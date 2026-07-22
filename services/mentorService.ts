@@ -1,168 +1,116 @@
-import { supabase } from "@/lib/supabase";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
 import { vapiService } from "@/services/vapiService";
-import type { Mentor } from "@/types/mentor";
+import type { Mentor, MentorWithStats } from "@/types/mentor";
 
-function mapToCamelCase(row: any): Mentor {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    name: row.name,
-    role: row.role,
-    subject: row.subject,
-    specialization: row.specialization,
-    difficultyLevel: row.difficulty_level,
-    learningGoal: row.learning_goal,
-    learningStyle: row.learning_style,
-    conversationStyle: row.conversation_style,
-    teachingSpeed: row.teaching_speed,
-    responseLength: row.response_length,
-    preferredLanguage: row.preferred_language,
-    sessionDuration: row.session_duration,
-    knowledgeFocus: row.knowledge_focus,
-    additionalInstructions: row.additional_instructions,
-    goalDeadline: row.goal_deadline,
-    voiceId: row.voice_id,
-    avatarUrl: row.avatar_url,
-    avatarColor: row.avatar_color,
-    status: row.status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  } as Mentor;
-}
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export class MentorService {
-  async getMentorsForUser(userId: string): Promise<Mentor[]> {
-    const { data, error } = await supabase
-      .from("mentors")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching mentors from Supabase:", error);
+  async getMentorsForUser(userId: string): Promise<MentorWithStats[]> {
+    try {
+      const mentors = await convex.query(api.mentors.getByUserId as any, { userId });
+      return mentors.map((m: any) => ({
+        ...m,
+        id: m._id,
+        conversationStyle: m.teachingStyle || "encouraging",
+        knowledgeFocus: m.subject || "general",
+        difficultyLevel: m.difficulty || "beginner",
+        learningStyle: m.learningStyle || "visual",
+        teachingSpeed: m.teachingSpeed || "moderate",
+        responseLength: m.responseLength || "concise",
+        stats: {
+          mentorId: m._id,
+          totalSessions: m.totalSessions || 0,
+          totalMinutes: m.totalMinutes || 0,
+          learningStreak: m.learningStreak || 0,
+          progressPercent: m.progressPercent || 0,
+          currentTopic: m.currentTopic || "Introduction",
+          completedTopics: m.completedTopics || 0,
+          totalTopics: m.totalTopics || 10,
+          messagesCount: m.messagesCount || 0,
+          questionsAsked: m.questionsAsked || 0,
+          filesUploaded: m.filesUploaded || 0,
+          projectsCompleted: m.projectsCompleted || 0,
+        }
+      })) as MentorWithStats[];
+    } catch (error) {
+      console.error("Error fetching mentors from Convex:", error);
       return [];
     }
-
-    // Attach mock stats for now, later we'll fetch from `topics` or similar tables
-    return data.map((row) => {
-      const mentor = mapToCamelCase(row);
-      return {
-        ...mentor,
-        stats: {
-          mentorId: mentor.id,
-          totalSessions: 0,
-          totalMinutes: 0,
-          learningStreak: 0,
-          progressPercent: 0,
-          currentTopic: "Introduction",
-          completedTopics: 0,
-          totalTopics: 10,
-        },
-      };
-    }) as unknown as Mentor[];
   }
 
-  async getMentorById(mentorId: string, userId: string): Promise<Mentor | null> {
-    const { data, error } = await supabase
-      .from("mentors")
-      .select("*")
-      .eq("id", mentorId)
-      .single();
-
-    if (error || !data) {
+  async getMentorById(mentorId: string, userId: string): Promise<MentorWithStats | null> {
+    try {
+      const mentor = await convex.query(api.mentors.getById as any, { id: mentorId });
+      if (!mentor || mentor.userId !== userId) return null;
+      
+      return {
+        ...mentor,
+        id: mentor._id,
+        conversationStyle: mentor.teachingStyle || "encouraging",
+        knowledgeFocus: mentor.subject || "general",
+        difficultyLevel: mentor.difficulty || "beginner",
+        learningStyle: mentor.learningStyle || "visual",
+        teachingSpeed: mentor.teachingSpeed || "moderate",
+        responseLength: mentor.responseLength || "concise",
+        stats: {
+          mentorId: mentor._id,
+          totalSessions: mentor.totalSessions || 0,
+          totalMinutes: mentor.totalMinutes || 0,
+          learningStreak: mentor.learningStreak || 0,
+          progressPercent: mentor.progressPercent || 0,
+          currentTopic: mentor.currentTopic || "Introduction",
+          completedTopics: mentor.completedTopics || 0,
+          totalTopics: mentor.totalTopics || 10,
+          messagesCount: mentor.messagesCount || 0,
+          questionsAsked: mentor.questionsAsked || 0,
+          filesUploaded: mentor.filesUploaded || 0,
+          projectsCompleted: mentor.projectsCompleted || 0,
+        }
+      } as MentorWithStats;
+    } catch (error) {
+      console.error("Error fetching mentor from Convex:", error);
       return null;
     }
-
-    if (data.user_id !== userId) {
-      console.warn(`User ${userId} attempted to access mentor ${mentorId} belonging to ${data.user_id}`);
-      return null;
-    }
-
-    const mentor = mapToCamelCase(data);
-
-    return {
-      ...mentor,
-      stats: {
-        mentorId: mentor.id,
-        totalSessions: 0,
-        totalMinutes: 0,
-        learningStreak: 0,
-        progressPercent: 0,
-        currentTopic: "Introduction",
-        completedTopics: 0,
-        totalTopics: 10,
-      },
-    } as unknown as Mentor;
   }
 
   async createMentor(
     userId: string,
-    data: {
-      name: string;
-      role: string;
-      subject: string;
-      specialization: string;
-      difficultyLevel: string;
-      learningStyle: string;
-      conversationStyle: string;
-      teachingSpeed: string;
-      responseLength: string;
-      preferredLanguage: string;
-      learningGoal: string;
-      sessionDuration: number;
-      knowledgeFocus: string;
-      additionalInstructions?: string;
-      goalDeadline?: string;
-    }
+    data: any
   ): Promise<string> {
     const AVATAR_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6"];
     const avatarColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
-    let voiceId: string | undefined;
+    let voiceId: string | undefined | null;
     try {
-      voiceId = await vapiService.createMentorAssistant({
+      const createdId = await vapiService.createMentorAssistant({
         name: data.name,
         role: data.role,
         subject: data.subject,
         teachingStyle: data.teachingSpeed,
         learningGoal: data.learningGoal,
       });
+      voiceId = createdId === null ? undefined : createdId;
     } catch (e) {
       console.error("Failed to create Voice Assistant", e);
     }
 
-    const { data: inserted, error } = await supabase
-      .from("mentors")
-      .insert({
-        user_id: userId,
-        name: data.name,
-        role: data.role,
-        subject: data.subject,
-        specialization: data.specialization,
-        difficulty_level: data.difficultyLevel,
-        learning_style: data.learningStyle,
-        conversation_style: data.conversationStyle,
-        teaching_speed: data.teachingSpeed,
-        response_length: data.responseLength,
-        preferred_language: data.preferredLanguage,
-        learning_goal: data.learningGoal,
-        session_duration: data.sessionDuration,
-        knowledge_focus: data.knowledgeFocus,
-        additional_instructions: data.additionalInstructions,
-        goal_deadline: data.goalDeadline,
-        avatar_color: avatarColor,
-        voice_id: voiceId,
-      })
-      .select("id")
-      .single();
+    const mentorId = await convex.mutation(api.mentors.createMentor as any, {
+      userId,
+      name: data.name,
+      role: data.role,
+      subject: data.subject,
+      teachingStyle: data.conversationStyle,
+      preferredLanguage: data.preferredLanguage || "English",
+      learningGoal: data.learningGoal,
+      sessionDuration: data.sessionDuration || 30,
+      avatarColor,
+      voiceId,
+      description: data.additionalInstructions,
+      difficulty: data.difficultyLevel,
+    });
 
-    if (error || !inserted) {
-      throw new Error(`Failed to create mentor in Supabase: ${error?.message}`);
-    }
-
-    // We will trigger AI Roadmap generation in the Action layer so it doesn't block
-
-    return inserted.id;
+    return mentorId;
   }
 }
 

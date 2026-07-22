@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MentorWorkspace } from "@/components/mentors/MentorWorkspace";
 import { mentorService } from "@/services/mentorService";
-import { MOCK_PROGRESS } from "@/lib/mock-data/mentor-progress";
+
 import { roadmapService } from "@/services/roadmapService";
 import { auth } from "@clerk/nextjs/server";
 
@@ -33,7 +33,7 @@ export default async function MentorWorkspacePage({ params }: MentorWorkspacePag
     notFound();
   }
 
-  const stats = MOCK_PROGRESS[mentorId] ?? mentor.stats;
+  const stats = mentor.stats;
 
   // Auto-generate roadmap using Groq if one doesn't exist yet
   const roadmap = await roadmapService.getOrGenerateRoadmap(mentorId, userId);
@@ -42,7 +42,7 @@ export default async function MentorWorkspacePage({ params }: MentorWorkspacePag
     <MentorWorkspace
       mentor={mentor}
       stats={stats}
-      roadmap={roadmap}
+      roadmap={roadmap ?? undefined}
     />
   );
 }

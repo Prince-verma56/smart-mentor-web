@@ -112,7 +112,7 @@ export function MentorWorkspace({
 
         {/* ── CENTER ───────────────────────────────── */}
         <div className="h-full overflow-hidden flex flex-col bg-background">
-          <MentorHeader mentor={mentor} />
+          <MentorHeader mentor={mentor} stats={stats} />
           <div className="flex-1 min-h-0 overflow-hidden">
             {view === "conversation" ? (
               <ConversationPanel mentor={mentor} stats={stats} />

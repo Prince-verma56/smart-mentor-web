@@ -43,11 +43,12 @@ export async function createMentorAction(formData: FormData) {
       knowledgeFocus,
     });
 
-    // Fire off AI roadmap generation in the background (fire-and-forget)
-    // In Next.js 15 this is best done with `after()`, but this standard unhandled promise works for immediate Vercel Serverless return.
-    roadmapService.generateRoadmapForMentor(mentorId, userId).catch(err => {
-      console.error("Background Roadmap Generation Failed:", err);
-    });
+    // Generate AI roadmap immediately so it completes during the UI loading animation
+    try {
+      await roadmapService.generateRoadmapForMentor(mentorId, userId);
+    } catch (err) {
+      console.error("Roadmap Generation Failed during mentor creation:", err);
+    }
 
     // Revalidate the mentors dashboard page so the new mentor shows up
     revalidatePath("/dashboard/mentors");

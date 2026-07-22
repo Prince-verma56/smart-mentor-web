@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Circle, Lock, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, Lock, PlayCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MentorRoadmap, TopicStatus } from "@/types/roadmap";
-import { toggleTopicStatusAction } from "@/actions/roadmapActions";
 import { toast } from "sonner";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface RoadmapCardProps {
   roadmap: MentorRoadmap;
@@ -15,7 +16,7 @@ interface RoadmapCardProps {
 
 const statusIcon: Record<TopicStatus, React.ReactNode> = {
   completed: <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />,
-  "in-progress": <Loader2 className="h-4 w-4 text-blue-500 shrink-0 animate-spin" />,
+  "in-progress": <PlayCircle className="h-4 w-4 text-blue-500 shrink-0" />,
   available: <Circle className="h-4 w-4 text-muted-foreground shrink-0" />,
   locked: <Lock className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />,
 };
@@ -23,6 +24,7 @@ const statusIcon: Record<TopicStatus, React.ReactNode> = {
 export function RoadmapCard({ roadmap }: RoadmapCardProps) {
   const [isPending, startTransition] = useTransition();
   const [optimisticRoadmap, setOptimisticRoadmap] = useState(roadmap);
+  const updateTopic = useMutation(api.roadmaps.updateTopicStatus as any);
 
   const handleToggle = (topicId: string, currentStatus: string) => {
     // If it's a mock topic (starts with "topic-"), don't try to save it to DB
@@ -48,14 +50,17 @@ export function RoadmapCard({ roadmap }: RoadmapCardProps) {
       return newRoadmap;
     });
 
-    // Server Action
+    // Server Action (Convex Mutation)
     startTransition(async () => {
-      const res = await toggleTopicStatusAction(topicId, currentStatus);
-      if (res.error) {
-        toast.error(res.error);
-        // Revert on error (could implement full revert logic here)
-      } else if (res.success) {
-        toast.success(res.newStatus === "completed" ? "Topic completed! 🎉" : "Topic unmarked.");
+      try {
+        const res = await updateTopic({ topicId, status: currentStatus === "completed" ? "available" : "completed" });
+        if (res.success) {
+          toast.success(res.newStatus === "completed" ? "Topic completed! 🎉" : "Topic unmarked.");
+        }
+      } catch (error) {
+        console.error("Failed to update topic:", error);
+        toast.error("Failed to update progress");
+        // Could revert optimistic UI here
       }
     });
   };

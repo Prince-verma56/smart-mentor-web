@@ -24,6 +24,7 @@ import {
 import type { MentorSubject } from "@/types/mentor";
 import { createMentorAction } from "@/actions/mentorActions";
 import { toast } from "sonner";
+import Loader from "@/components/kokonutui/loader";
 
 const SUBJECTS: { value: MentorSubject; label: string }[] = [
   { value: "frontend", label: "Frontend Development" },
@@ -109,55 +110,66 @@ export function MentorWizard() {
 
       {/* Step card */}
       <Card className="border-muted shadow-sm overflow-hidden">
-        <CardContent className="p-6 sm:p-8">
-          {step === 1 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="space-y-3">
-                <Label htmlFor="name" className="text-base font-semibold">What should we call your mentor?</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g. Dan Abramov, Senior Architect, Frontend Coach"
-                  className="h-12 text-base px-4"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-3">
-                <Label htmlFor="subject" className="text-base font-semibold">What will they teach you?</Label>
-                <Select value={subject} onValueChange={(v) => setSubject(v as MentorSubject)}>
-                  <SelectTrigger id="subject" className="h-12 text-base px-4">
-                    <SelectValue placeholder="Select a core subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUBJECTS.map((s) => (
-                      <SelectItem key={s.value} value={s.value} className="py-3 cursor-pointer">
-                        {s.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <CardContent className="p-6 sm:p-8 min-h-[300px] flex flex-col justify-center">
+          {isCreating ? (
+            <div className="animate-in fade-in zoom-in-95 duration-500 w-full flex justify-center">
+              <Loader 
+                title="Building Your Mentor" 
+                subtitle="Generating personalized roadmap and AI curriculum..." 
+              />
             </div>
-          )}
-          
-          {step === 2 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="space-y-3">
-                <Label htmlFor="learningGoal" className="text-base font-semibold">What is your ultimate goal?</Label>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Be as specific as possible. Your mentor will design its entire curriculum, tone, and teaching style around this objective.
-                </p>
-                <Textarea
-                  id="learningGoal"
-                  placeholder="e.g. I want to build production-ready fullstack applications and get hired as a Mid-Level React Developer in the next 6 months."
-                  className="min-h-[160px] text-base p-4 resize-none leading-relaxed"
-                  value={learningGoal}
-                  onChange={(e) => setLearningGoal(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            </div>
+          ) : (
+            <>
+              {step === 1 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="space-y-3">
+                    <Label htmlFor="name" className="text-base font-semibold">What should we call your mentor?</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g. Dan Abramov, Senior Architect, Frontend Coach"
+                      className="h-12 text-base px-4"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="subject" className="text-base font-semibold">What will they teach you?</Label>
+                    <Select value={subject} onValueChange={(v) => setSubject(v as MentorSubject)}>
+                      <SelectTrigger id="subject" className="h-12 text-base px-4">
+                        <SelectValue placeholder="Select a core subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUBJECTS.map((s) => (
+                          <SelectItem key={s.value} value={s.value} className="py-3 cursor-pointer">
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              
+              {step === 2 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="space-y-3">
+                    <Label htmlFor="learningGoal" className="text-base font-semibold">What is your ultimate goal?</Label>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Be as specific as possible. Your mentor will design its entire curriculum, tone, and teaching style around this objective.
+                    </p>
+                    <Textarea
+                      id="learningGoal"
+                      placeholder="e.g. I want to build production-ready fullstack applications and get hired as a Mid-Level React Developer in the next 6 months."
+                      className="min-h-[160px] text-base p-4 resize-none leading-relaxed"
+                      value={learningGoal}
+                      onChange={(e) => setLearningGoal(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

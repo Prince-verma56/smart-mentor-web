@@ -96,6 +96,10 @@ export interface MentorStats {
   nextTopicSuggestion?: string;
   completedTopics: number;
   totalTopics: number;
+  messagesCount?: number;
+  questionsAsked?: number;
+  filesUploaded?: number;
+  projectsCompleted?: number;
 }
 
 // ─── Mentor with Stats (for card display) ────────────────────────────────────

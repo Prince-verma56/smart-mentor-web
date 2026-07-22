@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     const systemPrompt = `You are ${mentor.name}, a ${mentor.role} specializing in ${mentor.subject}.
-Your teaching style is: ${mentor.teachingStyle}.
+Your teaching style is: ${mentor.conversationStyle}.
 The student's learning goal is: ${mentor.learningGoal}.
 
 CRITICAL INSTRUCTIONS:
