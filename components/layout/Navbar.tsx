@@ -39,6 +39,12 @@ export function Navbar() {
     { name: "Pricing", href: "/#pricing" },
   ];
 
+  const isMentorWorkspace = pathname.startsWith("/dashboard/mentors/") && pathname.split("/").length >= 4;
+
+  if (isMentorWorkspace) {
+    return null;
+  }
+
   return (
     <motion.header
       initial={{ y: -100 }}

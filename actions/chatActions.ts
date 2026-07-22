@@ -97,3 +97,21 @@ export async function getChatSessions(mentorId: string) {
 
   return data;
 }
+
+export async function deleteChatSession(sessionId: string) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const { error } = await supabase
+    .from("chat_sessions")
+    .delete()
+    .eq("id", sessionId)
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Failed to delete chat session:", error);
+    return false;
+  }
+
+  return true;
+}

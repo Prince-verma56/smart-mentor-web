@@ -14,7 +14,6 @@ import {
   ClipboardList,
   Bookmark,
   History,
-  Settings,
   ArrowLeft,
   MessageSquare,
 } from "lucide-react";
@@ -33,52 +32,49 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-const navItems = [
-  { label: "Conversation", icon: MessageSquare, href: "", implemented: true },
-  { label: "Roadmap", icon: Map, href: "#", implemented: false },
-  { label: "Resources", icon: FolderOpen, href: "#", implemented: false },
-  { label: "Assignments", icon: ClipboardList, href: "#", implemented: false },
-  { label: "Bookmarks", icon: Bookmark, href: "#", implemented: false },
-  { label: "History", icon: History, href: "#", implemented: false },
-  { label: "Settings", icon: Settings, href: "/settings", implemented: true },
-];
-
 export function MentorSidebar({ mentor }: MentorSidebarProps) {
   const pathname = usePathname();
   const baseHref = `/dashboard/mentors/${mentor.id}`;
 
+  const navItems = [
+    { label: "Conversation", icon: MessageSquare, href: baseHref, implemented: true },
+    { label: "Roadmap", icon: Map, href: "#", implemented: false },
+    { label: "Resources", icon: FolderOpen, href: "#", implemented: false },
+    { label: "Assignments", icon: ClipboardList, href: "#", implemented: false },
+    { label: "Bookmarks", icon: Bookmark, href: "#", implemented: false },
+    { label: "History", icon: History, href: "#", implemented: false },
+  ];
+
   return (
-    <aside className="flex h-full flex-col border-r bg-background">
-      {/* Back */}
-      <div className="px-4 pt-4 pb-2">
+    <div className="flex h-full flex-col bg-background">
+      {/* Back link */}
+      <div className="px-3 h-14 flex items-center border-b shrink-0">
         <Link href="/dashboard">
-          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground -ml-2">
-            <ArrowLeft className="h-4 w-4" />
-            All Mentors
+          <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground -ml-1 h-8">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span className="text-xs font-medium">All Mentors</span>
           </Button>
         </Link>
       </div>
 
-      <Separator />
-
       {/* Mentor Identity */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 shrink-0">
         <div className="flex items-center gap-3">
-          <Avatar className="h-11 w-11 shrink-0">
+          <Avatar className="h-10 w-10 shrink-0 ring-2 ring-background shadow-sm">
             {mentor.avatarUrl ? (
               <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
             ) : null}
             <AvatarFallback
               style={{ backgroundColor: mentor.avatarColor }}
-              className="text-white font-semibold"
+              className="text-white font-semibold text-sm"
             >
               {getInitials(mentor.name)}
             </AvatarFallback>
           </Avatar>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="font-semibold text-sm leading-tight truncate">{mentor.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{mentor.role}</p>
-            <Badge variant="secondary" className="mt-1 text-xs">
+            <p className="text-xs text-muted-foreground truncate mt-0.5">{mentor.role}</p>
+            <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0 h-4">
               {mentor.subject}
             </Badge>
           </div>
@@ -88,34 +84,35 @@ export function MentorSidebar({ mentor }: MentorSidebarProps) {
       <Separator />
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-2 py-3">
-        <nav className="space-y-1">
+      <ScrollArea className="flex-1 px-2 py-2" data-lenis-prevent="true">
+        <nav className="space-y-0.5">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const href = item.implemented ? `${baseHref}${item.href}` : "#";
-            const isActive = item.implemented && pathname === href;
-            
+            const isActive = item.implemented && pathname === item.href;
+
             return (
               <Link
                 key={item.label}
-                href={href}
+                href={item.implemented ? item.href : "#"}
                 onClick={(e) => {
                   if (!item.implemented) e.preventDefault();
                 }}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors relative group",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150 relative group",
                   isActive
                     ? "bg-primary/10 text-primary font-medium"
                     : item.implemented
                     ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    : "text-muted-foreground/50 cursor-not-allowed",
+                    : "text-muted-foreground/40 cursor-not-allowed pointer-events-none"
                 )}
               >
-                <Icon className={cn("h-4 w-4 shrink-0", !item.implemented && "opacity-50")} />
-                <span className={cn(!item.implemented && "opacity-50")}>{item.label}</span>
-                
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
                 {!item.implemented && (
-                  <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 h-4 font-normal uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Badge
+                    variant="outline"
+                    className="ml-auto text-[9px] px-1 py-0 h-3.5 font-normal uppercase opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
                     Soon
                   </Badge>
                 )}
@@ -124,6 +121,6 @@ export function MentorSidebar({ mentor }: MentorSidebarProps) {
           })}
         </nav>
       </ScrollArea>
-    </aside>
+    </div>
   );
 }

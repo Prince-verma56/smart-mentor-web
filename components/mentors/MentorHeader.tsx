@@ -1,23 +1,14 @@
 import Link from "next/link";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Settings, Zap, Home } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 import type { Mentor } from "@/types/mentor";
 import Breadcrumb from "@/components/ui/smoothui/breadcrumb";
 
 interface MentorHeaderProps {
   mentor: Mentor;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
 }
 
 const DIFFICULTY_COLORS = {
@@ -29,8 +20,9 @@ const DIFFICULTY_COLORS = {
 
 export function MentorHeader({ mentor }: MentorHeaderProps) {
   return (
-    <header className="border-b bg-background px-4 py-3 space-y-3">
-      <div className="flex items-center">
+    <header className="border-b bg-background shrink-0">
+      {/* Row 1: Breadcrumb */}
+      <div className="px-4 pt-2.5 pb-0">
         <Breadcrumb
           items={[
             { label: <Home className="h-3.5 w-3.5" />, href: "/dashboard" },
@@ -39,46 +31,39 @@ export function MentorHeader({ mentor }: MentorHeaderProps) {
           ]}
         />
       </div>
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <Avatar className="h-9 w-9 shrink-0">
-            {mentor.avatarUrl ? (
-              <img src={mentor.avatarUrl} alt={mentor.name} />
-            ) : null}
-            <AvatarFallback
-              style={{ backgroundColor: mentor.avatarColor }}
-              className="text-white text-sm font-semibold"
-            >
-              {getInitials(mentor.name)}
-            </AvatarFallback>
-          </Avatar>
+
+      {/* Row 2: Mentor info + actions */}
+      <div className="flex items-center justify-between gap-3 px-4 py-2">
+        {/* Left: mentor info */}
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className="min-w-0">
-            <h1 className="text-base font-semibold leading-tight truncate">{mentor.name}</h1>
+            <h1 className="text-sm font-semibold leading-tight truncate">{mentor.name}</h1>
             <p className="text-xs text-muted-foreground truncate">{mentor.role}</p>
           </div>
-          <Separator orientation="vertical" className="h-8 hidden sm:block" />
-          <div className="hidden sm:flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">{mentor.subject}</Badge>
-            <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[mentor.difficultyLevel]}`}
-            >
+          <Separator orientation="vertical" className="h-6 hidden sm:block" />
+          <div className="hidden sm:flex items-center gap-1.5">
+            <Badge variant="outline" className="text-xs h-5 px-1.5">{mentor.subject}</Badge>
+            <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${DIFFICULTY_COLORS[mentor.difficultyLevel]}`}>
               {mentor.difficultyLevel}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Extension point: Live Teaching Mode button */}
-          <Button variant="outline" size="sm" className="gap-1.5 hidden sm:flex" disabled>
-            <Zap className="h-3.5 w-3.5" />
+        {/* Right: actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs hidden sm:flex" disabled>
+            <Zap className="h-3 w-3" />
             Live Mode
           </Button>
           <Link href={`/dashboard/mentors/${mentor.id}/settings`}>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Settings className="h-4 w-4" />
-              <span className="sr-only">Mentor settings</span>
+            <Button variant="ghost" size="icon" className="h-7 w-7">
+              <Settings className="h-3.5 w-3.5" />
+              <span className="sr-only">Settings</span>
             </Button>
           </Link>
+          <UserButton
+            appearance={{ elements: { avatarBox: "h-7 w-7 ring-1 ring-border" } }}
+          />
         </div>
       </div>
     </header>

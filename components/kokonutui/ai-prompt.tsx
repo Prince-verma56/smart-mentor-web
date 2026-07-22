@@ -164,8 +164,8 @@ export default function AI_Prompt({
   };
 
   return (
-    <div className={cn("w-4/6 py-4", className)}>
-      <div className="rounded-2xl bg-black/5 p-1.5 pt-4 dark:bg-white/5">
+    <div className={cn("w-full max-w-3xl mx-auto py-4", className)}>
+      <div className="rounded-3xl bg-black/5 p-1.5 pt-4 dark:bg-white/5 shadow-sm border border-black/10 dark:border-white/10">
         <div className="mx-2 mb-2.5 flex items-center gap-2">
           <div className="flex flex-1 items-center gap-2">
             <Anthropic className="h-3.5 w-3.5 text-black dark:hidden" />
@@ -183,7 +183,7 @@ export default function AI_Prompt({
             <div className="overflow-y-auto" style={{ maxHeight: "400px" }}>
               <Textarea
                 className={cn(
-                  "w-full resize-none rounded-xl rounded-b-none border-none bg-black/5 px-4 py-3 placeholder:text-black/70 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-white/5 dark:text-white dark:placeholder:text-white/70",
+                  "w-full resize-none rounded-xl rounded-b-none border-none bg-black/5 px-4 py-3 placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-white/5 text-foreground",
                   "min-h-[72px]"
                 )}
                 id="ai-input-15"

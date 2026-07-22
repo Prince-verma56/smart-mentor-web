@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MentorWorkspace } from "@/components/mentors/MentorWorkspace";
 import { mentorService } from "@/services/mentorService";
-import { MOCK_ROADMAPS } from "@/lib/mock-data/mentor-roadmap";
 import { MOCK_PROGRESS } from "@/lib/mock-data/mentor-progress";
 import { roadmapService } from "@/services/roadmapService";
 import { auth } from "@clerk/nextjs/server";
@@ -35,9 +34,9 @@ export default async function MentorWorkspacePage({ params }: MentorWorkspacePag
   }
 
   const stats = MOCK_PROGRESS[mentorId] ?? mentor.stats;
-  // Fetch real AI generated roadmap from Supabase
-  const roadmapFromDb = await roadmapService.getRoadmapForMentor(mentorId);
-  const roadmap = roadmapFromDb || MOCK_ROADMAPS[mentorId];
+
+  // Auto-generate roadmap using Groq if one doesn't exist yet
+  const roadmap = await roadmapService.getOrGenerateRoadmap(mentorId, userId);
 
   return (
     <MentorWorkspace

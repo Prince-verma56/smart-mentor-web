@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: MentorLayoutProps): Promise<M
 
 export default function MentorWorkspaceLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="-mx-4 -my-6 sm:-mx-6 lg:-mx-8 h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="fixed inset-0 z-40 bg-background overflow-hidden">
       {children}
     </div>
   );

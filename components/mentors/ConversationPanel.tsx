@@ -4,7 +4,7 @@ import type { Mentor, MentorStats } from "@/types/mentor";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect, useRef } from "react";
 import AI_Prompt from "@/components/kokonutui/ai-prompt";
-import { createChatSession, saveMessage, getChatHistory } from "@/actions/chatActions";
+import { createChatSession, saveMessage, getChatHistory, getChatSessions, deleteChatSession } from "@/actions/chatActions";
 import MaskRevealUp from "@/components/ui/smoothui/mask-reveal-up";
 
 interface ConversationPanelProps {
@@ -27,6 +27,51 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const [messages, setMessages] = useState<{ id: string; role: string; content: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
+
+  // Load the latest chat session on mount
+  useEffect(() => {
+    async function loadLatestSession() {
+      try {
+        const sessions = await getChatSessions(mentor.id);
+        if (sessions && sessions.length > 0) {
+          const latestSessionId = sessions[0].id;
+          setSessionId(latestSessionId);
+          const history = await getChatHistory(latestSessionId);
+          if (history) {
+            setMessages(history);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load chat history:", error);
+      }
+    }
+    loadLatestSession();
+  }, [mentor.id]);
+
+  const handleDeleteSession = async () => {
+    if (!sessionId) return;
+    const confirmed = window.confirm("Are you sure you want to delete this conversation?");
+    if (!confirmed) return;
+    
+    await deleteChatSession(sessionId);
+    setSessionId(null);
+    setMessages([]);
+  };
+
+  const handleNewSession = () => {
+    setSessionId(null);
+    setMessages([]);
+  };
 
   const handlePromptSubmit = async (value: string, model: string) => {
     if (!value.trim()) return;
@@ -113,8 +158,22 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
   return (
     <div className="flex flex-col h-full bg-background relative">
+      {/* Session Controls */}
+      <div className="absolute top-4 right-4 z-10 flex gap-2">
+        {sessionId && messages.length > 0 && (
+          <>
+            <Button variant="outline" size="sm" onClick={handleNewSession} className="gap-2 bg-background/80 backdrop-blur-sm">
+              New Chat
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDeleteSession} className="bg-background/80 backdrop-blur-sm text-destructive hover:bg-destructive hover:text-destructive-foreground">
+              Delete
+            </Button>
+          </>
+        )}
+      </div>
+
       {/* Main Conversation Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-8 md:px-8">
+      <div className="flex-1 overflow-y-auto px-4 py-8 md:px-8" data-lenis-prevent="true">
         
         {/* Empty State / Welcome Screen */}
         <div className="flex flex-col items-center justify-center text-center mt-12 mb-8 max-w-2xl mx-auto space-y-6">
@@ -195,23 +254,21 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
         )}
       </div>
 
       {/* Input Area */}
-      <div className="p-4 md:px-8 pb-8 lg:pb-12 bg-background border-t shrink-0">
-        <div className="max-w-3xl mx-auto flex items-center justify-center">
-          <AI_Prompt
-            className="w-full"
-            onSubmit={handlePromptSubmit}
-            placeholder={`Ask ${mentor.name} anything...`}
-            headerText="Powered by Groq"
-            headerAction="Online"
-            models={["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"]}
-            defaultModel="llama3-8b-8192"
-          />
-        </div>
+      <div className="px-4 pb-6 pt-2 bg-background border-t shrink-0">
+        <AI_Prompt
+          onSubmit={handlePromptSubmit}
+          placeholder={`Ask ${mentor.name} anything...`}
+          headerText="Powered by Groq"
+          headerAction="Online"
+          models={["llama-3.1-8b-instant", "llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"]}
+          defaultModel="llama-3.1-8b-instant"
+        />
       </div>
     </div>
   );
