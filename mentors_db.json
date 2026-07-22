@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Fulsrtack Developer",
+    "role": "frontend Expert",
+    "subject": "frontend",
+    "teachingStyle": "hands-on",
+    "preferredLanguage": "English",
+    "learningGoal": "To leanring a proepr resposivness fully apps",
+    "sessionDuration": 45,
+    "userId": "user_2test123",
+    "avatarColor": "#ec4899",
+    "id": "e945ac90-9c79-43e6-838a-7ec02c81bc34",
+    "createdAt": "2026-07-22T11:05:06.219Z",
+    "updatedAt": "2026-07-22T11:05:06.219Z",
+    "status": "active"
+  }
+]

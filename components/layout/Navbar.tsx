@@ -1,28 +1,31 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-motion";
+import { Sparkles, Menu, X, LayoutDashboard } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
 import { UserButton } from "@clerk/nextjs";
-import { Menu, X, Sparkles, LayoutDashboard } from "lucide-react";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { scrollY } = useScroll();
+  const { theme, setTheme } = useTheme();
+  
   const pathname = usePathname();
   const { isSignedIn, isLoaded, role } = useAuth();
 
-  // Handle scroll effect for glassmorphism
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    if (latest > 50) {
+      setIsScrolled(true);
+    } else {
+      setIsScrolled(false);
+    }
+  });
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -30,171 +33,214 @@ export function Navbar() {
   }, [pathname]);
 
   const navLinks = [
-    { name: "Home", href: "/" },
     { name: "Features", href: "/#features" },
+    { name: "AI Mentor", href: "/#ai-mentor" },
+    { name: "Roadmaps", href: "/#roadmaps" },
     { name: "Pricing", href: "/#pricing" },
   ];
 
   return (
-    <header
-      className={`fixed top-0 z-50 w-full border-b transition-all duration-300 ${
-        isScrolled
-          ? "border-slate-200/50 bg-white/70 backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-950/70"
-          : "border-transparent bg-transparent"
+    <motion.header
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className={`sticky top-0 z-50 w-full border-b transition-all duration-300 ${
+        isScrolled ? "bg-background/80 backdrop-blur-md shadow-sm border-border" : "bg-background border-transparent"
       }`}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <Link
-              href="/"
-              className="group flex items-center gap-2.5 transition-opacity hover:opacity-90"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-600 shadow-sm shadow-violet-600/20 group-hover:bg-violet-700 transition-colors">
-                <Sparkles className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                SuperMentor<span className="text-violet-600 dark:text-violet-500">.ai</span>
-              </span>
-            </Link>
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Sparkles className="h-5 w-5 transition-transform group-hover:scale-110" />
           </div>
+          <span className="text-xl font-bold tracking-tight text-foreground">
+            SuperMentor<span className="text-primary">.ai</span>
+          </span>
+        </Link>
 
-          {/* Desktop Nav Links (Hidden on small screens) */}
-          <nav className="hidden md:flex md:items-center md:gap-8">
-            {!isSignedIn &&
-              navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className="text-sm font-medium text-slate-600 transition-colors hover:text-violet-600 dark:text-slate-300 dark:hover:text-violet-400"
-                >
-                  {link.name}
-                </Link>
-              ))}
-          </nav>
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-8">
+          {!isSignedIn ? (
+            navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {link.name}
+              </Link>
+            ))
+          ) : (
+            <>
+              <Link href="/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                Dashboard
+              </Link>
+            </>
+          )}
+        </nav>
 
-          {/* Right Section: Auth & Theme */}
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:block">
-              <ThemeToggle />
-            </div>
+        {/* Actions */}
+        <div className="hidden md:flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="rounded-full"
+          >
+            <span className="sr-only">Toggle theme</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="dark:hidden">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
+            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="hidden dark:block">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+            </svg>
+          </Button>
 
-            {isLoaded ? (
-              isSignedIn ? (
-                <div className="flex items-center gap-4">
-                  {/* Quick dashboard link if they are on a public page */}
-                  {!pathname.startsWith("/dashboard") && (
-                    <Link
-                      href={`/dashboard/${role === "admin" ? "admin" : role === "instructor" ? "instructor" : "student"}`}
-                      className="hidden items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 sm:flex"
-                    >
+          {isLoaded ? (
+            isSignedIn ? (
+              <div className="flex items-center gap-4">
+                {!pathname.startsWith("/dashboard") && (
+                  <Link href={`/dashboard${role === "admin" ? "/admin" : role === "instructor" ? "/instructor" : ""}`}>
+                    <Button variant="ghost" className="rounded-full font-medium gap-2 hidden lg:flex">
                       <LayoutDashboard className="h-4 w-4" />
                       Dashboard
-                    </Link>
-                  )}
-                  {/* Clerk UserButton: fully styled, responsive, handles profile logic */}
-                  <div className="relative z-50 flex items-center">
-                    <UserButton
-                      appearance={{
-                        elements: {
-                          avatarBox: "h-9 w-9 ring-2 ring-slate-200 dark:ring-slate-800",
-                          userButtonPopoverCard: "shadow-xl border border-slate-200 dark:border-slate-800",
-                        },
-                      }}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="hidden items-center gap-3 md:flex">
-                  <Link
-                    href="/login"
-                    className="rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                  >
-                    Sign in
+                    </Button>
                   </Link>
-                  <Link
-                    href="/signup"
-                    className="rounded-full bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700"
-                  >
-                    Get Started
-                  </Link>
+                )}
+                <div className="relative z-50 flex items-center gap-3">
+                  <Button variant="ghost" size="icon" className="rounded-full relative" title="Notifications">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                    </svg>
+                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+                  </Button>
+                  <UserButton
+                    appearance={{
+                      elements: {
+                        avatarBox: "h-9 w-9 ring-2 ring-primary/20",
+                        userButtonPopoverCard: "shadow-xl border border-border bg-background",
+                      },
+                    }}
+                  />
                 </div>
-              )
-            ) : (
-              // Loading skeleton for auth section
-              <div className="flex items-center gap-3">
-                <div className="hidden h-9 w-16 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800 md:block" />
-                <div className="h-9 w-9 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
               </div>
-            )}
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link href="/sign-in">
+                  <Button variant="ghost" className="rounded-full font-medium">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/sign-up">
+                  <Button className="rounded-full bg-primary font-medium text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105">
+                    Get Started
+                  </Button>
+                </Link>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="hidden h-9 w-20 animate-pulse rounded-full bg-muted md:block" />
+              <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />
+            </div>
+          )}
+        </div>
 
-            {/* Mobile Menu Toggle */}
-            <button
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle mobile menu"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
+        {/* Mobile menu toggle */}
+        <div className="md:hidden flex items-center gap-4">
+          {isLoaded && isSignedIn && (
+             <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "h-8 w-8 ring-2 ring-primary/20",
+                },
+              }}
+            />
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Nav */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-x-0 top-16 border-b border-slate-200/50 bg-white/95 px-4 pb-6 pt-4 shadow-lg backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-950/95 md:hidden"
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute left-4 right-4 top-24 rounded-2xl glass-card p-4 shadow-xl md:hidden flex flex-col gap-4 border border-border"
           >
-            <div className="flex flex-col gap-4">
-              {!isSignedIn &&
+            <nav className="flex flex-col gap-2">
+              {!isSignedIn ? (
                 navLinks.map((link) => (
                   <Link
                     key={link.name}
                     href={link.href}
-                    className="text-base font-medium text-slate-600 hover:text-violet-600 dark:text-slate-300 dark:hover:text-violet-400"
+                    className="rounded-lg px-4 py-3 text-base font-medium transition-colors hover:bg-muted"
+                    onClick={() => setMobileMenuOpen(false)}
                   >
                     {link.name}
                   </Link>
-                ))}
-              {isSignedIn && (
-                <Link
-                  href={`/dashboard/${role === "admin" ? "admin" : role === "instructor" ? "instructor" : "student"}`}
-                  className="flex items-center gap-2 text-base font-medium text-slate-600 hover:text-violet-600 dark:text-slate-300 dark:hover:text-violet-400"
-                >
-                  <LayoutDashboard className="h-5 w-5" />
-                  Go to Dashboard
-                </Link>
-              )}
-              <div className="mt-4 flex items-center justify-between border-t border-slate-200/50 pt-4 dark:border-slate-800/50 sm:hidden">
-                <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Theme</span>
-                <ThemeToggle />
-              </div>
-              {!isSignedIn && isLoaded && (
-                <div className="mt-4 flex flex-col gap-3 border-t border-slate-200/50 pt-4 dark:border-slate-800/50">
+                ))
+              ) : (
+                <>
                   <Link
-                    href="/login"
-                    className="flex w-full justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                    href="/dashboard"
+                    className="flex items-center gap-2 rounded-lg px-4 py-3 text-base font-medium transition-colors hover:bg-muted text-primary"
+                    onClick={() => setMobileMenuOpen(false)}
                   >
-                    Sign in
+                    <LayoutDashboard className="h-5 w-5" />
+                    Dashboard
                   </Link>
-                  <Link
-                    href="/signup"
-                    className="flex w-full justify-center rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
-                  >
-                    Get Started
-                  </Link>
-                </div>
+                </>
               )}
+            </nav>
+            <div className="h-px w-full bg-border" />
+            <div className="flex items-center justify-between px-4 py-2">
+              <span className="text-sm font-medium text-muted-foreground">Theme</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="rounded-full h-8 w-8"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="dark:hidden">
+                  <circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
+                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="hidden dark:block">
+                  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                </svg>
+              </Button>
             </div>
+            {!isSignedIn && isLoaded && (
+              <div className="flex flex-col gap-2 mt-2">
+                <Link href="/sign-in" className="w-full">
+                  <Button variant="outline" className="w-full justify-center">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/sign-up" className="w-full">
+                  <Button className="w-full justify-center bg-primary">
+                    Get Started
+                  </Button>
+                </Link>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
-    </header>
+    </motion.header>
   );
 }

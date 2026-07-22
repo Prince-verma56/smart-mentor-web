@@ -1,0 +1,40 @@
+import type { MentorStats } from "@/types/mentor";
+
+export const MOCK_PROGRESS: Record<string, MentorStats> = {
+  "mentor-1": {
+    mentorId: "mentor-1",
+    totalSessions: 12,
+    totalMinutes: 540,
+    learningStreak: 5,
+    progressPercent: 38,
+    currentTopic: "React Server Components",
+    lastSessionDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    nextTopicSuggestion: "Suspense & Error Boundaries",
+    completedTopics: 8,
+    totalTopics: 21,
+  },
+  "mentor-2": {
+    mentorId: "mentor-2",
+    totalSessions: 24,
+    totalMinutes: 1440,
+    learningStreak: 12,
+    progressPercent: 61,
+    currentTopic: "Dynamic Programming – Knapsack",
+    lastSessionDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    nextTopicSuggestion: "Graph Shortest Paths",
+    completedTopics: 31,
+    totalTopics: 51,
+  },
+  "mentor-3": {
+    mentorId: "mentor-3",
+    totalSessions: 4,
+    totalMinutes: 120,
+    learningStreak: 2,
+    progressPercent: 15,
+    currentTopic: "Crafting a Strong Resume",
+    lastSessionDate: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    nextTopicSuggestion: "LinkedIn Profile Optimization",
+    completedTopics: 2,
+    totalTopics: 14,
+  },
+};

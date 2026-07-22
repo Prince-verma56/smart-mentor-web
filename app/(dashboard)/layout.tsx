@@ -23,8 +23,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="flex-1 flex flex-col w-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 flex-1">
         {children}
       </main>
     </div>
