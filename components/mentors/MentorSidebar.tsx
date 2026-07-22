@@ -24,6 +24,7 @@ import {
   Settings,
 } from "lucide-react";
 import type { Mentor } from "@/types/mentor";
+import { ConversationList } from "./ConversationList";
 
 interface MentorSidebarProps {
   mentor: Mentor;
@@ -71,7 +72,6 @@ export function MentorSidebar({ mentor }: MentorSidebarProps) {
       items: [
         { label: "Notes", icon: FileText, href: "#", implemented: false },
         { label: "Bookmarks", icon: Bookmark, href: "#", implemented: false },
-        { label: "History", icon: History, href: `${baseHref}/history`, implemented: true },
       ]
     },
     {
@@ -170,6 +170,14 @@ export function MentorSidebar({ mentor }: MentorSidebarProps) {
               })}
             </div>
           ))}
+
+          {/* Conversation History embedded */}
+          <div className="space-y-1.5 pt-2">
+            <h4 className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">
+              Recent Chats
+            </h4>
+            <ConversationList mentorId={mentor.id} />
+          </div>
         </nav>
       </ScrollArea>
     </div>

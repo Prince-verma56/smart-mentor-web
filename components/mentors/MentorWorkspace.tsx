@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, use, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import {
   Sheet,
   SheetContent,
@@ -47,9 +48,25 @@ function RoadmapPlaceholder() {
   );
 }
 
+function RoadmapErrorPlaceholder() {
+  const router = useRouter();
+  return (
+    <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-5 space-y-3 text-center mt-2">
+      <div className="space-y-1.5">
+        <p className="text-[11px] text-destructive font-medium leading-relaxed">
+          Failed to generate roadmap.
+        </p>
+      </div>
+      <Button variant="outline" size="sm" className="h-7 text-xs w-full" onClick={() => router.refresh()}>
+        Try Again
+      </Button>
+    </div>
+  );
+}
+
 function RoadmapWrapper({ promise }: { promise: Promise<MentorRoadmap | null> }) {
   const roadmap = use(promise);
-  return roadmap ? <RoadmapCard roadmap={roadmap} /> : <RoadmapPlaceholder />;
+  return roadmap ? <RoadmapCard roadmap={roadmap} /> : <RoadmapErrorPlaceholder />;
 }
 
 function RightPanelContent({

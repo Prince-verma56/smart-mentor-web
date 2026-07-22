@@ -66,6 +66,7 @@ interface AIPromptProps {
   headerAction?: string;
   onSubmit?: (value: string, model: string) => void;
   className?: string;
+  voiceButton?: React.ReactNode;
 }
 
 const DEFAULT_MODELS = [
@@ -84,6 +85,7 @@ export default function AI_Prompt({
   headerAction = "Ship Now!",
   onSubmit,
   className,
+  voiceButton,
 }: AIPromptProps) {
   const [value, setValue] = useState("");
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
@@ -266,6 +268,7 @@ export default function AI_Prompt({
                     <input className="hidden" type="file" />
                     <Paperclip className="h-4 w-4 transition-colors" />
                   </label>
+                  {voiceButton && <div className="ml-1">{voiceButton}</div>}
                 </div>
                 <button
                   aria-label="Send message"

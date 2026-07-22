@@ -134,6 +134,58 @@ export async function getMentorById(mentorId: string) {
     return null;
   }
 
+  // Get real stats from database (async, non-blocking)
+  let stats = {
+    mentorId: data.id,
+    totalSessions: 0,
+    totalMinutes: 0,
+    learningStreak: 0,
+    progressPercent: 0,
+    currentTopic: "Introduction",
+    completedTopics: 0,
+    totalTopics: 0,
+    messagesCount: 0,
+    questionsAsked: 0,
+    filesUploaded: 0,
+    projectsCompleted: 0,
+  };
+
+  try {
+    // Fetch roadmap stats
+    const { data: roadmap } = await supabase
+      .from("roadmaps")
+      .select("id, progress_percent")
+      .eq("mentor_id", data.id)
+      .single();
+
+    if (roadmap) {
+      const { data: topics } = await supabase
+        .from("roadmap_topics")
+        .select("id, title, status")
+        .eq("roadmap_id", roadmap.id);
+
+      if (topics) {
+        stats.totalTopics = topics.length;
+        stats.completedTopics = topics.filter((t: any) => t.status === "completed").length;
+        stats.progressPercent = roadmap.progress_percent || 
+          (topics.length > 0 ? Math.round((stats.completedTopics / topics.length) * 100) : 0);
+        const activeTopic = topics.find((t: any) => t.status === "in-progress");
+        if (activeTopic) stats.currentTopic = (activeTopic as any).title;
+      }
+    }
+
+    // Fetch session count
+    const { count: sessCount } = await supabase
+      .from("chat_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("mentor_id", data.id)
+      .eq("user_id", userId);
+    stats.totalSessions = sessCount || 0;
+    stats.totalMinutes = (sessCount || 0) * 30;
+  } catch {
+    // Silently use defaults if stats fail
+  }
+
   return {
     ...data,
     id: data.id,
@@ -146,22 +198,10 @@ export async function getMentorById(mentorId: string) {
     learningGoal: data.learning_goal,
     sessionDuration: data.session_duration,
     knowledgeFocus: data.knowledge_focus,
-    stats: {
-      mentorId: data.id,
-      totalSessions: 0,
-      totalMinutes: 0,
-      learningStreak: 0,
-      progressPercent: 0,
-      currentTopic: "Introduction",
-      completedTopics: 0,
-      totalTopics: 10,
-      messagesCount: 0,
-      questionsAsked: 0,
-      filesUploaded: 0,
-      projectsCompleted: 0,
-    }
+    stats,
   };
 }
+
 
 export async function updateMentorAction(mentorId: string, updates: any) {
   const { userId } = await auth();

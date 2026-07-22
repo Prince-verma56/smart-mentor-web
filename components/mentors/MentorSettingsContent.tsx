@@ -66,7 +66,7 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Mentor Settings</h1>
-          <p className="text-muted-foreground">Manage {mentor.name}'s configuration, personality, and data.</p>
+          <p className="text-muted-foreground">Manage {mentor.name}&apos;s configuration, personality, and data.</p>
         </div>
 
         <Tabs defaultValue="general" className="w-full">
@@ -95,7 +95,7 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
             <Card>
               <CardHeader>
                 <CardTitle>General Information</CardTitle>
-                <CardDescription>Update your mentor's basic details.</CardDescription>
+                <CardDescription>Update your mentor&apos;s basic details.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">

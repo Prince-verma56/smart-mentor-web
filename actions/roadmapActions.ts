@@ -3,9 +3,9 @@
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
-
 import Groq from "groq-sdk";
 import { getMentorById } from "./mentorActions";
+import type { MentorRoadmap, RoadmapTopic } from "@/types/roadmap";
 
 let _groq: Groq | null = null;
 function getGroq() {
@@ -15,7 +15,28 @@ function getGroq() {
   return _groq;
 }
 
-export async function generateRoadmapForMentor(mentorId: string, userId: string) {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function topicsToPhases(topics: RoadmapTopic[]): MentorRoadmap["phases"] {
+  return [
+    {
+      id: "phase-1",
+      title: "Learning Path",
+      description: "Your personalized learning path",
+      order: 1,
+      topics,
+      completedCount: topics.filter((t) => t.status === "completed").length,
+      totalCount: topics.length,
+      progressPercent: topics.length > 0
+        ? Math.round((topics.filter((t) => t.status === "completed").length / topics.length) * 100)
+        : 0,
+    },
+  ];
+}
+
+// ─── Generate Roadmap ─────────────────────────────────────────────────────────
+
+export async function generateRoadmapForMentor(mentorId: string, userId: string): Promise<MentorRoadmap | null> {
   console.log(`[RoadmapService] Generating roadmap for mentor: ${mentorId}`);
 
   const mentor = await getMentorById(mentorId);
@@ -24,33 +45,59 @@ export async function generateRoadmapForMentor(mentorId: string, userId: string)
     return null;
   }
 
+  // Prevent duplicates just in case
+  const { data: existingRoadmaps } = await supabase
+    .from("roadmaps")
+    .select("id")
+    .eq("mentor_id", mentorId)
+    .limit(1);
+
+  if (existingRoadmaps && existingRoadmaps.length > 0) {
+    console.log(`[RoadmapService] Roadmap already exists for mentor: ${mentorId}`);
+    return null; // or fetch and return it
+  }
+
   try {
-    const prompt = `You are a world-class curriculum designer. Create a structured learning roadmap for a student.
+    const prompt = `You are a world-class curriculum designer. Create a detailed structured learning roadmap.
+
 Mentor Role: ${mentor.role}
 Subject: ${mentor.subject}
 Difficulty Level: ${mentor.difficulty_level}
 Learning Goal: ${mentor.learning_goal || `Master ${mentor.subject} at ${mentor.difficulty_level} level`}
 
-Respond with ONLY a valid JSON object in this exact format (no markdown, no explanation):
+Generate a roadmap with 8-12 progressive topics. Each topic should build on the previous.
+
+Respond with ONLY a valid JSON object (no markdown, no explanation):
 {
-  "title": "Roadmap title here",
-  "description": "A clear one-sentence description of what the student will achieve.",
+  "title": "Descriptive roadmap title",
+  "description": "One sentence describing the outcome",
+  "total_estimated_hours": 40,
   "topics": [
-    {"title": "Topic 1 Title", "description": "What will be learned", "order_index": 1},
-    {"title": "Topic 2 Title", "description": "What will be learned", "order_index": 2},
-    {"title": "Topic 3 Title", "description": "What will be learned", "order_index": 3}
+    {
+      "title": "Topic Title",
+      "description": "Detailed description of what will be learned and why it matters",
+      "difficulty": "beginner",
+      "estimated_minutes": 45,
+      "order_index": 1
+    }
   ]
-}`;
+}
+
+Difficulty must be one of: beginner, intermediate, advanced.
+Make each topic progressively harder. Start with fundamentals.`;
 
     const completion = await getGroq().chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.4,
-      max_tokens: 1024,
+      max_tokens: 2048,
     });
 
     const raw = completion.choices[0]?.message?.content?.trim() || "";
-    const jsonStr = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "");
+    const jsonStr = raw
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "");
     const roadmapData = JSON.parse(jsonStr);
 
     console.log(`[RoadmapService] AI generated. Saving to Supabase...`);
@@ -62,158 +109,126 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no expl
         mentor_id: mentorId,
         title: roadmapData.title || `${mentor.subject} Roadmap`,
         description: roadmapData.description || "",
+        total_estimated_hours: roadmapData.total_estimated_hours || 40,
       })
       .select("id")
       .single();
 
-    if (roadmapError || !roadmap) throw new Error("Failed to insert roadmap");
+    if (roadmapError || !roadmap) {
+      console.error("[RoadmapService] Roadmap Insert Error:", roadmapError);
+      throw new Error(`Failed to insert roadmap: ${roadmapError?.message || "Unknown error"}`);
+    }
 
-    // Insert Topics
+    // Insert Topics with all new fields
     const topicsToInsert = roadmapData.topics.map((t: any, index: number) => ({
       roadmap_id: roadmap.id,
       title: t.title || `Topic ${index + 1}`,
       description: t.description || "",
+      difficulty: t.difficulty || "beginner",
+      estimated_minutes: t.estimated_minutes || 30,
       order_index: t.order_index || index + 1,
       status: index === 0 ? "in-progress" : "locked",
     }));
 
-    const { error: topicsError } = await supabase
+    const { data: insertedTopics, error: topicsError } = await supabase
       .from("roadmap_topics")
-      .insert(topicsToInsert);
+      .insert(topicsToInsert)
+      .select("*");
 
     if (topicsError) throw new Error("Failed to insert roadmap topics");
 
-    console.log(`[RoadmapService] Successfully saved roadmap and topics.`);
-    
-    // Return the generated roadmap directly to prevent infinite loops
-    // in case the Supabase select fails to read it back.
-    const formattedTopics = topicsToInsert.map((t: any) => ({
-      ...t,
-      id: t.id || Math.random().toString(),
-      orderIndex: t.order_index,
+    console.log(`[RoadmapService] Successfully saved ${topicsToInsert.length} topics.`);
+
+    const formattedTopics: RoadmapTopic[] = (insertedTopics || topicsToInsert).map((t: any, i: number) => ({
+      id: t.id || `temp-${i}`,
+      roadmap_id: roadmap.id,
+      title: t.title,
+      description: t.description || "",
+      difficulty: t.difficulty || "beginner",
+      estimated_minutes: t.estimated_minutes || 30,
+      order_index: t.order_index,
+      status: t.status,
+      prerequisites: t.prerequisites || [],
+      progress_percent: 0,
     }));
 
     return {
-      ...roadmap,
       id: roadmap.id,
-      mentorId: mentorId,
-      phases: [{
-        id: "phase-1",
-        title: "Learning Path",
-        description: "Your personalized roadmap",
-        order: 1,
-        topics: formattedTopics,
-        completedCount: formattedTopics.filter((t: any) => t.status === "completed").length,
-        totalCount: formattedTopics.length,
-      }]
+      mentorId,
+      title: roadmapData.title || `${mentor.subject} Roadmap`,
+      description: roadmapData.description || "",
+      total_estimated_hours: roadmapData.total_estimated_hours || 40,
+      progress_percent: 0,
+      phases: topicsToPhases(formattedTopics),
+      currentTopicId: formattedTopics[0]?.id,
+      currentTopic: formattedTopics[0] || null,
+      lastUpdated: new Date().toISOString(),
     };
-
   } catch (error) {
     console.error("[RoadmapService] Failed to generate roadmap:", error);
     return null;
   }
 }
 
-export async function getOrGenerateRoadmap(mentorId: string, userId: string) {
-  const { data: roadmap, error } = await supabase
+// ─── Get or Generate Roadmap ──────────────────────────────────────────────────
+
+export async function getOrGenerateRoadmap(mentorId: string, userId: string): Promise<MentorRoadmap | null> {
+  const { data: roadmaps, error } = await supabase
     .from("roadmaps")
     .select("*")
     .eq("mentor_id", mentorId)
-    .single();
+    .order("created_at", { ascending: false })
+    .limit(1);
 
-  if (error && error.code !== "PGRST116") { // PGRST116 is 'not found'
+  if (error) {
     console.error("Failed to fetch roadmap:", error);
     return null;
   }
+  
+  const roadmap = roadmaps?.[0];
 
   if (roadmap) {
-    // Fetch topics
     const { data: topics } = await supabase
       .from("roadmap_topics")
       .select("*")
       .eq("roadmap_id", roadmap.id)
       .order("order_index", { ascending: true });
 
-    const formattedTopics = (topics || []).map((t: any) => ({
-      ...t,
+    const formattedTopics: RoadmapTopic[] = (topics || []).map((t: any) => ({
       id: t.id,
-      orderIndex: t.order_index,
+      roadmap_id: t.roadmap_id,
+      title: t.title,
+      description: t.description || "",
+      difficulty: t.difficulty || "beginner",
+      estimated_minutes: t.estimated_minutes || 30,
+      order_index: t.order_index,
+      status: t.status,
+      prerequisites: t.prerequisites || [],
+      completed_at: t.completed_at,
+      notes: t.notes,
+      revision_required: t.revision_required,
+      is_skipped: t.is_skipped,
+      progress_percent: t.progress_percent || 0,
     }));
 
+    const currentTopic = formattedTopics.find((t) => t.status === "in-progress") || null;
+
     return {
-      ...roadmap,
       id: roadmap.id,
       mentorId: roadmap.mentor_id,
-      phases: [{
-        id: "phase-1",
-        title: "Learning Path",
-        description: "Your personalized roadmap",
-        order: 1,
-        topics: formattedTopics,
-        completedCount: formattedTopics.filter((t: any) => t.status === "completed").length,
-        totalCount: formattedTopics.length,
-      }]
+      title: roadmap.title,
+      description: roadmap.description || "",
+      total_estimated_hours: roadmap.total_estimated_hours || 0,
+      progress_percent: roadmap.progress_percent || 0,
+      phases: topicsToPhases(formattedTopics),
+      currentTopicId: currentTopic?.id,
+      currentTopic,
+      lastUpdated: roadmap.updated_at,
     };
   }
 
-  // Not found, generate it!
+  // Not found — generate it
   return await generateRoadmapForMentor(mentorId, userId);
 }
 
-/**
- * Toggle a topic's status between "completed" and "in-progress".
- * After completing a topic, unlocks the next locked topic in sequence.
- */
-export async function toggleTopicStatusAction(topicId: string, currentStatus: string) {
-  try {
-    const { userId } = await auth();
-    if (!userId) return { error: "Unauthorized" };
-
-    const isCompleting = currentStatus !== "completed";
-    const newStatus = isCompleting ? "completed" : "in-progress";
-
-    const { data: topic, error: fetchError } = await supabase
-      .from("roadmap_topics")
-      .select("id, roadmap_id, order_index")
-      .eq("id", topicId)
-      .single();
-
-    if (fetchError || !topic) {
-      return { error: "Topic not found" };
-    }
-
-    // Update the toggled topic
-    const { error: updateError } = await supabase
-      .from("roadmap_topics")
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq("id", topicId);
-
-    if (updateError) {
-      console.error("Failed to update topic status:", updateError);
-      return { error: "Failed to update progress" };
-    }
-
-    // If completing: find and unlock the next topic in the same roadmap
-    if (isCompleting) {
-      const { data: nextTopic } = await supabase
-        .from("roadmap_topics")
-        .select("id, status")
-        .eq("roadmap_id", topic.roadmap_id)
-        .eq("order_index", topic.order_index + 1)
-        .single();
-
-      if (nextTopic && nextTopic.status === "locked") {
-        await supabase
-          .from("roadmap_topics")
-          .update({ status: "in-progress", updated_at: new Date().toISOString() })
-          .eq("id", nextTopic.id);
-      }
-    }
-
-    revalidatePath("/dashboard/mentors", "layout");
-    return { success: true, newStatus };
-  } catch (error) {
-    console.error("Error toggling topic status:", error);
-    return { error: "Something went wrong" };
-  }
-}
+// Note: toggleTopicStatusAction is exported from progressActions.ts directly

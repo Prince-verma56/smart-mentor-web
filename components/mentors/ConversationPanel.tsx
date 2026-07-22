@@ -1,5 +1,11 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Lightbulb, Sparkles, User, Loader2, Copy, Bookmark, RefreshCcw, HelpCircle, Code2, GraduationCap, Plus, Mic, FileText, Image as ImageIcon, Video, Brain, Globe, Zap } from "lucide-react";
+import {
+  MessageSquare, Sparkles, User, Loader2, Copy, Bookmark, RefreshCcw,
+  HelpCircle, Code2, GraduationCap, Plus, Mic, FileText, Image as ImageIcon,
+  Video, Brain, Globe, Zap, CheckCircle2, RotateCcw
+} from "lucide-react";
 import type { Mentor, MentorStats } from "@/types/mentor";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect, useRef } from "react";
@@ -9,135 +15,199 @@ import { useUser } from "@clerk/nextjs";
 import { Separator } from "@/components/ui/separator";
 import { getChatSessions, getChatHistory, createChatSession, saveMessage, deleteChatSession } from "@/actions/chatActions";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
+import { toast } from "sonner";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { VapiVoiceButton } from "./VapiVoiceButton";
+
+// ─── Loading Steps ────────────────────────────────────────────────────────────
+
+const LOADING_STEPS = [
+  { icon: "👤", text: "Reading mentor profile..." },
+  { icon: "🗺️", text: "Checking your roadmap..." },
+  { icon: "📊", text: "Reviewing progress..." },
+  { icon: "💬", text: "Scanning conversation history..." },
+  { icon: "🧠", text: "Generating response..." },
+];
 
 interface ConversationPanelProps {
   mentor: Mentor;
   stats: MentorStats;
 }
 
-const getSuggestedQuestions = (subject: string) => [
-  `Explain ${subject} Hooks`,
-  `Create Authentication`,
-  `Teach JWT`,
-  `Roadmap for ${subject}`,
-  `Interview Questions`,
+const getSuggestedQuestions = (subject: string, currentTopic?: string) => [
+  currentTopic ? `Explain ${currentTopic} to me` : `What should I learn first in ${subject}?`,
+  "Where are we in my roadmap?",
+  "What have we completed so far?",
+  "What should I study today?",
+  "Give me a quiz on the current topic",
 ];
 
 function getInitials(name: string): string {
   return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
+function MessageActions({ content, onAction }: { content: string, onAction?: (action: string) => void }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="Copy" onClick={handleCopy}>
+        {copied ? <CheckCircle2 className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+      </Button>
+      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="Bookmark">
+        <Bookmark className="h-3 w-3" />
+      </Button>
+      <Separator orientation="vertical" className="h-3 mx-1" />
+      <Button variant="ghost" size="sm" onClick={() => onAction?.("explain")} className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1">
+        <HelpCircle className="h-3 w-3" /> Explain More
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => onAction?.("practice")} className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1">
+        <Code2 className="h-3 w-3" /> Practice
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => onAction?.("quiz")} className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1">
+        <GraduationCap className="h-3 w-3" /> Quiz Me
+      </Button>
+    </div>
+  );
+}
+
 export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const { user } = useUser();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
-  const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
+  const [status, setStatus] = useState<"ready" | "submitted" | "streaming" | "error">("ready");
   const [loadingStep, setLoadingStep] = useState(0);
-  const suggestedQuestions = getSuggestedQuestions(mentor.subject);
-  const mentorTopics = mentor.knowledgeFocus ? mentor.knowledgeFocus.split(',').map(t => t.trim()) : ["React", "Next.js", "Node.js", "Express", "MongoDB"];
-
   const [sessions, setSessions] = useState<any[]>([]);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const sessionQuery = searchParams.get("session");
 
-  // Fetch sessions from Supabase
+  useEffect(() => {
+    if (sessionQuery && sessionQuery !== sessionId) {
+      setSessionId(sessionQuery);
+      setIsCreatingNew(false);
+    }
+  }, [sessionQuery]);
+
+  const suggestedQuestions = getSuggestedQuestions(mentor.subject, stats.currentTopic);
+
+  // Fetch sessions
   useEffect(() => {
     if (!user) return;
     getChatSessions(mentor.id)
-      .then(data => setSessions(data))
-      .catch(err => console.error("Failed to load sessions:", err));
+      .then((data) => setSessions(data))
+      .catch((err) => console.error("Failed to load sessions:", err));
   }, [user, mentor.id]);
 
-  // Load the latest chat session on mount or session change
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+
+  // Auto-select latest session on mount, but respect "New Chat" explicit action
   useEffect(() => {
-    if (sessions && sessions.length > 0 && !sessionId) {
+    if (sessions.length > 0 && !sessionId && !isCreatingNew) {
       setSessionId(sessions[0].id);
     }
-  }, [sessions, sessionId]);
+  }, [sessions, sessionId, isCreatingNew]);
 
-  // Fetch chat history from Supabase when sessionId changes
+  // Load chat history when session changes
   useEffect(() => {
     if (!sessionId) {
       setMessages([]);
       return;
     }
     getChatHistory(sessionId)
-      .then(data => setMessages(data))
-      .catch(err => console.error("Failed to load history:", err));
+      .then((data) => setMessages(data))
+      .catch((err) => console.error("Failed to load history:", err));
   }, [sessionId]);
 
-  // Auto-scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Scroll to bottom
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, status, loadingStep]);
 
-  // Loading Steps Animation
+  // Animate loading steps
   useEffect(() => {
-    if (status === 'submitted' || status === 'streaming') {
+    if (status === "submitted" || status === "streaming") {
       setLoadingStep(0);
       const interval = setInterval(() => {
-        setLoadingStep((prev) => (prev < 2 ? prev + 1 : prev));
-      }, 800);
+        setLoadingStep((prev) => (prev < LOADING_STEPS.length - 1 ? prev + 1 : prev));
+      }, 600);
       return () => clearInterval(interval);
+    } else {
+      setLoadingStep(0);
     }
   }, [status]);
 
   const handleDeleteSession = async () => {
     if (!sessionId || !user) return;
-    const confirmed = window.confirm("Are you sure you want to delete this conversation?");
-    if (!confirmed) return;
-    
-    await deleteChatSession(sessionId);
-    setSessionId(null);
-    setMessages([]);
+    if (!window.confirm("Delete this conversation?")) return;
+    await deleteChatSession(sessionId, mentor.id);
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.delete("session");
+    router.push(`${pathname}?${newParams.toString()}`);
+    toast.success("Conversation deleted.");
   };
 
-  const handleNewSession = () => {
+  const handleNewSession = async () => {
+    setIsCreatingNew(true);
     setSessionId(null);
     setMessages([]);
+    try {
+      const newSessionId = await createChatSession(mentor.id, "New Conversation");
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.set("session", newSessionId);
+      router.push(`${pathname}?${newParams.toString()}`);
+      setIsCreatingNew(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to start new chat");
+      setIsCreatingNew(false);
+    }
   };
 
-  const handlePromptSubmit = async (value: string, model: string) => {
-    if (!value.trim() || !user) return;
-    
-    // Optimistically add user message to UI
-    const newUserMessage = { id: Date.now().toString(), role: "user", content: value };
-    setMessages(prev => [...prev, newUserMessage]);
-    setStatus('submitted');
-    
+  const handlePromptSubmit = async (value: string, model: string, action?: string) => {
+    if ((!value.trim() && !action) || !user) return;
+
+    // Use a synthetic message for actions if no value is provided
+    const displayValue = action ? `*Requested: ${action}*` : value;
+    const newUserMessage = { id: Date.now().toString(), role: "user", content: displayValue };
+    setMessages((prev) => [...prev, newUserMessage]);
+    setStatus("submitted");
+
     let currentSessionId = sessionId;
     if (!currentSessionId) {
       try {
-        currentSessionId = await createChatSession(mentor.id, value.slice(0, 30));
+        currentSessionId = await createChatSession(mentor.id, value.slice(0, 40));
         setSessionId(currentSessionId);
-      } catch (error) {
-        console.error("Failed to create session", error);
-        setStatus('error');
+      } catch {
+        setStatus("error");
+        toast.error("Failed to create session.");
         return;
       }
     }
 
-    // Save user message to Supabase
-    await saveMessage(currentSessionId, "user", value);
+    await saveMessage(currentSessionId!, "user", value);
 
-    // Prepare API call
     const chatBody = {
-      messages: [...messages, newUserMessage],
+      messages: [...messages, newUserMessage].map((m) => ({ role: m.role, content: m.content })),
       mentorId: mentor.id,
       sessionId: currentSessionId,
-      model: model || "llama-3.1-8b-instant"
+      model: model || "llama-3.1-8b-instant",
+      action: action,
     };
 
     try {
-      setStatus('streaming');
-      
-      // Add empty assistant message placeholder
+      setStatus("streaming");
+
       const tempId = `temp-${Date.now()}`;
-      setMessages(prev => [...prev, { id: tempId, role: "assistant", content: "" }]);
+      setMessages((prev) => [...prev, { id: tempId, role: "assistant", content: "" }]);
 
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -145,7 +215,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
         body: JSON.stringify(chatBody),
       });
 
-      if (!res.ok) throw new Error("API responded with error");
+      if (!res.ok) throw new Error(`API Error ${res.status}`);
       if (!res.body) throw new Error("No response body");
 
       const reader = res.body.getReader();
@@ -155,45 +225,49 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunkText = decoder.decode(value, { stream: true });
-        assistantText += chunkText;
-        
-        // Update the last message (the assistant placeholder)
-        setMessages(prev => {
-          const newMessages = [...prev];
-          const lastMsg = newMessages[newMessages.length - 1];
-          if (lastMsg && lastMsg.role === "assistant") {
-            lastMsg.content = assistantText;
+        const chunk = decoder.decode(value, { stream: true });
+        assistantText += chunk;
+
+        setMessages((prev) => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last && last.role === "assistant") {
+            last.content = assistantText;
           }
-          return newMessages;
+          return next;
         });
       }
-      
+
       assistantText += decoder.decode();
-      
-      // Finalize and save assistant message
-      if (!assistantText) assistantText = "[Empty Response]";
-      await saveMessage(currentSessionId, "assistant", assistantText);
-      
+      if (!assistantText) assistantText = "[No response received]";
+
+      await saveMessage(currentSessionId!, "assistant", assistantText);
+
+      // Tool calls are now handled by the python orchestrator.
+      // We don't need to manually parse the stream for regex tags anymore.
     } catch (err) {
       console.error("Chat error:", err);
-      // Fallback update if failed
-      setMessages(prev => {
-        const newMessages = [...prev];
-        const lastMsg = newMessages[newMessages.length - 1];
-        if (lastMsg && lastMsg.role === "assistant") {
-          lastMsg.content = lastMsg.content || "Sorry, I encountered an error. Please try again.";
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last && last.role === "assistant" && !last.content) {
+          last.content = "Sorry, I encountered an error. Please try again.";
         }
-        return newMessages;
+        return next;
       });
+      toast.error("Connection error. Please try again.");
     } finally {
-      setStatus('ready');
+      setStatus("ready");
     }
   };
 
   const handleQuestionClick = (q: string) => {
-     handlePromptSubmit(q, "llama-3.1-8b-instant");
+    handlePromptSubmit(q, "llama-3.1-8b-instant");
   };
+
+  const isThinking = (status === "submitted" || status === "streaming") &&
+    messages.length > 0 &&
+    messages[messages.length - 1].role === "user";
 
   return (
     <div className="flex flex-col h-full bg-background relative">
@@ -201,47 +275,53 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
       <div className="absolute top-4 right-4 z-10 flex gap-2">
         {sessionId && messages.length > 0 && (
           <>
-            <Button variant="outline" size="sm" onClick={handleNewSession} className="gap-2 bg-background/80 backdrop-blur-sm">
-              New Chat
+            <Button variant="outline" size="sm" onClick={handleNewSession} className="gap-1.5 bg-background/80 backdrop-blur-sm text-xs h-7">
+              <Plus className="h-3 w-3" /> New Chat
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDeleteSession} className="bg-background/80 backdrop-blur-sm text-destructive hover:bg-destructive hover:text-destructive-foreground">
+            <Button variant="outline" size="sm" onClick={handleDeleteSession} className="bg-background/80 backdrop-blur-sm text-destructive hover:bg-destructive hover:text-destructive-foreground text-xs h-7">
               Delete
             </Button>
           </>
         )}
       </div>
 
-      {/* Main Conversation Area */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-8 md:px-8" data-lenis-prevent="true">
-        
         {messages.length === 0 ? (
-          /* Empty State / Welcome Screen */
+          // Welcome Screen
           <div className="flex flex-col mt-4 max-w-3xl mx-auto space-y-8 px-4">
             <div className="space-y-3">
               <MaskRevealUp className="text-3xl font-bold tracking-tight">
-                {`👋 Hi ${user?.firstName || 'there'}!`}
+                {`👋 Hi ${user?.firstName || "there"}!`}
               </MaskRevealUp>
               <p className="text-xl text-muted-foreground">
                 I'm your <span className="font-semibold text-foreground">{mentor.role}</span>.
               </p>
-              <p className="text-muted-foreground text-sm">Today I'll help you with:</p>
-              <ul className="list-disc list-inside text-sm text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 pt-2">
-                {mentorTopics.map((topic, i) => (
-                  <li key={i}>{topic}</li>
-                ))}
-              </ul>
+              {stats.currentTopic && stats.currentTopic !== "Introduction" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-200 dark:border-blue-800">
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                    📍 Currently on: {stats.currentTopic}
+                  </span>
+                </div>
+              )}
+              {stats.progressPercent > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  You're <span className="font-semibold text-foreground">{stats.progressPercent}%</span> through your roadmap.
+                  {stats.completedTopics > 0 && ` ${stats.completedTopics} lessons completed!`}
+                </p>
+              )}
             </div>
 
-            <Separator className="my-8" />
-            
-            <div className="space-y-4">
+            <Separator className="my-4" />
+
+            <div className="space-y-3">
               <h3 className="text-sm font-medium text-muted-foreground">Suggested Questions</h3>
               <div className="flex flex-wrap gap-2">
                 {suggestedQuestions.map((q, i) => (
                   <button
                     key={i}
                     onClick={() => handleQuestionClick(q)}
-                    className="text-left px-4 py-2 text-sm rounded-full border bg-muted/20 hover:bg-muted transition-colors hover:border-primary/30"
+                    className="text-left px-4 py-2 text-sm rounded-full border bg-muted/20 hover:bg-muted/50 hover:border-primary/30 transition-all duration-200"
                   >
                     {q}
                   </button>
@@ -250,116 +330,117 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
             </div>
           </div>
         ) : (
-          /* Chat Messages */
-          <div className="max-w-3xl mx-auto space-y-8 pb-12">
+          // Chat Messages
+          <div className="max-w-3xl mx-auto space-y-6 pb-12">
             {messages.map((m: any, index: number) => (
               <div
                 key={m.id}
-                className={`group flex gap-4 ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                className={cn(
+                  "group flex gap-3 animate-in fade-in-0 slide-in-from-bottom-2 duration-300",
+                  m.role === "user" ? "justify-end" : "justify-start"
+                )}
               >
                 {m.role === "assistant" && (
                   <Avatar className="h-8 w-8 ring-1 ring-primary/10 shrink-0 mt-1">
                     {mentor.avatarUrl ? (
                       <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
                     ) : null}
-                    <AvatarFallback style={{ backgroundColor: mentor.avatarColor }} className="text-white text-xs">
+                    <AvatarFallback
+                      style={{ backgroundColor: mentor.avatarColor }}
+                      className="text-white text-xs font-semibold"
+                    >
                       {getInitials(mentor.name)}
                     </AvatarFallback>
                   </Avatar>
                 )}
-                
-                <div className={`flex flex-col gap-2 max-w-[85%] ${m.role === "user" ? "items-end" : "items-start"}`}>
+
+                <div className={cn("flex flex-col max-w-[85%]", m.role === "user" ? "items-end" : "items-start")}>
                   <div
-                    className={`rounded-2xl px-5 py-3.5 overflow-hidden ${
+                    className={cn(
+                      "rounded-2xl px-5 py-3.5 overflow-hidden",
                       m.role === "user"
                         ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-muted/50 rounded-bl-sm text-foreground border shadow-sm"
-                    }`}
+                        : "bg-card rounded-bl-sm text-foreground border shadow-sm"
+                    )}
                   >
-                    <div className="text-sm whitespace-pre-wrap leading-relaxed relative">
+                    <div className="text-sm leading-relaxed relative">
                       {m.role === "user" ? (
-                        m.content
+                        <span className="whitespace-pre-wrap">{m.content}</span>
                       ) : (
-                        <MarkdownRenderer content={m.content} />
-                      )}
-                      {/* Streaming cursor */}
-                      {index === messages.length - 1 && m.role === "assistant" && (status === 'submitted' || status === 'streaming') && !m.content.endsWith(" ") && m.content.length > 0 && (
-                        <span className="inline-block w-1 h-4 bg-primary ml-1 animate-pulse align-middle" />
+                        <>
+                          <MarkdownRenderer content={m.content} />
+                          {/* Streaming cursor */}
+                          {index === messages.length - 1 &&
+                            (status === "submitted" || status === "streaming") &&
+                            m.content.length > 0 && (
+                              <span className="inline-block w-0.5 h-4 bg-primary ml-0.5 animate-pulse align-middle" />
+                            )}
+                        </>
                       )}
                     </div>
                   </div>
-                  
-                  {/* Hover Actions */}
-                  {m.role === "assistant" && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="Copy" onClick={() => navigator.clipboard.writeText(m.content)}>
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="Bookmark">
-                        <Bookmark className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="Regenerate">
-                        <RefreshCcw className="h-3 w-3" />
-                      </Button>
-                      <Separator orientation="vertical" className="h-3 mx-1" />
-                      <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1">
-                        <HelpCircle className="h-3 w-3" /> Explain More
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1">
-                        <Code2 className="h-3 w-3" /> Practice
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1">
-                        <GraduationCap className="h-3 w-3" /> Quiz Me
-                      </Button>
-                    </div>
+
+                  {m.role === "assistant" && m.content && (
+                    <MessageActions 
+                      content={m.content} 
+                      onAction={(act) => handlePromptSubmit("", "llama-3.1-8b-instant", act)} 
+                    />
                   )}
                 </div>
-                
+
                 {m.role === "user" && (
                   <Avatar className="h-8 w-8 ring-1 ring-primary/10 shrink-0 mt-1">
-                    <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                       {user?.firstName?.[0] || 'U'}
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
+                      {user?.firstName?.[0] || "U"}
                     </AvatarFallback>
                   </Avatar>
                 )}
               </div>
             ))}
-            
-            {/* AI Thinking Animation */}
-            {(status === 'submitted' || status === 'streaming') && messages.length > 0 && messages[messages.length - 1].role === "user" && (
-              <div className="flex gap-4 justify-start">
+
+            {/* Intelligent Loading Animation */}
+            {isThinking && (
+              <div className="flex gap-3 justify-start animate-in fade-in-0 duration-200">
                 <Avatar className="h-8 w-8 ring-1 ring-primary/10 shrink-0 mt-1">
                   {mentor.avatarUrl ? (
                     <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
                   ) : null}
-                  <AvatarFallback style={{ backgroundColor: mentor.avatarColor }} className="text-white text-xs">
+                  <AvatarFallback
+                    style={{ backgroundColor: mentor.avatarColor }}
+                    className="text-white text-xs font-semibold"
+                  >
                     {getInitials(mentor.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="rounded-2xl px-5 py-3.5 max-w-[85%] bg-muted/50 rounded-bl-sm border shadow-sm flex flex-col gap-1.5 min-w-[160px]">
-                   <div className="flex items-center gap-2 text-xs font-medium text-primary mb-1">
-                     <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                     <span>AI Thinking...</span>
-                   </div>
-                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {loadingStep === 0 && <Loader2 className="h-3 w-3 animate-spin" />}
-                      {loadingStep > 0 ? <span className="text-green-500">✓</span> : null}
-                      <span className={loadingStep > 0 ? "line-through opacity-70" : ""}>Reading Context</span>
-                   </div>
-                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {loadingStep === 1 && <Loader2 className="h-3 w-3 animate-spin" />}
-                      {loadingStep > 1 ? <span className="text-green-500">✓</span> : null}
-                      <span className={loadingStep > 1 ? "line-through opacity-70" : ""}>Searching Notes</span>
-                   </div>
-                   {loadingStep >= 2 && (
-                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span>Generating Answer</span>
-                     </div>
-                   )}
+
+                <div className="rounded-2xl rounded-bl-sm px-5 py-4 bg-card border shadow-sm min-w-[220px]">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-primary mb-3">
+                    <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                    <span>{mentor.name} is thinking...</span>
+                  </div>
+                  <div className="space-y-2">
+                    {LOADING_STEPS.map((step, i) => (
+                      <div key={i} className={cn(
+                        "flex items-center gap-2 text-xs transition-all duration-300",
+                        i < loadingStep && "text-muted-foreground/50 line-through",
+                        i === loadingStep && "text-foreground",
+                        i > loadingStep && "text-muted-foreground/30"
+                      )}>
+                        {i < loadingStep ? (
+                          <span className="text-emerald-500 text-[10px]">✓</span>
+                        ) : i === loadingStep ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                        ) : (
+                          <span className="h-3 w-3" />
+                        )}
+                        <span>{step.icon} {step.text}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
+
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -367,38 +448,33 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
       {/* Input Area */}
       <div className="px-4 pb-6 pt-2 bg-background border-t shrink-0 flex flex-col gap-2 max-w-4xl mx-auto w-full">
-        {/* Toolbar */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide px-2">
-           <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
-             <Plus className="h-3.5 w-3.5" /> Upload
-           </Button>
-           <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
-             <Mic className="h-3.5 w-3.5" /> Voice
-           </Button>
-           <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
-             <FileText className="h-3.5 w-3.5" /> Add PDF
-           </Button>
-           <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
-             <ImageIcon className="h-3.5 w-3.5" /> Image
-           </Button>
-           <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
-             <Video className="h-3.5 w-3.5" /> Video
-           </Button>
-           <Separator orientation="vertical" className="h-4 mx-1" />
-           <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
-             <Code2 className="h-3.5 w-3.5" /> Code Mode
-           </Button>
-           <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
-             <Brain className="h-3.5 w-3.5" /> Deep Think
-           </Button>
-           <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
-             <Globe className="h-3.5 w-3.5" /> Search Web
-           </Button>
-           <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
-             <Zap className="h-3.5 w-3.5" /> Live Mode
-           </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
+            <Plus className="h-3.5 w-3.5" /> Upload
+          </Button>
+          
+          {[
+            { icon: <FileText className="h-3.5 w-3.5" />, label: "Add PDF" },
+            { icon: <ImageIcon className="h-3.5 w-3.5" />, label: "Image" },
+            { icon: <Video className="h-3.5 w-3.5" />, label: "Video" },
+          ].map(({ icon, label }) => (
+            <Button key={label} variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
+              {icon} {label}
+            </Button>
+          ))}
+          <Separator orientation="vertical" className="h-4 mx-1" />
+          {[
+            { icon: <Code2 className="h-3.5 w-3.5" />, label: "Code Mode" },
+            { icon: <Brain className="h-3.5 w-3.5" />, label: "Deep Think" },
+            { icon: <Globe className="h-3.5 w-3.5" />, label: "Search Web" },
+            { icon: <Zap className="h-3.5 w-3.5" />, label: "Live Mode" },
+          ].map(({ icon, label }) => (
+            <Button key={label} variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 rounded-full text-muted-foreground hover:text-foreground shrink-0" disabled title="Coming soon">
+              {icon} {label}
+            </Button>
+          ))}
         </div>
-        
+
         <AI_Prompt
           onSubmit={handlePromptSubmit}
           placeholder={`Ask ${mentor.name} anything...`}
@@ -407,6 +483,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
           models={["llama-3.1-8b-instant", "llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"]}
           defaultModel="llama-3.1-8b-instant"
           className="py-0"
+          voiceButton={<VapiVoiceButton mentor={mentor} sessionId={sessionId || undefined} isInputIcon={true} />}
         />
       </div>
     </div>

@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
-import { Check, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, Copy, ChevronDown, ChevronUp, WrapText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface CodeBlockProps {
   language: string;
@@ -14,6 +15,7 @@ interface CodeBlockProps {
 export function CodeBlock({ language, value }: CodeBlockProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isWrapped, setIsWrapped] = useState(false);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(value);
@@ -50,6 +52,15 @@ export function CodeBlock({ language, value }: CodeBlockProps) {
           <Button
             variant="ghost"
             size="icon"
+            className={cn("h-6 w-6 text-zinc-400 hover:text-white", isWrapped && "text-white bg-zinc-800")}
+            onClick={() => setIsWrapped(!isWrapped)}
+            title="Toggle word wrap"
+          >
+            <WrapText className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             className="h-6 w-6 text-zinc-400 hover:text-white"
             onClick={copyToClipboard}
           >
@@ -73,7 +84,8 @@ export function CodeBlock({ language, value }: CodeBlockProps) {
             fontSize: "0.875rem",
           }}
           showLineNumbers={true}
-          wrapLines={true}
+          wrapLines={isWrapped}
+          wrapLongLines={isWrapped}
           lineNumberStyle={{
             minWidth: "2.5em",
             paddingRight: "1em",
