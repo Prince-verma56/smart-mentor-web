@@ -7,9 +7,7 @@ import AI_Prompt from "@/components/kokonutui/ai-prompt";
 import MaskRevealUp from "@/components/ui/smoothui/mask-reveal-up";
 import { useUser } from "@clerk/nextjs";
 import { Separator } from "@/components/ui/separator";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useChat } from "@ai-sdk/react";
+import { getChatSessions, getChatHistory, createChatSession, saveMessage, deleteChatSession } from "@/actions/chatActions";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 
 interface ConversationPanelProps {
@@ -34,54 +32,39 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
   const [loadingStep, setLoadingStep] = useState(0);
   const suggestedQuestions = getSuggestedQuestions(mentor.subject);
   const mentorTopics = mentor.knowledgeFocus ? mentor.knowledgeFocus.split(',').map(t => t.trim()) : ["React", "Next.js", "Node.js", "Express", "MongoDB"];
 
-  // Convex Queries & Mutations
-  const sessions = useQuery(api.chats.getSessions, user ? { mentorId: mentor.id, userId: user.id } : "skip");
-  const history = useQuery(api.chats.getMessages, sessionId ? { sessionId } : "skip");
-  
-  const createSession = useMutation(api.chats.createSession);
-  const saveMessage = useMutation(api.chats.saveMessage);
-  const deleteSession = useMutation(api.chats.deleteSession);
+  const [sessions, setSessions] = useState<any[]>([]);
 
-  // useChat Integration
-  const { messages, setMessages, status, append, sendMessage } = useChat({
-    api: "/api/chat",
-    body: {
-      mentorId: mentor.id,
-      sessionId: sessionId,
-      model: "llama-3.1-8b-instant"
-    },
-    streamProtocol: "text",
-    onFinish: async (message: any) => {
-      if (sessionId) {
-        await saveMessage({ sessionId, role: "assistant", content: message.content });
-      }
-    }
-  } as any) as any;
+  // Fetch sessions from Supabase
+  useEffect(() => {
+    if (!user) return;
+    getChatSessions(mentor.id)
+      .then(data => setSessions(data))
+      .catch(err => console.error("Failed to load sessions:", err));
+  }, [user, mentor.id]);
 
   // Load the latest chat session on mount or session change
   useEffect(() => {
     if (sessions && sessions.length > 0 && !sessionId) {
-      setSessionId(sessions[0]._id);
+      setSessionId(sessions[0].id);
     }
   }, [sessions, sessionId]);
 
-  // Sync Convex history to useChat state
+  // Fetch chat history from Supabase when sessionId changes
   useEffect(() => {
-    if (history) {
-      const formattedHistory = history.map((msg: any) => ({
-        id: msg._id,
-        role: msg.role,
-        content: msg.content
-      }));
-      setMessages(formattedHistory);
-    } else {
+    if (!sessionId) {
       setMessages([]);
+      return;
     }
-  }, [history, setMessages]);
+    getChatHistory(sessionId)
+      .then(data => setMessages(data))
+      .catch(err => console.error("Failed to load history:", err));
+  }, [sessionId]);
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -108,7 +91,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
     const confirmed = window.confirm("Are you sure you want to delete this conversation?");
     if (!confirmed) return;
     
-    await deleteSession({ sessionId, userId: user.id });
+    await deleteChatSession(sessionId);
     setSessionId(null);
     setMessages([]);
   };
@@ -121,31 +104,90 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const handlePromptSubmit = async (value: string, model: string) => {
     if (!value.trim() || !user) return;
     
+    // Optimistically add user message to UI
+    const newUserMessage = { id: Date.now().toString(), role: "user", content: value };
+    setMessages(prev => [...prev, newUserMessage]);
+    setStatus('submitted');
+    
     let currentSessionId = sessionId;
     if (!currentSessionId) {
       try {
-        currentSessionId = await createSession({
-          mentorId: mentor.id,
-          userId: user.id,
-          title: value.slice(0, 30)
-        });
+        currentSessionId = await createChatSession(mentor.id, value.slice(0, 30));
         setSessionId(currentSessionId);
       } catch (error) {
         console.error("Failed to create session", error);
+        setStatus('error');
         return;
       }
     }
 
-    // Save user message to Convex
-    await saveMessage({ sessionId: currentSessionId, role: "user", content: value });
+    // Save user message to Supabase
+    await saveMessage(currentSessionId, "user", value);
 
-    // Append to useChat (this triggers the API call automatically)
-    if (append) {
-      append({ role: "user", content: value });
-    } else if (sendMessage) {
-      sendMessage({ role: "user", content: value });
-    } else {
-      console.error("Neither append nor sendMessage is available on useChat");
+    // Prepare API call
+    const chatBody = {
+      messages: [...messages, newUserMessage],
+      mentorId: mentor.id,
+      sessionId: currentSessionId,
+      model: model || "llama-3.1-8b-instant"
+    };
+
+    try {
+      setStatus('streaming');
+      
+      // Add empty assistant message placeholder
+      const tempId = `temp-${Date.now()}`;
+      setMessages(prev => [...prev, { id: tempId, role: "assistant", content: "" }]);
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chatBody),
+      });
+
+      if (!res.ok) throw new Error("API responded with error");
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunkText = decoder.decode(value, { stream: true });
+        assistantText += chunkText;
+        
+        // Update the last message (the assistant placeholder)
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const lastMsg = newMessages[newMessages.length - 1];
+          if (lastMsg && lastMsg.role === "assistant") {
+            lastMsg.content = assistantText;
+          }
+          return newMessages;
+        });
+      }
+      
+      assistantText += decoder.decode();
+      
+      // Finalize and save assistant message
+      if (!assistantText) assistantText = "[Empty Response]";
+      await saveMessage(currentSessionId, "assistant", assistantText);
+      
+    } catch (err) {
+      console.error("Chat error:", err);
+      // Fallback update if failed
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastMsg = newMessages[newMessages.length - 1];
+        if (lastMsg && lastMsg.role === "assistant") {
+          lastMsg.content = lastMsg.content || "Sorry, I encountered an error. Please try again.";
+        }
+        return newMessages;
+      });
+    } finally {
+      setStatus('ready');
     }
   };
 

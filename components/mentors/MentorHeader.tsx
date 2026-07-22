@@ -10,8 +10,7 @@ import type { Mentor, MentorStats } from "@/types/mentor";
 import Breadcrumb from "@/components/ui/smoothui/breadcrumb";
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { updateMentorAction } from "@/actions/mentorActions";
 
 interface MentorHeaderProps {
   mentor: Mentor;
@@ -29,7 +28,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(mentor.name);
   const inputRef = useRef<HTMLInputElement>(null);
-  const updateMentor = useMutation(api.mentors.updateMentor as any);
+  // updateMentor action used directly
 
   // Mock knowledge sources count based on subject or random for now
   const knowledgeCount = mentor.knowledgeFocus ? mentor.knowledgeFocus.split(',').length : 3;
@@ -43,7 +42,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
   const handleSaveName = async () => {
     if (nameInput.trim() && nameInput !== mentor.name) {
       try {
-        await updateMentor({ id: mentor.id, name: nameInput.trim() });
+        await updateMentorAction(mentor.id, { name: nameInput.trim() });
       } catch (error) {
         console.error("Failed to update mentor name", error);
         setNameInput(mentor.name);
@@ -69,7 +68,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
         <Breadcrumb
           items={[
             { label: <Home className="h-3.5 w-3.5" />, href: "/dashboard" },
-            { label: "Mentors", href: "/dashboard/mentors" },
+            { label: "Mentors", href: "/dashboard" },
             { label: mentor.name },
           ]}
         />

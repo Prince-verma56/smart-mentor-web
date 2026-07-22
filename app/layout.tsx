@@ -5,7 +5,6 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { LenisProvider } from "@/components/providers/LenisProvider";
 import { Navbar } from "@/components/layout/Navbar";
 import { Toaster } from "sonner";
-import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,7 +35,6 @@ export default function RootLayout({
     >
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-300">
         <ClerkProvider>
-          <ConvexClientProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
               <LenisProvider>
                 <Navbar />
@@ -46,7 +44,6 @@ export default function RootLayout({
                 <Toaster position="bottom-right" />
               </LenisProvider>
             </ThemeProvider>
-          </ConvexClientProvider>
         </ClerkProvider>
       </body>
     </html>

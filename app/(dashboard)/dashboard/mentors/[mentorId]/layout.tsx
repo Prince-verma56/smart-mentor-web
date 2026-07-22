@@ -1,7 +1,7 @@
 // The mentor workspace uses a full-height, edge-to-edge layout.
 // We override the parent dashboard layout padding here.
 import type { ReactNode } from "react";
-import { mentorService } from "@/services/mentorService";
+import { getMentorById } from "@/actions/mentorActions";
 import type { Metadata } from "next";
 
 interface MentorLayoutProps {
@@ -10,7 +10,7 @@ interface MentorLayoutProps {
 
 export async function generateMetadata({ params }: MentorLayoutProps): Promise<Metadata> {
   const { mentorId } = await params;
-  const mentor = await mentorService.getMentorById(mentorId, "user_2test123");
+  const mentor = await getMentorById(mentorId);
   return {
     title: mentor ? mentor.name : "AI Mentor",
   };

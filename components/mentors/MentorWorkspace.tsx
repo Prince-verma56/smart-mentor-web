@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use, Suspense } from "react";
 import {
   Sheet,
   SheetContent,
@@ -24,6 +24,7 @@ interface MentorWorkspaceProps {
   mentor: Mentor;
   stats: MentorStats;
   roadmap?: MentorRoadmap;
+  roadmapPromise?: Promise<MentorRoadmap | null>;
   view?: "conversation" | "settings";
   children?: React.ReactNode;
 }
@@ -46,13 +47,20 @@ function RoadmapPlaceholder() {
   );
 }
 
+function RoadmapWrapper({ promise }: { promise: Promise<MentorRoadmap | null> }) {
+  const roadmap = use(promise);
+  return roadmap ? <RoadmapCard roadmap={roadmap} /> : <RoadmapPlaceholder />;
+}
+
 function RightPanelContent({
   stats,
   roadmap,
+  roadmapPromise,
   mentorId,
 }: {
   stats: MentorStats;
   roadmap?: MentorRoadmap;
+  roadmapPromise?: Promise<MentorRoadmap | null>;
   mentorId: string;
 }) {
   return (
@@ -70,7 +78,13 @@ function RightPanelContent({
             <ProgressCard stats={stats} />
           </TabsContent>
           <TabsContent value="roadmap" className="mt-0">
-            {roadmap ? <RoadmapCard roadmap={roadmap} /> : <RoadmapPlaceholder />}
+            {roadmapPromise ? (
+              <Suspense fallback={<RoadmapPlaceholder />}>
+                <RoadmapWrapper promise={roadmapPromise} />
+              </Suspense>
+            ) : (
+              roadmap ? <RoadmapCard roadmap={roadmap} /> : <RoadmapPlaceholder />
+            )}
           </TabsContent>
           <TabsContent value="resources" className="mt-0">
             <ResourcePanel mentorId={mentorId} />
@@ -85,6 +99,7 @@ export function MentorWorkspace({
   mentor,
   stats,
   roadmap,
+  roadmapPromise,
   view = "conversation",
   children,
 }: MentorWorkspaceProps) {
@@ -124,10 +139,11 @@ export function MentorWorkspace({
 
         {/* ── RIGHT SIDEBAR ────────────────────────── */}
         <div className="h-full overflow-hidden flex flex-col border-l bg-background">
-          <RightPanelContent
-            stats={stats}
-            roadmap={roadmap}
-            mentorId={mentor.id}
+          <RightPanelContent 
+            stats={stats} 
+            roadmap={roadmap} 
+            roadmapPromise={roadmapPromise}
+            mentorId={mentor.id} 
           />
         </div>
       </div>

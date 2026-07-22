@@ -1,6 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
-import { mentorService } from "@/services/mentorService";
+import { getMentorById } from "@/actions/mentorActions";
 import { auth } from "@clerk/nextjs/server";
 
 export async function POST(req: Request) {
@@ -12,13 +12,16 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     console.log("Proxying to Python Backend:", body);
-    const { messages, mentorId, model } = body;
+    
+    // Vercel AI SDK might send extra properties in `body.data` or at the root `body`
+    const mentorId = body.mentorId || (body.data && body.data.mentorId);
+    const model = body.model || (body.data && body.data.model) || "llama-3.1-8b-instant";
+    const messages = body.messages;
 
     if (!mentorId) {
       return new Response("Missing mentorId", { status: 400 });
     }
-    
-    const mentor = await mentorService.getMentorById(mentorId, userId);
+    const mentor = await getMentorById(mentorId);
     
     if (!mentor) {
       return new Response("Mentor not found", { status: 404 });
@@ -28,6 +31,10 @@ export async function POST(req: Request) {
 Your teaching style is: ${mentor.conversationStyle}.
 The student's learning goal is: ${mentor.learningGoal}.
 
+CURRENT TOPIC CONTEXT:
+The student is currently learning: "${mentor.stats.currentTopic}".
+Please tailor your responses to help them understand this specific topic, unless they explicitly ask about something else.
+
 CRITICAL INSTRUCTIONS:
 - You must deeply embody this persona.
 - Keep responses relatively concise and focused on the learning goal.
@@ -35,7 +42,10 @@ CRITICAL INSTRUCTIONS:
 - Never break character or refer to yourself as an AI assistant.`;
 
     const payload = {
-      ...body,
+      messages: body.messages,
+      mentorId: mentorId,
+      model: model,
+      sessionId: body.sessionId || (body.data && body.data.sessionId),
       system_prompt: systemPrompt
     };
 

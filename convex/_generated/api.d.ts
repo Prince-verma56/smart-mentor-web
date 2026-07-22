@@ -8,21 +8,13 @@
  * @module
  */
 
-import type * as chats from "../chats.js";
-import type * as mentors from "../mentors.js";
-import type * as roadmaps from "../roadmaps.js";
-
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{
-  chats: typeof chats;
-  mentors: typeof mentors;
-  roadmaps: typeof roadmaps;
-}>;
+declare const fullApi: ApiFromModules<{}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

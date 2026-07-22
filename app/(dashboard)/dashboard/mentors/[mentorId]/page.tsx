@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MentorWorkspace } from "@/components/mentors/MentorWorkspace";
-import { mentorService } from "@/services/mentorService";
-
-import { roadmapService } from "@/services/roadmapService";
+import { getMentorById } from "@/actions/mentorActions";
+import { getOrGenerateRoadmap } from "@/actions/roadmapActions";
 import { auth } from "@clerk/nextjs/server";
 
 interface MentorWorkspacePageProps {
@@ -13,7 +12,7 @@ interface MentorWorkspacePageProps {
 export async function generateMetadata({ params }: MentorWorkspacePageProps): Promise<Metadata> {
   const { userId } = await auth();
   const { mentorId } = await params;
-  const mentor = await mentorService.getMentorById(mentorId, userId || "unauthenticated");
+  const mentor = await getMentorById(mentorId);
   return {
     title: mentor ? `${mentor.name} Workspace` : "Mentor Workspace",
   };
@@ -27,7 +26,7 @@ export default async function MentorWorkspacePage({ params }: MentorWorkspacePag
     notFound();
   }
 
-  const mentor = await mentorService.getMentorById(mentorId, userId);
+  const mentor = await getMentorById(mentorId);
 
   if (!mentor) {
     notFound();
@@ -35,14 +34,14 @@ export default async function MentorWorkspacePage({ params }: MentorWorkspacePag
 
   const stats = mentor.stats;
 
-  // Auto-generate roadmap using Groq if one doesn't exist yet
-  const roadmap = await roadmapService.getOrGenerateRoadmap(mentorId, userId);
+  // Pass the promise down to avoid blocking the page load during generation!
+  const roadmapPromise = getOrGenerateRoadmap(mentorId, userId);
 
   return (
     <MentorWorkspace
       mentor={mentor}
       stats={stats}
-      roadmap={roadmap ?? undefined}
+      roadmapPromise={roadmapPromise}
     />
   );
 }

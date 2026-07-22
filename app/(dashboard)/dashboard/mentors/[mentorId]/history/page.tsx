@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MentorWorkspace } from "@/components/mentors/MentorWorkspace";
-import { mentorService } from "@/services/mentorService";
-import { roadmapService } from "@/services/roadmapService";
+import { getMentorById } from "@/actions/mentorActions";
+import { getOrGenerateRoadmap } from "@/actions/roadmapActions";
 import { auth } from "@clerk/nextjs/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { History, Search } from "lucide-react";
@@ -15,7 +15,7 @@ interface HistoryPageProps {
 export async function generateMetadata({ params }: HistoryPageProps): Promise<Metadata> {
   const { userId } = await auth();
   const { mentorId } = await params;
-  const mentor = await mentorService.getMentorById(mentorId, userId || "unauthenticated");
+  const mentor = await getMentorById(mentorId);
   return {
     title: mentor ? `History - ${mentor.name}` : "Mentor History",
   };
@@ -29,11 +29,11 @@ export default async function HistoryPage({ params }: HistoryPageProps) {
     notFound();
   }
 
-  const mentor = await mentorService.getMentorById(mentorId, userId);
+  const mentor = await getMentorById(mentorId);
   if (!mentor) {
     notFound();
   }
-  const roadmap = await roadmapService.getOrGenerateRoadmap(mentorId, userId);
+  const roadmap = await getOrGenerateRoadmap(mentorId, userId);
 
   return (
     <MentorWorkspace mentor={mentor} stats={mentor.stats} roadmap={roadmap ?? undefined} view="settings">

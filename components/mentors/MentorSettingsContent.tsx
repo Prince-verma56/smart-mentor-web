@@ -10,8 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Settings, Brain, MessageSquare, Mic, FolderOpen, AlertTriangle, Loader2 } from "lucide-react";
 import type { Mentor, MentorStats } from "@/types/mentor";
 import type { MentorRoadmap } from "@/types/roadmap";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { updateMentorAction, deleteMentorAction } from "@/actions/mentorActions";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -24,8 +23,7 @@ interface MentorSettingsContentProps {
 
 export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettingsContentProps) {
   const router = useRouter();
-  const updateMentor = useMutation(api.mentors.updateMentor as any);
-  const deleteMentor = useMutation(api.mentors.deleteMentor as any);
+  // using actions directly
 
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,11 +35,10 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
   const handleSaveGeneral = async () => {
     setIsSaving(true);
     try {
-      await updateMentor({
-        id: mentor.id,
+      await updateMentorAction(mentor.id, {
         name: formData.name,
         role: formData.role,
-        learningGoal: formData.learningGoal,
+        learning_goal: formData.learningGoal,
       });
       toast.success("Settings saved successfully.");
       router.refresh();
@@ -55,7 +52,7 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to permanently delete this mentor? All chat history and roadmaps will be lost.")) {
       try {
-        await deleteMentor({ id: mentor.id });
+        await deleteMentorAction(mentor.id);
         toast.success("Mentor deleted.");
         router.push("/dashboard");
       } catch (e) {

@@ -12,12 +12,13 @@ export default function CreateMentorPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/dashboard/mentors">
+        <Link href="/dashboard">
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground -ml-2 mb-2 hover:bg-transparent hover:text-foreground transition-colors">
             <ChevronLeft className="h-4 w-4" />
             Back to Mentors
           </Button>
         </Link>
+        <h1 className="text-3xl font-bold tracking-tight">Create AI Mentor</h1>
       </div>
 
       <MentorWizard />

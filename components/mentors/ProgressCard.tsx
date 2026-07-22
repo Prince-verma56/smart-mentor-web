@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Flame, BookOpen, Clock, Target, PlayCircle, Trophy, TrendingUp, Sparkles, AlertCircle } from "lucide-react";
+import { Flame, BookOpen, Clock, Target, PlayCircle, Trophy, TrendingUp, Sparkles, AlertCircle, Brain, Rocket } from "lucide-react";
 import type { MentorStats } from "@/types/mentor";
 
 interface ProgressCardProps {
@@ -16,10 +16,10 @@ export function ProgressCard({ stats }: ProgressCardProps) {
   
   // Example for deriving achievements or using real arrays when available
   const achievements = [
-    { id: 1, icon: "🎯", name: "First Session", unlocked: (stats.totalSessions || 0) > 0 },
-    { id: 2, icon: "🔥", name: "3 Day Streak", unlocked: (stats.learningStreak || 0) >= 3 },
-    { id: 3, icon: "🧠", name: "Quiz Master", unlocked: (stats.questionsAsked || 0) >= 10 },
-    { id: 4, icon: "🚀", name: "Fast Learner", unlocked: (stats.completedTopics || 0) >= 5 },
+    { id: 1, icon: <Target className="h-6 w-6 text-blue-500" />, name: "First Session", unlocked: (stats.totalSessions || 0) > 0 },
+    { id: 2, icon: <Flame className="h-6 w-6 text-orange-500" />, name: "3 Day Streak", unlocked: (stats.learningStreak || 0) >= 3 },
+    { id: 3, icon: <Brain className="h-6 w-6 text-purple-500" />, name: "Quiz Master", unlocked: (stats.questionsAsked || 0) >= 10 },
+    { id: 4, icon: <Rocket className="h-6 w-6 text-red-500" />, name: "Fast Learner", unlocked: (stats.completedTopics || 0) >= 5 },
   ];
 
   const weeklyGoalDays = stats.learningStreak || 0;
@@ -157,7 +157,7 @@ export function ProgressCard({ stats }: ProgressCardProps) {
                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xl shadow-sm border">
                    {achievement.icon}
                  </div>
-                 <span className="text-[10px] font-medium text-center w-16 truncate">{achievement.name}</span>
+                 <span className="text-[10px] font-medium text-center w-20 leading-tight">{achievement.name}</span>
                </div>
              ))}
            </div>

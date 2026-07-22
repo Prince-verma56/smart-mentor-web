@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle, Lock, PlayCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MentorRoadmap, TopicStatus } from "@/types/roadmap";
 import { toast } from "sonner";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { toggleTopicStatusAction } from "@/actions/roadmapActions";
 
 interface RoadmapCardProps {
   roadmap: MentorRoadmap;
@@ -24,7 +23,8 @@ const statusIcon: Record<TopicStatus, React.ReactNode> = {
 export function RoadmapCard({ roadmap }: RoadmapCardProps) {
   const [isPending, startTransition] = useTransition();
   const [optimisticRoadmap, setOptimisticRoadmap] = useState(roadmap);
-  const updateTopic = useMutation(api.roadmaps.updateTopicStatus as any);
+
+
 
   const handleToggle = (topicId: string, currentStatus: string) => {
     // If it's a mock topic (starts with "topic-"), don't try to save it to DB
@@ -53,7 +53,7 @@ export function RoadmapCard({ roadmap }: RoadmapCardProps) {
     // Server Action (Convex Mutation)
     startTransition(async () => {
       try {
-        const res = await updateTopic({ topicId, status: currentStatus === "completed" ? "available" : "completed" });
+        const res = await toggleTopicStatusAction(topicId, currentStatus);
         if (res.success) {
           toast.success(res.newStatus === "completed" ? "Topic completed! 🎉" : "Topic unmarked.");
         }

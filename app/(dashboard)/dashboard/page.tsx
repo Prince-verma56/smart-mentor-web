@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { MentorGrid } from "@/components/mentors/MentorGrid";
-import { mentorService } from "@/services/mentorService";
+import { getMentorsForUser } from "@/actions/mentorActions";
 import type { MentorWithStats } from "@/types/mentor";
 import { Plus, Sparkles, Clock, Target, BrainCircuit, Flame, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   if (!userId) redirect("/login");
 
   const user = await currentUser();
-  const allMentors = (await mentorService.getMentorsForUser(userId)) as unknown as MentorWithStats[];
+  const allMentors = (await getMentorsForUser()) as unknown as MentorWithStats[];
 
   // Stats calculation
   const totalSessions = allMentors.reduce((a, m) => a + m.stats.totalSessions, 0);
