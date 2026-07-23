@@ -111,7 +111,6 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
       } else {
         toast.success("Roadmap reset to beginning.");
         setShowReset(false);
-        setOptimisticRoadmap(roadmap);
       }
     });
   };
@@ -155,6 +154,8 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
           value={progressPercent}
           completed={completedCount}
           total={totalCount}
+          allTopics={allTopics}
+          currentTopic={currentTopic}
         />
       </div>
 
@@ -170,16 +171,24 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
                 </p>
               </div>
             )}
-            {phase.topics.map((topic) => (
-              <RoadmapTopicCard
-                key={topic.id}
-                topic={topic}
-                onToggle={handleToggle}
-                onSkip={handleSkip}
-                onRevision={handleRevision}
-                onResume={handleResume}
-                isPending={isPending}
-              />
+            {phase.topics.map((topic, idx) => (
+              <div key={topic.id} className="relative group/topic">
+                {/* Timeline connector */}
+                {idx !== phase.topics.length - 1 && (
+                  <div className="absolute left-6 top-[34px] bottom-[-16px] w-[2px] bg-border/40 group-hover/topic:bg-border/60 transition-colors z-0" />
+                )}
+                
+                <div className="relative z-10">
+                  <RoadmapTopicCard
+                    topic={topic}
+                    onToggle={handleToggle}
+                    onSkip={handleSkip}
+                    onRevision={handleRevision}
+                    onResume={handleResume}
+                    isPending={isPending}
+                  />
+                </div>
+              </div>
             ))}
           </div>
         ))}

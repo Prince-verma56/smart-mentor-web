@@ -24,8 +24,8 @@ import { MentorSidebar } from "./MentorSidebar";
 import { MentorHeader } from "./MentorHeader";
 import { ConversationPanel } from "./ConversationPanel";
 import { ResourcePanel } from "./ResourcePanel";
-import { ProgressCard } from "./ProgressCard";
 import { RoadmapSidebar } from "@/components/roadmap/RoadmapSidebar";
+import { VisualAnalytics } from "./VisualAnalytics";
 import { 
   Tooltip, 
   TooltipContent, 
@@ -132,8 +132,8 @@ function RightPanelContent({
       <ScrollArea className="flex-1 min-h-0" data-lenis-prevent="true">
         <div className="p-3">
           <TabsContent value="progress" className="mt-0">
-            {/* ProgressCard now gets live stats */}
-            <ProgressCard stats={liveStats} />
+            {/* Phase X Visual Analytics Engine */}
+            <VisualAnalytics stats={liveStats} />
           </TabsContent>
           <TabsContent value="roadmap" className="mt-0">
             {roadmapPromise ? (

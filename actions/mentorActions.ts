@@ -44,6 +44,7 @@ export async function createMentorAction(formData: FormData) {
         learning_goal: learningGoal,
         session_duration: sessionDuration,
         knowledge_focus: knowledgeFocus,
+        voice_id: formData.get("voiceId") as string || "21m00Tcm4TlvDq8ikWAM"
       })
       .select("id")
       .single();
@@ -256,6 +257,7 @@ export async function updateMentorVoiceSettingsAction(mentorId: string, settings
       voice_temperature: settings.voiceTemperature,
       voice_interruptions: settings.voiceInterruptions,
       voice_auto_start: settings.voiceAutoStart,
+      voice_id: settings.voiceId,
     })
     .eq("id", mentorId)
     .eq("user_id", userId);

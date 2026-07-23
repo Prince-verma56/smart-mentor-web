@@ -48,6 +48,7 @@ export function MentorWizard() {
   const [name, setName] = useState("");
   const [subject, setSubject] = useState<MentorSubject | "">("");
   const [learningGoal, setLearningGoal] = useState("");
+  const [voiceId, setVoiceId] = useState("21m00Tcm4TlvDq8ikWAM");
 
   const isStep1Valid = name.trim().length > 0 && subject !== "";
   const isStep2Valid = learningGoal.trim().length > 10;
@@ -61,6 +62,7 @@ export function MentorWizard() {
     formData.append("subject", subject);
     formData.append("role", `${subject} Expert`); // Auto-generated
     formData.append("learningGoal", learningGoal);
+    formData.append("voiceId", voiceId);
     
     // Intelligent Defaults
     formData.append("difficultyLevel", "intermediate");
@@ -135,6 +137,24 @@ export function MentorWizard() {
                       onValueChange={(v) => setSubject(v as MentorSubject)}
                       placeholder="Select a core subject"
                       options={SUBJECTS}
+                      className="h-12 text-base px-4"
+                    />
+                  </div>
+                  <div className="space-y-3 pt-2">
+                    <Label htmlFor="voiceId" className="text-base font-semibold">Voice Identity & Tone</Label>
+                    <Select 
+                      name="voiceId"
+                      value={voiceId} 
+                      onValueChange={(v) => setVoiceId(v)}
+                      placeholder="Select a voice for your mentor"
+                      options={[
+                        { label: "Rachel (Female, Friendly & Clear)", value: "21m00Tcm4TlvDq8ikWAM" },
+                        { label: "Drew (Male, Professional & News)", value: "29vD33N1CtxCmqQRPOHJ" },
+                        { label: "Bella (Female, Soft & Encouraging)", value: "EXAVITQu4vr4xnSDxMaL" },
+                        { label: "Adam (Male, Deep & Strict)", value: "pNInz6obpgDQGcFmaJgB" },
+                        { label: "Elli (Female, Young & Energetic)", value: "MF3mGyEYCl7XYWbV9V6O" },
+                        { label: "Josh (Male, Casual & Relaxed)", value: "TxGEqnHWrfWFTfGW9XjX" }
+                      ]}
                       className="h-12 text-base px-4"
                     />
                   </div>

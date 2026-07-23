@@ -34,7 +34,7 @@ import {
   X,
   Plus,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isToday, isYesterday, isThisWeek, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -392,9 +392,43 @@ export function ConversationList() {
         {recent.length > 0 && (
           <div>
             {pinned.length > 0 && <SectionLabel label="Recent" />}
-            {recent.map((s) => (
-              <SessionRow key={s.id} session={s} />
-            ))}
+            
+            {/* Grouping Logic */}
+            {(() => {
+              const today = recent.filter(s => s.last_message_at && isToday(new Date(s.last_message_at)));
+              const yesterday = recent.filter(s => s.last_message_at && isYesterday(new Date(s.last_message_at)));
+              const last7Days = recent.filter(s => s.last_message_at && !isToday(new Date(s.last_message_at)) && !isYesterday(new Date(s.last_message_at)) && new Date(s.last_message_at) > subDays(new Date(), 7));
+              const older = recent.filter(s => !s.last_message_at || new Date(s.last_message_at) <= subDays(new Date(), 7));
+              
+              return (
+                <>
+                  {today.length > 0 && (
+                    <div className="mb-2">
+                      <SectionLabel label="Today" />
+                      {today.map(s => <SessionRow key={s.id} session={s} />)}
+                    </div>
+                  )}
+                  {yesterday.length > 0 && (
+                    <div className="mb-2">
+                      <SectionLabel label="Yesterday" />
+                      {yesterday.map(s => <SessionRow key={s.id} session={s} />)}
+                    </div>
+                  )}
+                  {last7Days.length > 0 && (
+                    <div className="mb-2">
+                      <SectionLabel label="Previous 7 Days" />
+                      {last7Days.map(s => <SessionRow key={s.id} session={s} />)}
+                    </div>
+                  )}
+                  {older.length > 0 && (
+                    <div className="mb-2">
+                      <SectionLabel label="Older" />
+                      {older.map(s => <SessionRow key={s.id} session={s} />)}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
       </AnimatePresence>

@@ -40,17 +40,24 @@ export function WelcomeDashboard({ mentor, stats, onSendMessage }: WelcomeDashbo
   return (
     <div className="flex flex-col max-w-4xl mx-auto space-y-6 px-4 pb-12 w-full mt-4">
       
-      {/* ── Header ────────────────────────────────────── */}
       <div className="flex flex-col space-y-2 mb-6 animate-in slide-in-from-bottom-2 fade-in duration-500">
         <MaskRevealUp className="text-3xl font-bold tracking-tight text-foreground">
           {`👋 Welcome Back, ${firstName}`}
         </MaskRevealUp>
         {stats.currentTopic && (
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
             <span className="text-muted-foreground text-sm font-medium">Continue Learning:</span>
-            <span className="text-primary font-semibold text-sm bg-primary/10 px-2 py-0.5 rounded-md">
-              {stats.currentTopic}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-primary font-semibold text-sm bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-md shadow-sm">
+                {stats.currentTopic}
+              </span>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded">
+                Intermediate
+              </span>
+              <span className="text-xs text-muted-foreground ml-1">
+                4 lessons remaining
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -78,20 +85,27 @@ export function WelcomeDashboard({ mentor, stats, onSendMessage }: WelcomeDashbo
         </Card>
 
         {/* Today's Goal Card */}
-        <Card className="p-5 flex flex-col justify-between border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-              <Target className="h-4 w-4 text-primary" />
+        <Card className="p-5 flex flex-col justify-between border-border/60 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative z-10 flex justify-between items-start mb-2">
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary">
+              <Target className="h-4 w-4" />
               <h3 className="font-semibold text-sm uppercase tracking-wider">Today's Goal</h3>
             </div>
+            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              45% Done
+            </span>
           </div>
           
-          <div className="flex flex-col gap-1 mt-2">
+          <div className="relative z-10 flex flex-col gap-1 mt-2">
             <span className="text-lg font-bold truncate">Complete {stats.currentTopic}</span>
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
-              <Clock className="h-3.5 w-3.5" />
-              <span>Estimated 45 min</span>
+            <div className="flex items-center justify-between mt-1">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Clock className="h-3.5 w-3.5 text-orange-500" />
+                <span>25 min remaining</span>
+              </div>
             </div>
+            <Progress value={45} className="h-1.5 w-full mt-2 bg-muted/50" />
           </div>
         </Card>
       </div>

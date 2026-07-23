@@ -31,6 +31,7 @@ import { useConversation } from "@/contexts/ConversationContext";
 import { SidebarAccordion } from "./SidebarAccordion";
 import { Input } from "@/components/ui/input";
 import { formatDistanceToNow } from "date-fns";
+import { ConversationSidebar } from "./ConversationSidebar";
 
 // Use a shared util for initials if available, else inline
 const getInitials = (name: string) => {
@@ -55,7 +56,7 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
   const router = useRouter();
   const [isNavigatingSettings, startNavigatingSettings] = React.useTransition();
   const baseHref = `/dashboard/mentors/${mentor.id}`;
-  const { createNewSession, sessions, activeSessionId, setActiveSession } = useConversation();
+  const { createNewSession } = useConversation();
 
   const navGroups = [
     {
@@ -84,39 +85,53 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
 
   return (
     <div className="flex h-full flex-col bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 overflow-hidden relative border-r">
-      {/* ── Top Header & Mentor Card ─────────────────────── */}
-      <div className="flex flex-col shrink-0">
-        <div className={cn("flex items-center h-12", collapsed && !mobile ? "justify-center" : "px-4")}>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleCollapse}
-            className={cn("text-muted-foreground hover:text-foreground shrink-0", collapsed && !mobile ? "" : "-ml-2")}
-            title="Toggle Sidebar"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
+      {/* ── Premium Workspace Header ─────────────────────── */}
+      <div className="flex flex-col shrink-0 p-3 pb-2 relative z-10">
+        <div 
+          onClick={collapsed && !mobile ? onToggleCollapse : undefined}
+          className={cn(
+          "flex items-center gap-3 p-2.5 rounded-xl border border-border/50 bg-card/40 backdrop-blur-md shadow-sm transition-all duration-300",
+          collapsed && !mobile ? "justify-center px-1 flex-col py-3 gap-3 cursor-pointer hover:bg-muted/50" : "hover:shadow-md hover:bg-card/60 cursor-default group/header"
+        )}>
+          {/* Avatar */}
+          <div className="relative shrink-0">
+            <Avatar className={cn(
+              "ring-1 ring-border/80 shadow-sm transition-transform duration-300 group-hover/header:scale-[1.02]",
+              collapsed && !mobile ? "h-8 w-8" : "h-10 w-10"
+            )}>
+              {mentor.avatarUrl ? (
+                <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
+              ) : null}
+              <AvatarFallback style={{ backgroundColor: mentor.avatarColor }} className="text-white font-semibold text-xs">
+                {getInitials(mentor.name)}
+              </AvatarFallback>
+            </Avatar>
+            {/* Online Indicator */}
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-[2px] border-background shadow-sm" />
+          </div>
+
           {(!collapsed || mobile) && (
-            <div className="flex items-center flex-1 min-w-0 ml-2 overflow-hidden">
-               <Avatar className="h-6 w-6 shrink-0 ring-1 ring-border shadow-sm">
-                {mentor.avatarUrl ? (
-                  <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
-                ) : null}
-                <AvatarFallback
-                  style={{ backgroundColor: mentor.avatarColor }}
-                  className="text-white font-semibold text-[10px]"
-                >
-                  {getInitials(mentor.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col ml-2 min-w-0">
-                 <div className="flex items-center gap-1.5">
-                   <span className="font-semibold text-[13px] leading-none truncate text-foreground">{mentor.name}</span>
-                   <span className="shrink-0 h-1.5 w-1.5 rounded-full bg-primary shadow-sm shadow-primary/50 animate-pulse" />
-                 </div>
-              </div>
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="font-bold text-[13px] leading-tight truncate text-foreground/90">{mentor.name}</span>
+              <span className="text-[11px] text-muted-foreground truncate">{mentor.role || "AI Mentor"}</span>
             </div>
           )}
+
+          {/* Progress / Action Toggle */}
+          <div className={cn("flex items-center", collapsed && !mobile ? "mt-1" : "")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => { e.stopPropagation(); onToggleCollapse?.(); }}
+              className={cn(
+                "text-muted-foreground/60 hover:text-foreground hover:bg-muted shrink-0 rounded-md transition-colors",
+                collapsed && !mobile ? "h-8 w-8" : "h-6 w-6"
+              )}
+              title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+              <Menu className={cn(collapsed && !mobile ? "h-4 w-4" : "h-3 w-3")} />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -159,13 +174,16 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
                             ? "h-11 w-11 justify-center rounded-xl mx-auto"
                             : "h-[34px] px-3 gap-2.5 rounded-md mx-1",
                           isActive
-                            ? "bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20"
+                            ? "bg-card/60 text-foreground font-medium shadow-sm border border-border/40 shadow-primary/5 relative overflow-hidden"
                             : item.implemented
-                            ? "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                            : "text-muted-foreground/30 cursor-not-allowed pointer-events-none"
+                            ? "text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent"
+                            : "text-muted-foreground/30 cursor-not-allowed pointer-events-none border border-transparent"
                         )}
                       >
-                        <item.icon className={cn(collapsed && !mobile ? "h-5 w-5" : "h-4 w-4 shrink-0", isActive && "text-primary-foreground")} strokeWidth={isActive ? 2.5 : 2} />
+                        {isActive && (
+                          <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-primary rounded-r-full" />
+                        )}
+                        <item.icon className={cn(collapsed && !mobile ? "h-5 w-5" : "h-4 w-4 shrink-0", isActive ? "text-primary ml-0.5" : "text-muted-foreground/70")} strokeWidth={isActive ? 2.5 : 2} />
                         {(!collapsed || mobile) && (
                           <span className="text-[13px] truncate">{item.label}</span>
                         )}
@@ -197,95 +215,22 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
             </SidebarAccordion>
           ))}
 
-          {/* Recent Chats Accordion */}
-          <SidebarAccordion title="Recent Chats" collapsed={collapsed && !mobile} storageKey="Chats">
-            <div className={cn("flex flex-col", collapsed && !mobile ? "items-center w-full gap-2 mt-2" : "w-full px-1")}>
-              {/* Tooling when expanded */}
-              {(!collapsed || mobile) && (
-                <div className="flex flex-col gap-2 mb-2 px-2 mt-1">
-                  <div className="flex items-center gap-1">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
-                      <Input 
-                        placeholder="Search chats..." 
-                        className="h-7 pl-7 text-[12px] bg-muted/30 border-transparent hover:bg-muted/50 transition-colors focus-visible:ring-1 rounded-md"
-                      />
-                    </div>
-                    <Button
-                      onClick={createNewSession}
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-md shrink-0 border border-transparent hover:bg-muted"
-                      title="New Chat"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Chat list mapped */}
-              {sessions.map((session) => {
-                function SessionItem() {
-                  const wrapperRef = React.useRef<HTMLDivElement | null>(null);
-                  const [tooltipSide, setTooltipSide] = React.useState<"left" | "right">("right");
-
-                  React.useEffect(() => {
-                    const el = wrapperRef.current;
-                    if (!el) return;
-                    let parent: HTMLElement | null = el;
-                    while (parent && parent !== document.documentElement) {
-                      const sideAttr = parent.getAttribute("data-side");
-                      if (sideAttr === "right" || sideAttr === "left") {
-                        setTooltipSide(sideAttr === "right" ? "left" : "right");
-                        return;
-                      }
-                      parent = parent.parentElement;
-                    }
-                    setTooltipSide("right");
-                  }, []);
-
-                  const content = (
-                    <button
-                      onClick={() => setActiveSession(session.id)}
-                      className={cn(
-                        "relative flex items-center transition-all duration-200 group text-left",
-                        collapsed && !mobile
-                          ? "h-11 w-11 justify-center rounded-xl mx-auto"
-                          : "h-[34px] px-3 gap-2.5 rounded-md mx-1",
-                        activeSessionId === session.id
-                          ? "bg-muted/80 text-foreground font-medium"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      )}
-                      key={session.id}
-                    >
-                      <MessageCircle className={cn(collapsed && !mobile ? "h-5 w-5" : "h-3.5 w-3.5 shrink-0")} strokeWidth={activeSessionId === session.id ? 2.5 : 2} />
-                      {(!collapsed || mobile) && (
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <span className="text-[12px] truncate">{session.title || "New Conversation"}</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-
-                  if (!collapsed || mobile) return content;
-
-                  return (
-                    <div ref={wrapperRef} key={session.id}>
-                      <Tooltip>
-                        <TooltipTrigger render={content} />
-                        <TooltipContent side={tooltipSide} align="center">
-                          {session.title || "Conversation"}
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  );
-                }
-
-                return <SessionItem />;
-              })}
+          {/* Conversations — full production sidebar */}
+          {(!collapsed || mobile) ? (
+            <div className="mt-1">
+              <div className="px-3 py-1 flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                  Conversations
+                </span>
+              </div>
+              <ConversationSidebar collapsed={false} />
             </div>
-          </SidebarAccordion>
+          ) : (
+            <div className="mt-3 w-full flex flex-col items-center">
+              <div className="w-8 h-[1px] bg-border/60 mb-2" />
+              <ConversationSidebar collapsed />
+            </div>
+          )}
 
         </div>
       </ScrollArea>
@@ -322,12 +267,15 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
                 "relative flex items-center transition-all duration-200 group shrink-0",
                 collapsed && !mobile
                   ? "h-11 w-11 justify-center rounded-xl mx-auto"
-                  : "h-[34px] px-3 gap-2.5 rounded-md",
+                  : "h-[34px] px-3 gap-2.5 rounded-md mx-1",
                 pathname === `/dashboard/mentors/${mentor.id}/settings`
-                  ? "bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  ? "bg-card/60 text-foreground font-medium shadow-sm border border-border/40 shadow-primary/5 relative overflow-hidden"
+                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent"
               )}
             >
+              {pathname === `/dashboard/mentors/${mentor.id}/settings` && (
+                <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-primary rounded-r-full" />
+              )}
               {isNavigatingSettings ? (
                 <Loader2 className={cn("animate-spin", collapsed && !mobile ? "h-5 w-5" : "h-4 w-4 shrink-0")} />
               ) : (

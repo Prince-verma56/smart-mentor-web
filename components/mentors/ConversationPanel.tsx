@@ -79,43 +79,47 @@ function MessageActions({
   const [copied, setCopied] = useState(false);
 
   return (
-    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 mt-1.5">
-      <button
-        onClick={() => {
-          navigator.clipboard.writeText(content);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        }}
-        title="Copy"
-        className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-      >
-        {copied ? (
-          <CheckCircle2 className="h-3 w-3 text-primary" />
-        ) : (
-          <Copy className="h-3 w-3" />
-        )}
-      </button>
-      <button
-        title="Bookmark"
-        className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-      >
-        <Bookmark className="h-3 w-3" />
-      </button>
-      <div className="w-px h-3 bg-border mx-1" />
-      {[
-        { icon: HelpCircle, label: "Explain More", action: "explain" },
-        { icon: Code2, label: "Practice", action: "practice" },
-        { icon: GraduationCap, label: "Quiz Me", action: "quiz" },
-      ].map(({ icon: Icon, label, action }) => (
+    <div className="flex flex-wrap items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mt-2">
+      <div className="flex items-center gap-0.5 bg-muted/40 p-0.5 rounded-lg border border-border/30">
         <button
-          key={action}
-          onClick={() => onAction?.(action)}
-          className="inline-flex items-center gap-1 px-2 h-6 rounded text-[11px] text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-all"
+          onClick={() => {
+            navigator.clipboard.writeText(content);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
+          title="Copy"
+          className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-background hover:shadow-sm transition-all"
         >
-          <Icon className="h-3 w-3" />
-          {label}
+          {copied ? (
+            <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
         </button>
-      ))}
+        <button
+          title="Bookmark"
+          className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-background hover:shadow-sm transition-all"
+        >
+          <Bookmark className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        {[
+          { icon: HelpCircle, label: "Explain More", action: "explain" },
+          { icon: Code2, label: "Practice", action: "practice" },
+          { icon: GraduationCap, label: "Quiz Me", action: "quiz" },
+        ].map(({ icon: Icon, label, action }) => (
+          <button
+            key={action}
+            onClick={() => onAction?.(action)}
+            className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-medium text-muted-foreground bg-muted/30 hover:text-foreground hover:bg-muted/80 border border-transparent hover:border-border/50 hover:shadow-sm transition-all duration-200"
+          >
+            <Icon className="h-3.5 w-3.5 opacity-70" />
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -268,8 +272,7 @@ function Composer({ mentor }: { mentor: Mentor }) {
   };
 
   return (
-    <div className="relative rounded-2xl border bg-card shadow-sm transition-all focus-within:border-primary/40 focus-within:shadow-md focus-within:shadow-primary/5">
-      {/* Textarea */}
+    <div className="relative rounded-[20px] bg-card/60 backdrop-blur-xl border border-border/60 shadow-sm transition-all duration-300 focus-within:bg-card focus-within:border-primary/30 focus-within:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:focus-within:shadow-[0_8px_30px_rgba(var(--primary),0.06)] group">
       <textarea
         ref={textareaRef}
         value={text}
@@ -280,9 +283,9 @@ function Composer({ mentor }: { mentor: Mentor }) {
         rows={1}
         aria-label="Chat input"
         className={cn(
-          "w-full bg-transparent resize-none text-sm leading-relaxed px-4 pt-3.5 pb-2",
+          "w-full bg-transparent resize-none text-[15px] leading-relaxed px-5 pt-3.5 pb-1",
           "placeholder:text-muted-foreground/40 focus:outline-none",
-          "min-h-[44px] max-h-[160px] overflow-y-auto no-scrollbar"
+          "min-h-[48px] max-h-[200px] overflow-y-auto no-scrollbar"
         )}
         style={{ height: "auto" }}
       />
@@ -300,11 +303,11 @@ function Composer({ mentor }: { mentor: Mentor }) {
             aria-label="Attach file"
             title="Attach file"
             className={cn(
-              "h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all",
+              "h-8 w-8 flex items-center justify-center rounded-xl text-muted-foreground/60 hover:text-foreground hover:bg-muted/80 transition-all duration-200",
               showAttach && "bg-muted text-foreground"
             )}
           >
-            <Paperclip className="h-3.5 w-3.5" />
+            <Paperclip className="h-4 w-4" />
           </button>
         </div>
 
@@ -414,18 +417,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-background relative">
 
-      {/* ── Top controls ──────────────────────────── */}
-      {activeSessionId && messages.length > 0 && (
-        <div className="absolute top-3 right-4 z-10 flex gap-1.5">
-          <button
-            onClick={createNewSession}
-            title="New Chat"
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] text-muted-foreground border bg-background/80 backdrop-blur-sm hover:bg-muted hover:text-foreground transition-all"
-          >
-            <Plus className="h-3 w-3" /> New Chat
-          </button>
-        </div>
-      )}
+      {/* Removed floating New Chat button from here */}
 
       {/* ── Messages ──────────────────────────────── */}
       <div
@@ -453,23 +445,23 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
           />
         ) : (
           /* Messages */
-          <div className="max-w-[760px] mx-auto space-y-5 pb-12">
+          <div className="max-w-[700px] mx-auto space-y-8 pb-12">
             {messages.map((m, index) => (
               <div
                 key={m.id}
                 className={cn(
-                  "group flex gap-3 animate-in fade-in-0 slide-in-from-bottom-1 duration-200",
+                  "group flex gap-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200",
                   m.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
                 {m.role === "assistant" && (
-                  <Avatar className="h-7 w-7 ring-1 ring-border shrink-0 mt-0.5">
+                  <Avatar className="h-8 w-8 ring-2 ring-background shadow-sm shrink-0 mt-1 z-10">
                     {mentor.avatarUrl ? (
                       <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
                     ) : null}
                     <AvatarFallback
                       style={{ backgroundColor: mentor.avatarColor }}
-                      className="text-white text-[10px] font-bold"
+                      className="text-white text-[11px] font-bold"
                     >
                       {getInitials(mentor.name)}
                     </AvatarFallback>
@@ -478,20 +470,20 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
                 <div
                   className={cn(
-                    "flex flex-col",
-                    m.role === "user" ? "items-end max-w-[78%]" : "items-start max-w-[85%]"
+                    "flex flex-col relative",
+                    m.role === "user" ? "items-end max-w-[85%]" : "items-start max-w-[100%]"
                   )}
                 >
                   <div
                     className={cn(
-                      "rounded-2xl overflow-hidden text-sm leading-relaxed",
+                      "leading-relaxed",
                       m.role === "user"
-                        ? "bg-primary text-primary-foreground px-4 py-2.5 rounded-br-sm"
-                        : "bg-card border shadow-sm px-5 py-3 rounded-bl-sm"
+                        ? "rounded-2xl rounded-tr-sm bg-muted/50 px-5 py-3.5 text-foreground"
+                        : "pt-1"
                     )}
                   >
                     {m.role === "user" ? (
-                      <span className="whitespace-pre-wrap">{m.content}</span>
+                      <span className="whitespace-pre-wrap text-[15px]">{m.content}</span>
                     ) : (
                       <>
                         <MarkdownRenderer content={m.content} />
@@ -512,8 +504,8 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                 </div>
 
                 {m.role === "user" && (
-                  <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-                    <AvatarFallback className="bg-primary/15 text-primary text-[10px] font-bold">
+                  <Avatar className="h-8 w-8 shrink-0 mt-1 ring-2 ring-background shadow-sm z-10">
+                    <AvatarFallback className="bg-muted text-foreground font-semibold text-[11px]">
                       {user?.firstName?.[0] || "U"}
                     </AvatarFallback>
                   </Avatar>
@@ -523,41 +515,43 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
             {/* Thinking indicator */}
             {isThinking && (
-              <div className="flex gap-3 justify-start animate-in fade-in-0 duration-200">
-                <Avatar className="h-7 w-7 ring-1 ring-border shrink-0 mt-0.5">
+              <div className="flex gap-3 justify-start animate-in fade-in-0 duration-200 mt-2">
+                <Avatar className="h-8 w-8 ring-2 ring-background shadow-sm shrink-0 mt-1 z-10">
                   {mentor.avatarUrl ? (
                     <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
                   ) : null}
                   <AvatarFallback
                     style={{ backgroundColor: mentor.avatarColor }}
-                    className="text-white text-[10px] font-bold"
+                    className="text-white text-[11px] font-bold"
                   >
                     {getInitials(mentor.name)}
                   </AvatarFallback>
                 </Avatar>
 
-                <div className="rounded-2xl rounded-bl-sm px-5 py-3.5 bg-card border shadow-sm min-w-[200px]">
-                  <div className="flex items-center gap-2 text-[11px] font-semibold text-primary mb-2.5">
-                    <Sparkles className="h-3 w-3 animate-pulse" />
+                <div className="pt-1 min-w-[220px]">
+                  <div className="flex items-center gap-2 text-[12px] font-semibold text-primary mb-3">
+                    <Sparkles className="h-3.5 w-3.5 animate-pulse" />
                     {mentor.name} is thinking...
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {LOADING_STEPS.map((step, i) => (
                       <div
                         key={i}
                         className={cn(
-                          "flex items-center gap-2 text-[11px] transition-all duration-300",
-                          i < loadingStep && "text-muted-foreground/40 line-through",
+                          "flex items-center gap-2.5 text-[12px] transition-all duration-300",
+                          i < loadingStep && "text-muted-foreground/50",
                           i === loadingStep && "text-foreground font-medium",
-                          i > loadingStep && "text-muted-foreground/25"
+                          i > loadingStep && "text-muted-foreground/20"
                         )}
                       >
                         {i < loadingStep ? (
-                          <span className="text-primary">✓</span>
+                          <div className="h-4 w-4 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                             <CheckCircle2 className="h-3 w-3" />
+                          </div>
                         ) : i === loadingStep ? (
-                          <Loader2 className="h-3 w-3 animate-spin text-primary shrink-0" />
+                          <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
                         ) : (
-                          <span className="h-3 w-3 shrink-0" />
+                          <span className="h-4 w-4 rounded-full border border-border/50 shrink-0" />
                         )}
                         <span>{step.icon} {step.text}</span>
                       </div>

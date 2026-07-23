@@ -29,10 +29,12 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
             const match = /language-(\w+)/.exec(className || "");
             const isInline = !match && !String(children).includes("\n");
             return !isInline && match ? (
-              <CodeBlock
-                language={match[1]}
-                value={String(children).replace(/\n$/, "")}
-              />
+              <div className="my-5 shadow-sm rounded-xl overflow-hidden border border-border/50">
+                <CodeBlock
+                  language={match[1]}
+                  value={String(children).replace(/\n$/, "")}
+                />
+              </div>
             ) : (
               <code
                 className="bg-muted/80 px-1.5 py-[2px] rounded-md font-mono text-[0.83em] border border-border/40 text-foreground/90 break-words"
@@ -45,37 +47,37 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
 
           // ── Headings ───────────────────────────────────────────────────────
           h1: ({ children }) => (
-            <h1 className="text-[1.25em] font-bold mt-6 mb-3 pb-2 border-b border-border/50 tracking-tight text-foreground">
+            <h1 className="text-[1.35em] font-bold mt-7 mb-4 pb-2 border-b border-border/40 tracking-tight text-foreground">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-[1.1em] font-semibold mt-5 mb-2.5 tracking-tight text-foreground">
+            <h2 className="text-[1.15em] font-bold mt-6 mb-3 tracking-tight text-foreground">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-[1em] font-semibold mt-4 mb-2 text-foreground/90">
+            <h3 className="text-[1.05em] font-semibold mt-5 mb-2.5 text-foreground/90">
               {children}
             </h3>
           ),
           h4: ({ children }) => (
-            <h4 className="text-[0.9em] font-semibold mt-3 mb-1.5 text-foreground/80">
+            <h4 className="text-[0.95em] font-semibold mt-4 mb-2 text-foreground/80">
               {children}
             </h4>
           ),
 
           // ── Paragraph ──────────────────────────────────────────────────────
           p: ({ children }) => (
-            <p className="mb-3 leading-[1.75] last:mb-0 text-foreground/90">{children}</p>
+            <p className="mb-4 leading-[1.85] last:mb-0 text-foreground/90 tracking-[0.01em]">{children}</p>
           ),
 
           // ── Lists ──────────────────────────────────────────────────────────
           ul: ({ children }) => (
-            <ul className="list-none pl-0 mb-3 space-y-1.5">{children}</ul>
+            <ul className="list-none pl-0 mb-4 space-y-2">{children}</ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal pl-5 mb-3 space-y-1.5 marker:text-muted-foreground marker:text-[0.85em]">
+            <ol className="list-decimal pl-5 mb-4 space-y-2 marker:text-muted-foreground marker:font-medium">
               {children}
             </ol>
           ),
@@ -85,13 +87,13 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
               (props as any).node?.parent?.ordered;
             if (isOrdered) {
               return (
-                <li className="leading-[1.7] pl-1 text-foreground/85">{children}</li>
+                <li className="leading-[1.8] pl-1.5 text-foreground/90">{children}</li>
               );
             }
             return (
-              <li className="flex items-start gap-2 leading-[1.7]">
-                <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-primary/50 shrink-0" />
-                <span className="flex-1 text-foreground/85">{children}</span>
+              <li className="flex items-start gap-3 leading-[1.8]">
+                <span className="mt-[9px] h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 shadow-sm" />
+                <span className="flex-1 text-foreground/90">{children}</span>
               </li>
             );
           },
@@ -109,13 +111,16 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
           ),
 
           // ── Blockquote ─────────────────────────────────────────────────────
-          blockquote: ({ children }) => (
-            <blockquote className="border-l-2 border-primary/50 pl-4 my-4 py-1 bg-primary/5 rounded-r-lg">
-              <div className="italic text-muted-foreground text-[0.95em] leading-relaxed">
-                {children}
-              </div>
-            </blockquote>
-          ),
+          blockquote: ({ children }) => {
+            return (
+              <blockquote className="relative border-l-4 border-primary/60 pl-5 my-5 py-3 pr-4 bg-primary/[0.03] rounded-r-xl overflow-hidden shadow-[inset_1px_0_0_0_rgba(var(--primary),0.05)]">
+                <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-primary/10 to-transparent" />
+                <div className="text-foreground/80 text-[0.95em] leading-[1.8] italic font-medium">
+                  {children}
+                </div>
+              </blockquote>
+            );
+          },
 
           // ── Horizontal rule ────────────────────────────────────────────────
           hr: () => <hr className="border-border/50 my-5" />,

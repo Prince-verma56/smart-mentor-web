@@ -19,6 +19,8 @@ import {
   renameChatSession,
   pinChatSession,
   archiveChatSession,
+  favoriteChatSession,
+  duplicateChatSession,
 } from "@/actions/chatActions";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
@@ -45,6 +47,8 @@ interface ConversationContextValue {
   renameSession: (id: string, title: string) => Promise<void>;
   pinSession: (id: string, pinned: boolean) => Promise<void>;
   archiveSession: (id: string, archived: boolean) => Promise<void>;
+  favoriteSession: (id: string, fav: boolean) => Promise<void>;
+  duplicateSession: (id: string) => Promise<string | null>;
 
   // Chat
   sendMessage: (
@@ -251,20 +255,29 @@ export function ConversationProvider({
   // ── Delete session ────────────────────────────────────────────────────────
   const deleteSession = useCallback(
     async (id: string) => {
-      await deleteChatSession(id, mentorId);
-      // Realtime will remove it from sessions list automatically
-      // If it was the active session, switch to the next available one
-      if (id === activeSessionId) {
-        const remaining = sessions.filter((s) => s.id !== id);
-        if (remaining.length > 0) {
-          handleSetActiveSession(remaining[0].id);
-        } else {
-          setActiveSessionId(null);
-          setMessages([]);
-          const p = new URLSearchParams(searchParams.toString());
-          p.delete("session");
-          router.push(`${pathname}?${p.toString()}`);
+      const prevSessions = [...sessions];
+      setSessions(prev => prev.filter(s => s.id !== id));
+      
+      try {
+        const success = await deleteChatSession(id, mentorId);
+        if (!success) throw new Error("Failed to delete");
+        
+        // If it was the active session, switch to the next available one
+        if (id === activeSessionId) {
+          const remaining = prevSessions.filter((s) => s.id !== id);
+          if (remaining.length > 0) {
+            handleSetActiveSession(remaining[0].id);
+          } else {
+            setActiveSessionId(null);
+            setMessages([]);
+            const p = new URLSearchParams(searchParams.toString());
+            p.delete("session");
+            router.push(`${pathname}?${p.toString()}`);
+          }
         }
+      } catch (err) {
+        setSessions(prevSessions);
+        toast.error("Failed to delete conversation.");
       }
     },
     [activeSessionId, sessions, mentorId, handleSetActiveSession, searchParams, pathname, router]
@@ -272,35 +285,95 @@ export function ConversationProvider({
 
   // ── Rename session ────────────────────────────────────────────────────────
   const renameSession = useCallback(async (id: string, title: string) => {
-    await renameChatSession(id, title);
-    // Realtime will update the list
-  }, []);
+    const session = sessions.find(s => s.id === id);
+    if (!session) return;
+    const oldTitle = session.title;
+    
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s));
+    
+    try {
+      const success = await renameChatSession(id, title);
+      if (!success) throw new Error("Rename failed");
+    } catch (err) {
+      setSessions(prev => prev.map(s => s.id === id ? { ...s, title: oldTitle } : s));
+      toast.error("Failed to rename conversation.");
+    }
+  }, [sessions]);
 
   // ── Pin session ───────────────────────────────────────────────────────────
   const pinSession = useCallback(async (id: string, pinned: boolean) => {
-    await pinChatSession(id, pinned);
-    // Realtime will update + re-sort the list
-  }, []);
+    const session = sessions.find(s => s.id === id);
+    if (!session) return;
+    const oldPinned = session.is_pinned;
+    
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, is_pinned: pinned } : s));
+    
+    try {
+      const success = await pinChatSession(id, pinned);
+      if (!success) throw new Error("Pin failed");
+    } catch (err) {
+      setSessions(prev => prev.map(s => s.id === id ? { ...s, is_pinned: oldPinned } : s));
+      toast.error("Failed to pin conversation.");
+    }
+  }, [sessions]);
 
   // ── Archive session ───────────────────────────────────────────────────────
   const archiveSession = useCallback(async (id: string, archived: boolean) => {
-    await archiveChatSession(id, archived);
-    // Realtime will update the list
-  }, []);
+    const session = sessions.find(s => s.id === id);
+    if (!session) return;
+    const oldArchived = session.is_archived;
+    
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, is_archived: archived } : s));
+    
+    try {
+      const success = await archiveChatSession(id, archived);
+      if (!success) throw new Error("Archive failed");
+    } catch (err) {
+      setSessions(prev => prev.map(s => s.id === id ? { ...s, is_archived: oldArchived } : s));
+      toast.error("Failed to archive conversation.");
+    }
+  }, [sessions]);
 
-  // ── Auto-generate title from first user message ───────────────────────────
-  const autoGenerateTitle = useCallback(
-    async (sessionId: string, firstMessage: string) => {
-      const title = firstMessage
-        .trim()
-        .split(/\s+/)
-        .slice(0, 6)
-        .join(" ")
-        .replace(/[^\w\s]/g, "")
-        .trim();
-      if (title) {
-        await renameChatSession(sessionId, title.slice(0, 60));
+  // ── Favorite session ──────────────────────────────────────────────────────
+  const favoriteSession = useCallback(async (id: string, fav: boolean) => {
+    const session = sessions.find(s => s.id === id);
+    if (!session) return;
+    const oldFav = session.is_favorite;
+    
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, is_favorite: fav } : s));
+    
+    try {
+      const success = await favoriteChatSession(id, fav);
+      if (!success) throw new Error("Favorite failed");
+    } catch (err) {
+      setSessions(prev => prev.map(s => s.id === id ? { ...s, is_favorite: oldFav } : s));
+      toast.error("Failed to favorite conversation.");
+    }
+  }, [sessions]);
+
+  // ── Duplicate session ─────────────────────────────────────────────────────
+  const duplicateSession = useCallback(
+    async (id: string): Promise<string | null> => {
+      const newId = await duplicateChatSession(id, mentorId);
+      if (newId) {
+        // Realtime INSERT will add it to the list automatically
+        toast.success("Conversation duplicated.");
       }
+      return newId;
+    },
+    [mentorId]
+  );
+
+  // ── Trigger AI Title (fire-and-forget) ────────────────────────────────────
+  // Called after the first complete AI response. Uses real LLM to generate a
+  // 3-6 word title, saves to DB, Realtime updates sidebar automatically.
+  const triggerAITitle = useCallback(
+    (sessionId: string, msgs: { role: string; content: string }[]) => {
+      fetch("/api/ai-title", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, messages: msgs }),
+      }).catch((err) => console.warn("[AI Title] fire-and-forget failed:", err));
     },
     []
   );
@@ -308,7 +381,7 @@ export function ConversationProvider({
   // ── Send message ──────────────────────────────────────────────────────────
   const sendMessage = useCallback(
     async (content: string, model: string, action?: string) => {
-      if (!user) return;
+      if (!user || isStreaming) return;
 
       const displayContent = action ? `*Requested: ${action}*` : content;
       const tempUserMsg: Message = {
@@ -342,10 +415,8 @@ export function ConversationProvider({
       await saveMessage(currentSessionId!, "user", content || action || "");
 
       // Auto-generate title if this is the first real message
+      // NOTE: we now do AI title AFTER the first response completes — see below
       const isFirstMessage = messages.filter((m) => m.role === "user").length === 0;
-      if (isFirstMessage && content) {
-        autoGenerateTitle(currentSessionId!, content);
-      }
 
       // Build chat body
       const chatBody = {
@@ -402,6 +473,15 @@ export function ConversationProvider({
         // Finalise the assistant message in DB
         await saveMessage(currentSessionId!, "assistant", assistantText);
 
+        // ── AI Title: fire after first complete response ─────────────────────
+        if (isFirstMessage && content && assistantText) {
+          triggerAITitle(currentSessionId!, [
+            ...messages.map((m) => ({ role: m.role, content: m.content })),
+            { role: "user", content },
+            { role: "assistant", content: assistantText.slice(0, 500) },
+          ]);
+        }
+
         // Replace temp IDs with final content
         setMessages((prev) => {
           const next = [...prev];
@@ -442,7 +522,8 @@ export function ConversationProvider({
       searchParams,
       pathname,
       router,
-      autoGenerateTitle,
+      triggerAITitle,
+      isStreaming,
     ]
   );
 
@@ -459,6 +540,8 @@ export function ConversationProvider({
     renameSession,
     pinSession,
     archiveSession,
+    favoriteSession,
+    duplicateSession,
     sendMessage,
     currentModel,
     setCurrentModel,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Vapi from "@vapi-ai/web";
 import { Square, X, Loader2, AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ export function VapiVoiceButton({ mentor, sessionId, isInputIcon = false }: Vapi
   const [isVoiceLoading, setIsVoiceLoading] = useState(false);
   const [cachedPrompt, setCachedPrompt] = useState<string | null>(null);
   const [cachedGreeting, setCachedGreeting] = useState<string | null>(null);
+  // Accumulates full voice transcript for end-of-call summarization
+  const transcriptRef = useRef<string>("");
 
   const connectingMessages = ["Preparing mentor...", "Connecting...", "Mentor is joining..."];
   const [connectingMsgIndex, setConnectingMsgIndex] = useState(0);
@@ -71,11 +73,26 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     vapi.on("call-start", () => {
       setIsVoiceActive(true);
       setIsVoiceLoading(false);
+      transcriptRef.current = ""; // Reset transcript on new call
     });
     
-    vapi.on("call-end", () => {
+    vapi.on("call-end", async () => {
       setIsVoiceActive(false);
       setIsVoiceLoading(false);
+
+      // ── Extract voice memory in background ────────────────────────────
+      const fullTranscript = transcriptRef.current.trim();
+      if (fullTranscript.length > 50) {
+        fetch("/api/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transcript: fullTranscript,
+            mentorId: mentor.id,
+            sessionId: sessionId || null,
+          }),
+        }).catch((err) => console.warn("[Voice Summary] failed:", err));
+      }
     });
     
     vapi.on("error", (e) => {
@@ -88,12 +105,16 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     // Listen for messages to sync with our database and execute tools
     vapi.on("message", async (msg: any) => {
       if (msg.type === "transcript" && msg.transcriptType === "final") {
+        const speaker = msg.role === "user" ? "Student" : "Mentor";
+        
         if (msg.role === "user" && sessionId) {
           await saveMessage(sessionId, "user", msg.transcript);
+        } else if (msg.role === "assistant" && sessionId) {
+          await saveMessage(sessionId, "assistant", msg.transcript);
         }
-      }
-      if (msg.type === "message" && msg.message?.role === "assistant" && sessionId) {
-        await saveMessage(sessionId, "assistant", msg.message.content);
+        
+        // Accumulate full transcript for end-of-call summarization
+        transcriptRef.current += `${speaker}: ${msg.transcript}\n`;
       }
       
       // Handle Client-Side Tool Calls
@@ -188,29 +209,28 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
       let greeting = cachedGreeting;
       
       if (!prompt) {
-        // Fallback fetch if not cached yet
-        const res = await fetch(`/api/vapi/prompt`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mentorId: mentor.id, basePrompt, sessionId })
-        });
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`Failed to fetch learning state: ${errorText}`);
-        }
-        const data = await res.json();
-        prompt = data.prompt;
-        greeting = data.greeting;
-        setCachedPrompt(data.prompt);
-        setCachedGreeting(data.greeting);
+        // OPTIMIZATION: Don't block the voice connection waiting 6+ seconds for an LLM to generate a prompt.
+        // Fallback to the synchronous base prompt immediately for instant connection.
+        prompt = basePrompt;
+        greeting = "Hi! I am your AI mentor. Let's get started whenever you're ready.";
       }
       
-      // Start VAPI call
       await vapi.start({
         firstMessage: greeting || "Hi! I am your mentor. Are you ready to begin?",
+        transcriber: {
+          provider: "deepgram",
+          model: "nova-2",
+          language: "en",
+          endpointing: 1500 // Adds a 1.5 second patience delay before AI responds
+        },
+        voice: {
+          provider: "11labs",
+          voiceId: mentor.voiceId || "21m00Tcm4TlvDq8ikWAM",
+          model: "eleven_turbo_v2_5"
+        },
         model: {
           provider: "openai",
-          model: "gpt-4-turbo-preview",
+          model: mentor.voiceModel || "gpt-4-turbo-preview",
           messages: [{ role: "system", content: prompt! }],
           tools: [
             {
@@ -264,10 +284,6 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
               }
             }
           ]
-        },
-        voice: {
-          provider: "11labs",
-          voiceId: mentor.voiceId || "21m00Tcm4TlvDq8ikWAM"
         }
       });
     } catch (err: any) {
@@ -314,69 +330,50 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm"
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 bg-card/95 backdrop-blur-xl border border-border shadow-2xl shadow-black/20 rounded-full px-4 py-3 pointer-events-auto"
           >
-            <div className="absolute top-8 right-8">
-              <Button variant="ghost" size="icon" onClick={endCall} className="rounded-full h-12 w-12 hover:bg-red-500/10 hover:text-red-500">
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-            
-            <div className="flex-1 flex flex-col items-center justify-center gap-12 w-full max-w-md mx-auto">
-              {isVoiceLoading ? (
-                <div className="flex flex-col items-center gap-8 text-center h-64 justify-center">
-                   <div className="relative h-24 w-24">
-                     <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin" />
-                     <div className="absolute inset-2 rounded-full border-r-2 border-primary/60 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-                   </div>
-                   <div className="h-8 w-full flex items-center justify-center">
-                     <AnimatePresence mode="wait">
-                       <motion.p 
-                         key={connectingMsgIndex}
-                         initial={{ opacity: 0, y: 10 }}
-                         animate={{ opacity: 1, y: 0 }}
-                         exit={{ opacity: 0, y: -10 }}
-                         transition={{ duration: 0.2 }}
-                         className="text-xl font-medium tracking-tight"
-                       >
-                         {connectingMessages[connectingMsgIndex]}
-                       </motion.p>
-                     </AnimatePresence>
-                   </div>
+            {isVoiceLoading ? (
+              <>
+                <div className="relative h-9 w-9 shrink-0 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin" />
+                  <div className="absolute inset-1.5 rounded-full border-r-2 border-primary/60 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
                 </div>
-              ) : (
-                <>
-                  <div className="text-center space-y-4">
-                    <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-semibold tracking-tight">Speaking with {mentor.name}</motion.h2>
-                    <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-muted-foreground">The AI is listening and will respond shortly.</motion.p>
-                  </div>
+                <div className="flex flex-col min-w-[140px]">
+                   <span className="text-sm font-semibold tracking-tight">{connectingMessages[connectingMsgIndex]}</span>
+                   <span className="text-[11px] text-muted-foreground">Please wait...</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="h-10 w-10 shrink-0 flex items-center justify-center overflow-hidden rounded-full ring-1 ring-border/50">
+                   <SiriOrb 
+                      animationDuration={15}
+                      size="40px"
+                      colors={{
+                        bg: "#020617",
+                        c1: "#10b981", 
+                        c2: "#3b82f6",
+                        c3: "#8b5cf6"
+                      }}
+                   />
+                </div>
+                <div className="flex flex-col min-w-[160px] mr-2">
+                  <span className="text-[13px] font-bold tracking-tight text-foreground/90 leading-tight">Speaking with {mentor.name}</span>
+                  <span className="text-[11px] text-emerald-500 font-medium">The AI is listening...</span>
+                </div>
+              </>
+            )}
 
-                  <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2 }} className="h-64 w-64 flex items-center justify-center">
-                     <SiriOrb 
-                        animationDuration={15}
-                        size="250px"
-                        colors={{
-                          bg: "#1a1a1a",
-                          c1: "#ff3b30",
-                          c2: "#ff9500",
-                          c3: "#ffcc00"
-                        }}
-                     />
-                  </motion.div>
-
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                    <Button 
-                      variant="destructive" 
-                      size="lg" 
-                      onClick={endCall}
-                      className="rounded-full px-8 shadow-lg shadow-red-500/20"
-                    >
-                      <Square className="h-4 w-4 mr-2 fill-current" />
-                      End Call
-                    </Button>
-                  </motion.div>
-                </>
-              )}
+            <div className="pl-3 border-l border-border/60">
+              <Button 
+                variant="destructive" 
+                size="icon" 
+                onClick={endCall}
+                className="rounded-full h-9 w-9 shadow-sm shadow-red-500/20 hover:scale-105 transition-transform"
+                title="End Call"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </motion.div>
         )}

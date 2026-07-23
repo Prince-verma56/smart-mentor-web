@@ -143,23 +143,27 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "rounded-xl border overflow-hidden transition-all duration-200 w-full",
-        isCurrent && "border-blue-300/70 dark:border-blue-700/60 bg-blue-50/60 dark:bg-blue-950/30 shadow-[0_0_20px_rgba(59,130,246,0.1)]",
-        isCompleted && "border-emerald-200/50 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/10",
-        isLocked && "border-border/30 opacity-50 bg-muted/10",
-        topic.status === "revision-required" && "border-yellow-200/70 dark:border-yellow-800/50 bg-yellow-50/20 dark:bg-yellow-950/10",
-        topic.status === "skipped" && "border-orange-200/60 dark:border-orange-800/40 bg-orange-50/10",
-        !isLocked && !isCurrent && !isCompleted && "border-border/60 hover:border-primary/20 hover:shadow-sm hover:-translate-y-px"
+        "rounded-xl border overflow-hidden transition-all duration-300 w-full",
+        // Active (Hero) State
+        isCurrent && "border-primary/50 bg-primary/[0.03] shadow-[0_4px_24px_-4px_rgba(var(--primary),0.15)] ring-1 ring-primary/20 scale-[1.02] z-20 my-2",
+        // Completed State
+        isCompleted && "border-emerald-200/30 dark:border-emerald-900/30 bg-emerald-50/10 dark:bg-emerald-950/10 opacity-70 hover:opacity-100",
+        // Locked State
+        isLocked && "border-border/20 opacity-40 bg-muted/5",
+        // Other States
+        topic.status === "revision-required" && "border-yellow-200/50 bg-yellow-50/10",
+        topic.status === "skipped" && "border-orange-200/50 bg-orange-50/10",
+        !isLocked && !isCurrent && !isCompleted && "border-border/40 hover:border-border hover:bg-muted/20 hover:shadow-sm"
       )}
     >
       {isCurrent && (
-        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-400 rounded-l-xl animate-pulse" />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary/80 to-primary rounded-l-xl" />
       )}
 
-      <div className="flex flex-col gap-1.5 px-3 py-2.5 relative w-full">
+      <div className={cn("flex flex-col gap-1.5 relative w-full", isCurrent ? "px-4 py-3.5" : "px-3 py-2")}>
         {/* Row 1: Circle + Title + Expand */}
-        <div className="flex items-start gap-2 w-full">
-          <div className="pt-0.5 shrink-0">
+        <div className="flex items-start gap-2.5 w-full">
+          <div className={cn("shrink-0", isCurrent ? "pt-1" : "pt-0.5")}>
             <CompletionCircle
               status={topic.status}
               onToggle={() => onToggle(topic.id, topic.status)}
@@ -168,32 +172,26 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
             />
           </div>
 
-          <TooltipProvider delay={400}>
-            <Tooltip>
-              <TooltipTrigger 
-                render={
-                  <div className="flex-1 min-w-0 cursor-default">
-                    <p
-                      className={cn(
-                        "text-[13px] font-medium leading-snug line-clamp-2 w-full",
-                        isLocked && "text-muted-foreground/50",
-                        isCompleted && "text-muted-foreground/70 line-through decoration-muted-foreground/30",
-                        isCurrent && "text-blue-700 dark:text-blue-300 font-semibold",
-                        !isLocked && !isCompleted && !isCurrent && "text-foreground"
-                      )}
-                    >
-                      {topic.title}
-                    </p>
-                  </div>
-                } 
-              />
-              <TooltipContent side="top" className="max-w-[280px]">
-                <p className="text-xs">{topic.title}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex-1 min-w-0 cursor-default">
+            <p
+              className={cn(
+                "font-semibold leading-snug line-clamp-2 w-full",
+                isLocked ? "text-[12px] text-muted-foreground/60 font-medium" : "",
+                isCompleted ? "text-[12px] text-muted-foreground line-through decoration-muted-foreground/30 font-medium" : "",
+                isCurrent ? "text-[15px] text-foreground" : "",
+                !isLocked && !isCompleted && !isCurrent ? "text-[13px] text-foreground/90 font-medium" : ""
+              )}
+            >
+              {topic.title}
+            </p>
+            {isCurrent && topic.description && (
+               <p className="text-[12px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                 {topic.description}
+               </p>
+            )}
+          </div>
 
-          {!isLocked && topic.description && (
+          {!isLocked && topic.description && !isCurrent && (
             <button
               type="button"
               onClick={(e) => {
@@ -201,7 +199,7 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
                 setExpanded((p) => !p);
               }}
               aria-label={expanded ? "Collapse" : "Expand lesson details"}
-              className="shrink-0 h-5 w-5 flex items-center justify-center rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-all duration-150"
+              className="shrink-0 h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/80 transition-all duration-150"
             >
               <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
                 <ChevronDown className="h-3.5 w-3.5" />
@@ -212,81 +210,92 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
 
         {/* Row 2: Meta */}
         {!isLocked && (
-          <div className="flex flex-wrap items-center gap-3 pl-7">
+          <div className={cn("flex flex-wrap items-center gap-3 pl-8", isCurrent ? "mt-2" : "")}>
             {topic.difficulty && diffConfig && (
-              <span className={cn("text-[11px] font-medium capitalize", diffConfig.className.replace("bg-", "text-").replace("border-", "text-").split(' ')[0])}>
+              <span className={cn("text-[10px] font-semibold uppercase tracking-wider", diffConfig.className.replace("bg-", "text-").replace("border-", "text-").split(' ')[0])}>
                 {diffConfig.label}
               </span>
             )}
             {topic.estimated_minutes && (
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
+              <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                 <Clock className="h-3 w-3 opacity-70" />
                 {topic.estimated_minutes}m
               </span>
             )}
-            <span className={cn("text-[11px] font-medium", config.color)}>
-              {config.label}
-            </span>
+            {isCurrent && (
+              <span className={cn("text-[10px] font-semibold uppercase tracking-wider", config.color)}>
+                {config.label}
+              </span>
+            )}
           </div>
         )}
       </div>
 
       {/* Expanded Content */}
       <AnimatePresence>
-        {expanded && !isLocked && (
+        {(expanded || isCurrent) && !isLocked && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="overflow-hidden bg-muted/20 border-t border-border/50"
+            className={cn("overflow-hidden", isCurrent ? "bg-transparent" : "bg-muted/20 border-t border-border/30")}
           >
-            <div className="p-3 pl-10 space-y-3">
-              {topic.description && (
+            <div className={cn("p-3 pl-11 space-y-3", isCurrent && "pt-1")}>
+              {topic.description && !isCurrent && (
                 <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                     <BookOpen className="h-3.5 w-3.5" />
                     Overview
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-pre-wrap">
+                  <p className="text-[12px] text-muted-foreground leading-relaxed break-words whitespace-pre-wrap">
                     {topic.description}
                   </p>
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/30">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 {!isCompleted && !isCurrent && (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[11px] gap-1.5 px-2 bg-background hover:bg-muted"
+                    className="h-7 text-[11px] gap-1.5 px-3 rounded-full bg-background hover:bg-muted"
                     onClick={() => onResume(topic.id)}
                     disabled={isPending}
                   >
-                    <Zap className="h-3 w-3 text-blue-500" />
+                    <Zap className="h-3 w-3 text-primary" />
                     Start Topic
                   </Button>
                 )}
                 {isCurrent && (
                   <>
                     <Button
+                      size="sm"
+                      className="h-8 text-[11px] font-semibold gap-1.5 px-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm shadow-primary/20"
+                      onClick={() => onToggle(topic.id, topic.status)}
+                      disabled={isPending}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Complete Lesson
+                    </Button>
+                    <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 text-[11px] gap-1.5 px-2 bg-background hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200"
+                      className="h-8 text-[11px] gap-1.5 px-3 rounded-full bg-background hover:bg-muted"
                       onClick={() => onSkip(topic.id)}
                       disabled={isPending}
                     >
-                      <SkipForward className="h-3 w-3" />
+                      <SkipForward className="h-3.5 w-3.5" />
                       Skip
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 text-[11px] gap-1.5 px-2 bg-background hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200"
+                      className="h-8 text-[11px] gap-1.5 px-3 rounded-full bg-background hover:bg-yellow-50 hover:text-yellow-700 hover:border-yellow-200"
                       onClick={() => onRevision(topic.id)}
                       disabled={isPending}
                     >
-                      <AlertTriangle className="h-3 w-3" />
+                      <AlertTriangle className="h-3.5 w-3.5" />
                       Needs Review
                     </Button>
                   </>
@@ -313,14 +322,6 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
 
   return (
     <div className={cn("relative w-full", isLocked && "opacity-80")}>
-      {!isLocked && (
-        <div
-          className={cn(
-            "absolute -left-[5px] top-4 bottom-[-1rem] w-px",
-            isCompleted ? "bg-emerald-200 dark:bg-emerald-900" : "bg-border/50"
-          )}
-        />
-      )}
       {content}
     </div>
   );

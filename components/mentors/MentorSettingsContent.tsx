@@ -175,7 +175,8 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                     voiceTemperature: parseFloat(formData.get("voiceTemperature") as string || "0.7"),
                     voiceInterruptions: formData.get("voiceInterruptions") === "on",
                     voiceAutoStart: formData.get("voiceAutoStart") === "on",
-                    voiceGreeting: formData.get("voiceGreeting")
+                    voiceGreeting: formData.get("voiceGreeting"),
+                    voiceId: formData.get("voiceId")
                   };
                   const promise = updateMentorVoiceSettingsAction(mentor.id, settings).then((res) => {
                     if (res?.error) throw new Error(res.error);
@@ -190,43 +191,33 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                 }} className="space-y-6">
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label>Voice Provider</Label>
+                    <div className="space-y-2 md:col-span-1">
+                      <Label>Voice Identity & Tone</Label>
                       <Select 
-                        name="voiceProvider" 
-                        defaultValue={mentor.voiceProvider || "vapi"}
-                        placeholder="Select provider"
+                        name="voiceId" 
+                        defaultValue={mentor.voiceId || "21m00Tcm4TlvDq8ikWAM"}
+                        placeholder="Select voice identity"
                         options={[
-                          { label: "Vapi", value: "vapi" },
-                          { label: "ElevenLabs", value: "elevenlabs" }
+                          { label: "Rachel (Female, Friendly & Clear)", value: "21m00Tcm4TlvDq8ikWAM" },
+                          { label: "Drew (Male, Professional & News)", value: "29vD33N1CtxCmqQRPOHJ" },
+                          { label: "Bella (Female, Soft & Encouraging)", value: "EXAVITQu4vr4xnSDxMaL" },
+                          { label: "Adam (Male, Deep & Strict)", value: "pNInz6obpgDQGcFmaJgB" },
+                          { label: "Elli (Female, Young & Energetic)", value: "MF3mGyEYCl7XYWbV9V6O" },
+                          { label: "Josh (Male, Casual & Relaxed)", value: "TxGEqnHWrfWFTfGW9XjX" }
                         ]}
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>Model</Label>
+                    <div className="space-y-2 md:col-span-1">
+                      <Label>AI Model</Label>
                       <Select 
                         name="voiceModel" 
                         defaultValue={mentor.voiceModel || "gpt-4-turbo-preview"}
                         placeholder="Select model"
                         options={[
-                          { label: "GPT-4 Turbo", value: "gpt-4-turbo-preview" },
-                          { label: "GPT-4o Realtime", value: "gpt-4o" },
-                          { label: "Claude 3 Sonnet", value: "claude-3-sonnet" }
-                        ]}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Language</Label>
-                      <Select 
-                        name="voiceLanguage" 
-                        defaultValue={mentor.voiceLanguage || "English"}
-                        placeholder="Select language"
-                        options={[
-                          { label: "English", value: "English" },
-                          { label: "Hindi", value: "Hindi" },
-                          { label: "Hinglish", value: "Hinglish" }
+                          { label: "GPT-4 Turbo (Stable)", value: "gpt-4-turbo-preview" },
+                          { label: "GPT-4o (Fast)", value: "gpt-4o" },
+                          { label: "GPT-3.5 Turbo (Fastest)", value: "gpt-3.5-turbo" }
                         ]}
                       />
                     </div>

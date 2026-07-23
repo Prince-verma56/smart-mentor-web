@@ -39,7 +39,9 @@ export async function getChatSessions(mentorId: string) {
 
   const { data, error } = await supabase
     .from("chat_sessions")
-    .select("id, title, created_at, is_pinned, is_archived, summary, message_count, last_message_at")
+    .select(
+      "id, title, created_at, is_pinned, is_archived, is_favorite, summary, ai_summary, message_count, last_message_at, voice_count, color, description"
+    )
     .eq("mentor_id", mentorId)
     .eq("user_id", userId)
     .order("is_pinned", { ascending: false })
@@ -137,6 +139,121 @@ export async function archiveChatSession(sessionId: string, isArchived: boolean)
   }
 
   return true;
+}
+
+export async function favoriteChatSession(sessionId: string, isFavorite: boolean) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({ is_favorite: isFavorite })
+    .eq("id", sessionId)
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Failed to favorite chat session:", error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function duplicateChatSession(sessionId: string, mentorId: string) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  // Fetch the original session
+  const { data: original, error: fetchError } = await supabase
+    .from("chat_sessions")
+    .select("title, ai_summary, summary, message_count")
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .single();
+
+  if (fetchError || !original) {
+    console.error("Failed to fetch original session for duplication:", fetchError);
+    return null;
+  }
+
+  // Fetch all messages from original session
+  const { data: messages, error: messagesError } = await supabase
+    .from("messages")
+    .select("role, content, token_count, metadata, created_at")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true });
+
+  if (messagesError) {
+    console.error("Failed to fetch messages for duplication:", messagesError);
+    return null;
+  }
+
+  // Create the new session
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .insert({
+      mentor_id: mentorId,
+      user_id: userId,
+      title: `Copy of ${original.title || "Conversation"}`,
+      ai_summary: original.ai_summary || null,
+      summary: original.summary || null,
+      is_pinned: false,
+      is_archived: false,
+      is_favorite: false,
+      message_count: original.message_count || 0,
+      last_message_at: messages && messages.length > 0 ? messages[messages.length - 1].created_at : null
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("Failed to duplicate chat session:", error);
+    return null;
+  }
+
+  // Insert copied messages mapped to new session
+  if (messages && messages.length > 0) {
+    const newMessages = messages.map((m) => ({
+      session_id: data.id,
+      role: m.role,
+      content: m.content,
+      token_count: m.token_count,
+      metadata: m.metadata,
+      created_at: m.created_at, // Preserve original timestamps to maintain order
+    }));
+
+    const { error: insertMessagesError } = await supabase
+      .from("messages")
+      .insert(newMessages);
+
+    if (insertMessagesError) {
+      console.error("Failed to insert duplicated messages:", insertMessagesError);
+      // We still return the new session ID even if messages fail, though in production we might want to rollback.
+    }
+  }
+
+  revalidatePath(`/dashboard/mentors/${mentorId}`);
+  return data.id;
+}
+
+export async function updateSessionSummary(sessionId: string, summary: string) {
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({ ai_summary: summary })
+    .eq("id", sessionId);
+
+  if (error) {
+    console.error("Failed to update session summary:", error);
+    return false;
+  }
+  return true;
+}
+
+export async function updateSessionLastOpened(sessionId: string) {
+  await supabase
+    .from("chat_sessions")
+    .update({ last_opened: new Date().toISOString() })
+    .eq("id", sessionId);
 }
 
 // ─── Delete ─────────────────────────────────────────────────────────────────

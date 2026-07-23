@@ -47,12 +47,18 @@ export interface ChatSession {
   user_id: string;
   title: string;
   summary?: string | null;
+  ai_summary?: string | null;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   last_message_at?: string | null;
+  last_opened?: string | null;
   message_count: number;
   is_pinned: boolean;
   is_archived: boolean;
+  is_favorite?: boolean;
+  voice_count?: number;
+  color?: string | null;
+  description?: string | null;
 }
 
 export interface CreateSession {

@@ -12,6 +12,8 @@ import { useState, useRef, useEffect, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { updateMentorAction } from "@/actions/mentorActions";
 import { usePathname, useRouter } from "next/navigation";
+import { useConversation } from "@/contexts/ConversationContext";
+import { Plus } from "lucide-react";
 
 interface MentorHeaderProps {
   mentor: Mentor;
@@ -34,6 +36,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
   const [nameInput, setNameInput] = useState(mentor.name);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isNavigating, startNavigating] = useTransition();
+  const { createNewSession } = useConversation();
 
   // Mock knowledge sources count based on subject or random for now
   const knowledgeCount = mentor.knowledgeFocus ? mentor.knowledgeFocus.split(',').length : 3;
@@ -67,7 +70,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
   };
 
   return (
-    <header className="border-b bg-background shrink-0 flex items-center justify-between px-4 py-2 h-14">
+    <header className="border-b bg-background shrink-0 flex items-center justify-between px-5 py-1.5 min-h-[52px]">
       {/* ── Left: Breadcrumbs & Status ──────────────────── */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <Breadcrumb
@@ -109,9 +112,9 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
         )}
       </div>
 
-      {/* ── Right: Memory, Settings, Profile ─────────────── */}
-      <div className="flex items-center justify-end gap-1.5 flex-1 min-w-0">
-        <div className="hidden md:flex items-center gap-1 mr-2 text-muted-foreground">
+      {/* ── Right: Memory, Sources, New Chat, Settings ─────────────── */}
+      <div className="flex items-center justify-end gap-2 flex-1 min-w-0">
+        <div className="hidden md:flex items-center gap-1.5 mr-2 text-muted-foreground">
            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs px-2.5 hover:text-foreground">
              <Brain className="h-3.5 w-3.5" />
              <span className="hidden xl:inline">Memory</span>
@@ -121,6 +124,19 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
              <span className="hidden xl:inline">Sources</span>
              <Badge variant="secondary" className="h-4 min-w-4 px-1 ml-1 text-[9px] bg-primary/10 text-primary">{knowledgeCount}</Badge>
            </Button>
+
+           <div className="w-px h-4 bg-border/60 mx-1" />
+
+           {!isSettingsView && (
+             <Button 
+               size="sm"
+               onClick={createNewSession}
+               className="h-8 gap-1.5 text-xs px-3 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all rounded-md"
+             >
+               <Plus className="h-3.5 w-3.5" />
+               <span className="hidden xl:inline">New Chat</span>
+             </Button>
+           )}
            {isSettingsView ? (
              <button 
                className="h-8 gap-1.5 text-xs px-3 shadow-sm inline-flex items-center justify-center rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 font-medium transition-colors" 
