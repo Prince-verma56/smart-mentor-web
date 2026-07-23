@@ -75,22 +75,22 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
 
         <Tabs defaultValue="general" className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 bg-muted/50 rounded-lg">
-            <TabsTrigger value="general" className="gap-2 data-[state=active]:bg-background">
+            <TabsTrigger value="general" className="gap-2">
               <Settings className="h-4 w-4" /> General
             </TabsTrigger>
-            <TabsTrigger value="style" className="gap-2 data-[state=active]:bg-background">
+            <TabsTrigger value="style" className="gap-2">
               <Brain className="h-4 w-4" /> Teaching Style
             </TabsTrigger>
-            <TabsTrigger value="conversation" className="gap-2 data-[state=active]:bg-background">
+            <TabsTrigger value="conversation" className="gap-2">
               <MessageSquare className="h-4 w-4" /> Conversation
             </TabsTrigger>
-            <TabsTrigger value="voice" className="gap-2 data-[state=active]:bg-background">
+            <TabsTrigger value="voice" className="gap-2">
               <Mic className="h-4 w-4" /> Voice
             </TabsTrigger>
-            <TabsTrigger value="resources" className="gap-2 data-[state=active]:bg-background">
+            <TabsTrigger value="resources" className="gap-2">
               <FolderOpen className="h-4 w-4" /> Resources
             </TabsTrigger>
-            <TabsTrigger value="danger" className="gap-2 text-destructive data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive">
+            <TabsTrigger value="danger" className="gap-2 text-destructive data-active:bg-destructive/15 data-active:text-destructive">
               <AlertTriangle className="h-4 w-4" /> Danger Zone
             </TabsTrigger>
           </TabsList>
