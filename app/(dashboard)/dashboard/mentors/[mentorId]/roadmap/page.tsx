@@ -7,7 +7,7 @@ import { auth } from "@clerk/nextjs/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Map, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RoadmapCard } from "@/components/mentors/RoadmapCard";
+import { RoadmapSidebar } from "@/components/roadmap/RoadmapSidebar";
 
 interface RoadmapPageProps {
   params: Promise<{ mentorId: string }>;
@@ -51,7 +51,7 @@ export default async function RoadmapPage({ params }: RoadmapPageProps) {
 
         <div className="mt-8">
           {roadmap ? (
-            <RoadmapCard roadmap={roadmap} />
+            <RoadmapSidebar roadmap={roadmap} />
           ) : (
             <Card>
               <CardContent>

@@ -76,7 +76,7 @@ export function ProgressCard({ stats }: ProgressCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-2 rounded-lg bg-muted/50 border p-3">
-          <Clock className="h-5 w-5 text-green-500 shrink-0" />
+          <Clock className="h-5 w-5 text-primary shrink-0" />
           <div>
             <p className="text-xs text-muted-foreground">Time</p>
             <p className="text-sm font-semibold">{hoursTotal}h</p>

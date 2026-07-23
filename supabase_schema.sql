@@ -146,3 +146,78 @@ DROP TRIGGER IF EXISTS recalculate_on_topic_change ON public.roadmap_topics;
 CREATE TRIGGER recalculate_on_topic_change
   AFTER INSERT OR UPDATE OF status ON public.roadmap_topics
   FOR EACH ROW EXECUTE FUNCTION trigger_recalculate_progress();
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS voice_provider TEXT DEFAULT 'vapi';
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS voice_model TEXT DEFAULT 'gpt-4-turbo-preview';
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS voice_language TEXT DEFAULT 'English';
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS voice_greeting TEXT;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS voice_speed NUMERIC DEFAULT 1.0;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS voice_temperature NUMERIC DEFAULT 0.7;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS voice_interruptions BOOLEAN DEFAULT true;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS voice_auto_start BOOLEAN DEFAULT false;
+
+-- ============================================================
+-- Phase 3.7 Migration: Realtime Sync & Conversation Manager
+-- Run this block in Supabase SQL Editor
+-- ============================================================
+
+-- Add new columns to chat_sessions for production conversation management
+ALTER TABLE public.chat_sessions
+  ADD COLUMN IF NOT EXISTS summary TEXT,
+  ADD COLUMN IF NOT EXISTS last_message_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS message_count INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
+
+-- Index for sidebar sort performance
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_message ON public.chat_sessions(mentor_id, last_message_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_pinned ON public.chat_sessions(mentor_id, is_pinned DESC);
+
+-- Auto-update session stats whenever a message is inserted
+CREATE OR REPLACE FUNCTION update_session_on_message()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.chat_sessions
+  SET
+    last_message_at = NOW(),
+    message_count = message_count + 1,
+    updated_at = NOW()
+  WHERE id = NEW.session_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS on_message_insert ON public.messages;
+CREATE TRIGGER on_message_insert
+  AFTER INSERT ON public.messages
+  FOR EACH ROW EXECUTE FUNCTION update_session_on_message();
+
+-- Enable Supabase Realtime on required tables
+-- These commands add the tables to the supabase_realtime publication
+ALTER PUBLICATION supabase_realtime ADD TABLE public.roadmap_topics;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.roadmaps;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_sessions;
+
+-- ============================================================
+-- Phase 3.11 Migration: Voice Sessions
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.voice_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id UUID REFERENCES public.chat_sessions(id) ON DELETE CASCADE,
+    mentor_id UUID REFERENCES public.mentors(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    ended_at TIMESTAMP WITH TIME ZONE,
+    duration INTEGER,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'failed')),
+    transcript TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.voice_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for development" ON public.voice_sessions;
+CREATE POLICY "Allow all for development" ON public.voice_sessions
+    FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_voice_sessions_mentor_id ON public.voice_sessions(mentor_id);
+CREATE INDEX IF NOT EXISTS idx_voice_sessions_session_id ON public.voice_sessions(session_id);

@@ -147,7 +147,7 @@ export function MentorCard({ mentor }: MentorCardProps) {
             <p className="text-xs text-muted-foreground mt-0.5">Sessions</p>
           </div>
           <div>
-            <div className="flex items-center justify-center gap-1 text-green-500">
+            <div className="flex items-center justify-center gap-1 text-primary">
               <Clock className="h-3.5 w-3.5" />
               <span className="text-sm font-semibold">{Math.round(stats.totalMinutes / 60)}h</span>
             </div>
@@ -167,7 +167,7 @@ export function MentorCard({ mentor }: MentorCardProps) {
 
       <CardFooter className="pt-0">
         <Link href={`/dashboard/mentors/${mentor.id}`} className="w-full">
-          <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md hover:shadow-lg transition-all" size="sm">
+          <Button className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all" size="sm">
             Continue
             <ArrowRight className="h-4 w-4" />
           </Button>

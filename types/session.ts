@@ -5,10 +5,12 @@ export type SessionStatus = "scheduled" | "active" | "completed" | "cancelled";
 
 export interface Message {
   id: string;
-  sessionId: string;
+  sessionId?: string;
   role: "user" | "assistant" | "system";
   content: string;
-  timestamp: string;
+  timestamp?: string;
+  created_at?: string;
+  token_count?: number;
   // Extension points for future rich content (code blocks, images)
   metadata?: {
     type?: "text" | "code" | "image" | "explanation";
@@ -35,6 +37,22 @@ export interface Session {
   topicsCovered: string[];
   notes?: string;
   createdAt: string;
+}
+
+// ─── Chat Session (Supabase DB model) ────────────────────────────────────────
+
+export interface ChatSession {
+  id: string;
+  mentor_id: string;
+  user_id: string;
+  title: string;
+  summary?: string | null;
+  created_at: string;
+  updated_at: string;
+  last_message_at?: string | null;
+  message_count: number;
+  is_pinned: boolean;
+  is_archived: boolean;
 }
 
 export interface CreateSession {

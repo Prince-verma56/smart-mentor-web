@@ -30,7 +30,7 @@ export function DashboardPreview() {
             <div className="flex gap-2">
               <div className="h-3 w-3 rounded-full bg-red-400" />
               <div className="h-3 w-3 rounded-full bg-yellow-400" />
-              <div className="h-3 w-3 rounded-full bg-green-400" />
+              <div className="h-3 w-3 rounded-full bg-primary" />
             </div>
             <div className="mx-auto text-xs text-muted-foreground font-medium flex items-center gap-1">
               <Sparkles className="h-3 w-3" /> app.supermentor.ai

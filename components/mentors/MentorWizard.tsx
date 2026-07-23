@@ -7,13 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import Select from "@/components/ui/smoothui/select";
 import { cn } from "@/lib/utils";
 import {
   ChevronRight,
@@ -135,18 +129,14 @@ export function MentorWizard() {
                   </div>
                   <div className="space-y-3">
                     <Label htmlFor="subject" className="text-base font-semibold">What will they teach you?</Label>
-                    <Select value={subject} onValueChange={(v) => setSubject(v as MentorSubject)}>
-                      <SelectTrigger id="subject" className="h-12 text-base px-4">
-                        <SelectValue placeholder="Select a core subject" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SUBJECTS.map((s) => (
-                          <SelectItem key={s.value} value={s.value} className="py-3 cursor-pointer">
-                            {s.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Select 
+                      name="subject"
+                      value={subject} 
+                      onValueChange={(v) => setSubject(v as MentorSubject)}
+                      placeholder="Select a core subject"
+                      options={SUBJECTS}
+                      className="h-12 text-base px-4"
+                    />
                   </div>
                 </div>
               )}

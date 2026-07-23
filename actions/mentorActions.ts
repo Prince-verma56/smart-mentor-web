@@ -240,3 +240,28 @@ export async function deleteMentorAction(mentorId: string) {
   revalidatePath("/dashboard");
   return { success: true };
 }
+
+export async function updateMentorVoiceSettingsAction(mentorId: string, settings: any) {
+  const { userId } = await auth();
+  if (!userId) return { error: "Unauthorized" };
+
+  const { error } = await supabase
+    .from("mentors")
+    .update({
+      voice_provider: settings.voiceProvider,
+      voice_model: settings.voiceModel,
+      voice_language: settings.voiceLanguage,
+      voice_greeting: settings.voiceGreeting,
+      voice_speed: settings.voiceSpeed,
+      voice_temperature: settings.voiceTemperature,
+      voice_interruptions: settings.voiceInterruptions,
+      voice_auto_start: settings.voiceAutoStart,
+    })
+    .eq("id", mentorId)
+    .eq("user_id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/mentors", "layout");
+  return { success: true };
+}

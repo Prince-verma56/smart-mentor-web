@@ -33,8 +33,8 @@ const features = [
         <div className="w-4/5 h-1 rounded-sm bg-muted" />
         <div className="w-full h-1 rounded-sm bg-muted" />
         <div className="w-3/4 h-1 rounded-sm bg-muted" />
-        <div className="mt-auto w-full h-4 rounded-sm bg-green-500/20 flex items-center justify-center">
-          <div className="w-4 h-1 rounded-sm bg-green-500" />
+        <div className="mt-auto w-full h-4 rounded-sm bg-primary/20 flex items-center justify-center">
+          <div className="w-4 h-1 rounded-sm bg-primary" />
         </div>
       </div>
     ),
@@ -86,8 +86,8 @@ const features = [
         <div className="text-zinc-500">{"// Generate Next.js app"}</div>
         <div className="text-purple-400">export default <span className="text-blue-400">function</span> <span className="text-yellow-200">App</span>() {'{'}</div>
         <div className="pl-2">return (</div>
-        <div className="pl-4 text-green-300">{"<div className='flex'>"}</div>
-        <div className="pl-4 text-green-300">{"</div>"}</div>
+        <div className="pl-4 text-primary">{"<div className='flex'>"}</div>
+        <div className="pl-4 text-primary">{"</div>"}</div>
         <div className="pl-2">)</div>
         <div>{'}'}</div>
       </div>

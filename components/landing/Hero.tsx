@@ -98,7 +98,7 @@ export function Hero() {
                 <div className="flex gap-2">
                   <div className="h-3 w-3 rounded-full bg-red-400" />
                   <div className="h-3 w-3 rounded-full bg-yellow-400" />
-                  <div className="h-3 w-3 rounded-full bg-green-400" />
+                  <div className="h-3 w-3 rounded-full bg-primary" />
                 </div>
                 <div className="h-6 w-32 rounded bg-muted" />
               </div>
@@ -178,11 +178,11 @@ export function Hero() {
               className="absolute -left-12 bottom-1/3 w-48 glass-card rounded-xl p-4 shadow-xl border border-white/20 dark:border-white/10 flex items-center gap-4"
               style={{ transform: "translateZ(80px)" }}
             >
-              <div className="relative flex h-12 w-12 items-center justify-center rounded-full border-4 border-green-500/20">
+              <div className="relative flex h-12 w-12 items-center justify-center rounded-full border-4 border-primary/20">
                 <svg className="absolute inset-0 h-full w-full -rotate-90">
-                  <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="4" className="text-green-500" strokeDasharray="125" strokeDashoffset="12" />
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="4" className="text-primary" strokeDasharray="125" strokeDashoffset="12" />
                 </svg>
-                <span className="text-sm font-bold text-green-500">92</span>
+                <span className="text-sm font-bold text-primary">92</span>
               </div>
               <div>
                 <div className="text-sm font-semibold">Interview Score</div>

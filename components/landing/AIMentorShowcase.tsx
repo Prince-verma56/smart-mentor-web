@@ -89,7 +89,7 @@ export function AIMentorShowcase() {
                   <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
                     <Bot className="h-5 w-5" />
                   </div>
-                  <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                  <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-primary border-2 border-background" />
                 </div>
                 <div>
                   <div className="font-semibold text-sm">SuperMentor AI</div>

@@ -39,8 +39,18 @@ export interface Mentor {
   learningGoal: string;
   learningStyle: LearningStyle;
   conversationStyle: ConversationStyle;
-  // Voice AI extension point — populated when Vapi/ElevenLabs is integrated
+  
+  // Voice AI extension point
   voiceId?: string;
+  voiceProvider?: string;
+  voiceModel?: string;
+  voiceLanguage?: string;
+  voiceGreeting?: string;
+  voiceSpeed?: number;
+  voiceTemperature?: number;
+  voiceInterruptions?: boolean;
+  voiceAutoStart?: boolean;
+  
   avatarUrl?: string;
   avatarColor: string; // fallback color for initials avatar
   teachingSpeed: TeachingSpeed;

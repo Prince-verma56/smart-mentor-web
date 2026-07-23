@@ -537,11 +537,33 @@ function SidebarMenuButton({
     }
   }
 
+  const wrapperRef = React.useRef<HTMLDivElement | null>(null)
+  const [tooltipSide, setTooltipSide] = React.useState<"left" | "right">(
+    "right"
+  )
+
+  React.useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    // Find nearest ancestor that has a data-side attribute (e.g. data-side="right")
+    let parent: HTMLElement | null = el
+    while (parent && parent !== document.documentElement) {
+      const sideAttr = parent.getAttribute("data-side")
+      if (sideAttr === "right" || sideAttr === "left") {
+        // Tooltip should appear on the opposite side of the sidebar
+        setTooltipSide(sideAttr === "right" ? "left" : "right")
+        return
+      }
+      parent = parent.parentElement
+    }
+    setTooltipSide("right")
+  }, [])
+
   return (
     <Tooltip>
-      {comp}
+      <div ref={wrapperRef}>{comp}</div>
       <TooltipContent
-        side="right"
+        side={tooltipSide}
         align="center"
         hidden={state !== "collapsed" || isMobile}
         {...tooltip}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use, Suspense } from "react";
+import { useState, use, Suspense, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sheet,
@@ -11,15 +11,34 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { PanelLeft, PanelRight } from "lucide-react";
+import { 
+  PanelLeft, 
+  PanelRight, 
+  MessageSquare, 
+  Menu,
+  Target,
+  BookOpen,
+  Folder
+} from "lucide-react";
 import { MentorSidebar } from "./MentorSidebar";
 import { MentorHeader } from "./MentorHeader";
 import { ConversationPanel } from "./ConversationPanel";
 import { ResourcePanel } from "./ResourcePanel";
 import { ProgressCard } from "./ProgressCard";
-import { RoadmapCard } from "./RoadmapCard";
+import { RoadmapSidebar } from "@/components/roadmap/RoadmapSidebar";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 import type { Mentor, MentorStats } from "@/types/mentor";
 import type { MentorRoadmap } from "@/types/roadmap";
+import { ConversationProvider } from "@/contexts/ConversationContext";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRealtimeRoadmap } from "@/hooks/useRealtimeRoadmap";
+import { useRealtimeStats } from "@/hooks/useRealtimeStats";
 
 interface MentorWorkspaceProps {
   mentor: Mentor;
@@ -29,6 +48,8 @@ interface MentorWorkspaceProps {
   view?: "conversation" | "settings";
   children?: React.ReactNode;
 }
+
+// ─── Roadmap Loading Skeletons ─────────────────────────────────────────────────
 
 function RoadmapPlaceholder() {
   return (
@@ -57,7 +78,12 @@ function RoadmapErrorPlaceholder() {
           Failed to generate roadmap.
         </p>
       </div>
-      <Button variant="outline" size="sm" className="h-7 text-xs w-full" onClick={() => router.refresh()}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-7 text-xs w-full"
+        onClick={() => router.refresh()}
+      >
         Try Again
       </Button>
     </div>
@@ -66,8 +92,10 @@ function RoadmapErrorPlaceholder() {
 
 function RoadmapWrapper({ promise }: { promise: Promise<MentorRoadmap | null> }) {
   const roadmap = use(promise);
-  return roadmap ? <RoadmapCard roadmap={roadmap} /> : <RoadmapErrorPlaceholder />;
+  return roadmap ? <RoadmapSidebar roadmap={roadmap} /> : <RoadmapErrorPlaceholder />;
 }
+
+// ─── Right Panel — consumes live roadmap & stats ───────────────────────────────
 
 function RightPanelContent({
   stats,
@@ -80,27 +108,42 @@ function RightPanelContent({
   roadmapPromise?: Promise<MentorRoadmap | null>;
   mentorId: string;
 }) {
+  // Live roadmap subscription — patches state from Supabase Realtime
+  const { roadmap: liveRoadmap } = useRealtimeRoadmap(mentorId, roadmap);
+
+  // Derive live stats from live roadmap
+  const liveStats = useRealtimeStats(mentorId, liveRoadmap, stats);
+
   return (
     <Tabs defaultValue="roadmap" className="flex flex-col h-full overflow-hidden">
       <div className="px-3 pt-3 pb-2 border-b shrink-0">
         <TabsList className="w-full grid grid-cols-3 h-8">
-          <TabsTrigger value="progress" className="text-xs">Stats</TabsTrigger>
-          <TabsTrigger value="roadmap" className="text-xs">Roadmap</TabsTrigger>
-          <TabsTrigger value="resources" className="text-xs">Files</TabsTrigger>
+          <TabsTrigger value="progress" className="text-xs">
+            Stats
+          </TabsTrigger>
+          <TabsTrigger value="roadmap" className="text-xs">
+            Roadmap
+          </TabsTrigger>
+          <TabsTrigger value="resources" className="text-xs">
+            Files
+          </TabsTrigger>
         </TabsList>
       </div>
       <ScrollArea className="flex-1 min-h-0" data-lenis-prevent="true">
         <div className="p-3">
           <TabsContent value="progress" className="mt-0">
-            <ProgressCard stats={stats} />
+            {/* ProgressCard now gets live stats */}
+            <ProgressCard stats={liveStats} />
           </TabsContent>
           <TabsContent value="roadmap" className="mt-0">
             {roadmapPromise ? (
               <Suspense fallback={<RoadmapPlaceholder />}>
                 <RoadmapWrapper promise={roadmapPromise} />
               </Suspense>
+            ) : liveRoadmap ? (
+              <RoadmapSidebar roadmap={liveRoadmap} />
             ) : (
-              roadmap ? <RoadmapCard roadmap={roadmap} /> : <RoadmapPlaceholder />
+              <RoadmapPlaceholder />
             )}
           </TabsContent>
           <TabsContent value="resources" className="mt-0">
@@ -112,6 +155,29 @@ function RightPanelContent({
   );
 }
 
+// ─── Async Roadmap Resolver (for Suspense wrapper) ────────────────────────────
+
+function AsyncRoadmapRightPanel({
+  stats,
+  roadmapPromise,
+  mentorId,
+}: {
+  stats: MentorStats;
+  roadmapPromise: Promise<MentorRoadmap | null>;
+  mentorId: string;
+}) {
+  const resolvedRoadmap = use(roadmapPromise);
+  return (
+    <RightPanelContent
+      stats={stats}
+      roadmap={resolvedRoadmap ?? undefined}
+      mentorId={mentorId}
+    />
+  );
+}
+
+// ─── Main Workspace ───────────────────────────────────────────────────────────
+
 export function MentorWorkspace({
   mentor,
   stats,
@@ -122,112 +188,223 @@ export function MentorWorkspace({
 }: MentorWorkspaceProps) {
   const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
   const [mobileRightOpen, setMobileRightOpen] = useState(false);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
 
+  // ConversationProvider wraps everything — single source of truth for conversations
   return (
-    <div className="w-full h-full overflow-hidden bg-background">
+    <ConversationProvider mentorId={mentor.id}>
+      <div className="w-full h-full overflow-hidden bg-background">
 
-      {/* ════════════════════════════════════════════════
-          DESKTOP 3-COLUMN GRID  (lg and above)
-          - Left  : 240px fixed sidebar
-          - Center: flex-1 (all remaining space)
-          - Right : 280px fixed sidebar
-          CSS Grid is rock-solid — no JS, no resizing bugs
-      ════════════════════════════════════════════════ */}
-      <div
-        className="hidden lg:grid h-full w-full"
-        style={{ gridTemplateColumns: "240px 1fr 280px" }}
-      >
-        {/* ── LEFT SIDEBAR ─────────────────────────── */}
-        <div className="h-full overflow-hidden flex flex-col border-r bg-background">
-          <MentorSidebar mentor={mentor} />
+        {/* ════════════════════════════════════════════════
+            DESKTOP 3-COLUMN LAYOUT (lg and above)
+        ════════════════════════════════════════════════ */}
+        <div className="hidden lg:flex h-full w-full">
+          {/* ── LEFT SIDEBAR ─────────────────────────── */}
+          <motion.div 
+            animate={{ width: leftCollapsed ? 72 : 280 }}
+            className="h-full overflow-hidden flex flex-col border-r bg-background shrink-0 relative"
+          >
+            <MentorSidebar 
+              mentor={mentor} 
+              collapsed={leftCollapsed} 
+              onToggleCollapse={() => setLeftCollapsed(p => !p)} 
+            />
+          </motion.div>
+
+          {/* ── CENTER + RIGHT (Flexible Workspace) ────────────────── */}
+          <div className="flex-1 min-w-0 h-full flex overflow-hidden">
+            
+            {/* Center Panel */}
+            <motion.div layout className="flex-1 min-w-0 flex flex-col bg-background relative overflow-hidden h-full">
+              <MentorHeader mentor={mentor} stats={stats} />
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {view === "conversation" ? (
+                  <ConversationPanel mentor={mentor} stats={stats} />
+                ) : (
+                  <div className="h-full overflow-y-auto p-6 md:p-10">
+                    {children}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Right Sidebar */}
+            <motion.div 
+              layout 
+              initial={false}
+              animate={{ width: rightCollapsed ? 56 : 360 }}
+              className="shrink-0 flex flex-col border-l bg-background relative overflow-hidden h-full"
+            >
+              {/* When Collapsed: show the rail icons */}
+              <div 
+                className={cn(
+                  "absolute inset-0 flex flex-col items-center py-3 gap-4 transition-opacity duration-300",
+                  rightCollapsed ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                )}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setRightCollapsed(false)}
+                  className="h-8 w-8 rounded-sm shadow-sm bg-background text-muted-foreground hover:text-foreground border mb-2"
+                  title="Expand Sidebar"
+                >
+                  <PanelLeft className="h-4 w-4" />
+                </Button>
+                
+                <TooltipProvider delay={0}>
+                  <Tooltip>
+                    <TooltipTrigger 
+                      render={
+                        <button className="p-2 rounded-md hover:bg-muted text-muted-foreground transition-colors" onClick={() => setRightCollapsed(false)}>
+                          <Target className="h-5 w-5" />
+                        </button>
+                      } 
+                    />
+                    <TooltipContent side="left">Stats</TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger 
+                      render={
+                        <button className="p-2 rounded-md hover:bg-muted text-primary bg-primary/10 transition-colors" onClick={() => setRightCollapsed(false)}>
+                          <BookOpen className="h-5 w-5" />
+                        </button>
+                      }
+                    />
+                    <TooltipContent side="left">Roadmap</TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger 
+                      render={
+                        <button className="p-2 rounded-md hover:bg-muted text-muted-foreground transition-colors" onClick={() => setRightCollapsed(false)}>
+                          <Folder className="h-5 w-5" />
+                        </button>
+                      } 
+                    />
+                    <TooltipContent side="left">Files</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
+              {/* When Expanded: show the full roadmap */}
+              <div 
+                className={cn(
+                  "absolute inset-0 flex flex-col transition-opacity duration-300 min-w-[360px]",
+                  !rightCollapsed ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                )}
+              >
+                <div className="absolute top-3 right-4 z-50">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRightCollapsed(true)}
+                    className="h-7 w-7 rounded-sm shadow-sm bg-background/80 backdrop-blur-sm text-muted-foreground hover:text-foreground border"
+                  >
+                    <PanelRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="h-full overflow-hidden flex flex-col">
+                  {roadmapPromise ? (
+                    <Suspense
+                      fallback={
+                        <RightPanelContent
+                          stats={stats}
+                          mentorId={mentor.id}
+                        />
+                      }
+                    >
+                      <AsyncRoadmapRightPanel
+                        stats={stats}
+                        roadmapPromise={roadmapPromise}
+                        mentorId={mentor.id}
+                      />
+                    </Suspense>
+                  ) : (
+                    <RightPanelContent
+                      stats={stats}
+                      roadmap={roadmap}
+                      mentorId={mentor.id}
+                    />
+                  )}
+                </div>
+              </div>
+            </motion.div>
+
+          </div>
         </div>
 
-        {/* ── CENTER ───────────────────────────────── */}
-        <div className="h-full overflow-hidden flex flex-col bg-background">
-          <MentorHeader mentor={mentor} stats={stats} />
-          <div className="flex-1 min-h-0 overflow-hidden">
+
+
+        {/* ════════════════════════════════════════════════
+            MOBILE LAYOUT  (<lg)
+            Full-width chat + Sheet overlays for sidebars
+        ════════════════════════════════════════════════ */}
+        <div className="flex lg:hidden flex-col h-full overflow-hidden">
+          {/* Mobile header bar */}
+          <div className="flex items-center h-12 px-2 gap-1 border-b bg-background shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setMobileLeftOpen(true)}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1 min-w-0 px-2">
+              <p className="text-sm font-semibold truncate">{mentor.name}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {mentor.subject}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setMobileRightOpen(true)}
+            >
+              <PanelRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Mobile main content */}
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
             {view === "conversation" ? (
               <ConversationPanel mentor={mentor} stats={stats} />
             ) : (
-              <div className="h-full overflow-y-auto p-6 md:p-10">{children}</div>
+              <div className="flex-1 overflow-y-auto p-6">{children}</div>
             )}
           </div>
         </div>
 
-        {/* ── RIGHT SIDEBAR ────────────────────────── */}
-        <div className="h-full overflow-hidden flex flex-col border-l bg-background">
-          <RightPanelContent 
-            stats={stats} 
-            roadmap={roadmap} 
-            roadmapPromise={roadmapPromise}
-            mentorId={mentor.id} 
-          />
-        </div>
+        {/* ── Mobile Sheets ────────────────────────────── */}
+        <Sheet open={mobileLeftOpen} onOpenChange={setMobileLeftOpen}>
+          <SheetContent side="left" className="w-[85vw] max-w-[400px] p-0 border-r-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Navigation</SheetTitle>
+            </SheetHeader>
+            <MentorSidebar mentor={mentor} mobile />
+          </SheetContent>
+        </Sheet>
+
+        <Sheet open={mobileRightOpen} onOpenChange={setMobileRightOpen}>
+          <SheetContent side="bottom" className="h-[90vh] p-0 rounded-t-2xl">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Resources</SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col h-full pt-4">
+              <div className="w-12 h-1.5 bg-muted mx-auto rounded-full mb-2 shrink-0" />
+              <RightPanelContent
+                stats={stats}
+                roadmap={roadmap}
+                mentorId={mentor.id}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
-
-      {/* ════════════════════════════════════════════════
-          MOBILE LAYOUT  (<lg)
-          Full-width chat + Sheet overlays for sidebars
-      ════════════════════════════════════════════════ */}
-      <div className="flex lg:hidden flex-col h-full overflow-hidden">
-        {/* Mobile header bar */}
-        <div className="flex items-center h-12 px-2 gap-1 border-b bg-background shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setMobileLeftOpen(true)}
-          >
-            <PanelLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1 min-w-0 px-2">
-            <p className="text-sm font-semibold truncate">{mentor.name}</p>
-            <p className="text-[10px] text-muted-foreground">{mentor.subject}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setMobileRightOpen(true)}
-          >
-            <PanelRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Mobile main content */}
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {view === "conversation" ? (
-            <ConversationPanel mentor={mentor} stats={stats} />
-          ) : (
-            <div className="flex-1 overflow-y-auto p-6">{children}</div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Mobile Sheets ────────────────────────────── */}
-      <Sheet open={mobileLeftOpen} onOpenChange={setMobileLeftOpen}>
-        <SheetContent side="left" className="w-72 p-0">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Navigation</SheetTitle>
-          </SheetHeader>
-          <MentorSidebar mentor={mentor} />
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={mobileRightOpen} onOpenChange={setMobileRightOpen}>
-        <SheetContent side="right" className="w-80 p-0">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Resources</SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col h-full pt-8">
-            <RightPanelContent
-              stats={stats}
-              roadmap={roadmap}
-              mentorId={mentor.id}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-    </div>
+    </ConversationProvider>
   );
 }

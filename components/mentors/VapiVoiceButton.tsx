@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Vapi from "@vapi-ai/web";
-import { Mic, Loader2, Square, X } from "lucide-react";
+import { Square, X, Loader2, AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { Mentor } from "@/types/mentor";
@@ -10,6 +10,7 @@ import { saveMessage } from "@/actions/chatActions";
 import { markTopicComplete, markTopicIncomplete } from "@/actions/progressActions";
 import SiriOrb from "@/components/ui/smoothui/siri-orb";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 // Initialize Vapi outside the component to avoid recreating it
 const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "a3a65c73-9cbd-4e8a-910f-8b5c99d56177");
@@ -24,13 +25,28 @@ export function VapiVoiceButton({ mentor, sessionId, isInputIcon = false }: Vapi
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [isVoiceLoading, setIsVoiceLoading] = useState(false);
   const [cachedPrompt, setCachedPrompt] = useState<string | null>(null);
+  const [cachedGreeting, setCachedGreeting] = useState<string | null>(null);
+
+  const connectingMessages = ["Preparing mentor...", "Connecting...", "Mentor is joining..."];
+  const [connectingMsgIndex, setConnectingMsgIndex] = useState(0);
+
+  useEffect(() => {
+    if (isVoiceLoading) {
+      const interval = setInterval(() => {
+        setConnectingMsgIndex(i => (i + 1) % connectingMessages.length);
+      }, 800);
+      return () => clearInterval(interval);
+    } else {
+      setConnectingMsgIndex(0);
+    }
+  }, [isVoiceLoading]);
 
   // Pre-fetch the prompt to make Voice Call start instantly
   useEffect(() => {
     async function prefetchPrompt() {
       const basePrompt = `You are ${mentor.name}, a ${mentor.role} teaching ${mentor.subject}.
-TEACHING STYLE: ${mentor.conversation_style}
-STUDENT GOAL: ${mentor.learning_goal}
+TEACHING STYLE: ${mentor.conversationStyle}
+STUDENT GOAL: ${mentor.learningGoal}
 Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
 
       try {
@@ -40,8 +56,9 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
           body: JSON.stringify({ mentorId: mentor.id, basePrompt, sessionId })
         });
         if (res.ok) {
-          const { prompt } = await res.json();
+          const { prompt, greeting } = await res.json();
           setCachedPrompt(prompt);
+          setCachedGreeting(greeting);
         }
       } catch (err) {
         console.error("Prefetch error", err);
@@ -94,7 +111,7 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
               
               results.push({
                 toolCallId: toolCall.id,
-                result: res.error ? `Error: ${res.error}` : "Successfully marked topic as complete."
+                result: 'error' in res && res.error ? `Error: ${res.error}` : "Successfully marked topic as complete."
               });
             } 
             else if (toolCall.function.name === "update_roadmap_revision_required") {
@@ -107,11 +124,13 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
               
               results.push({
                 toolCallId: toolCall.id,
-                result: res.error ? `Error: ${res.error}` : "Successfully marked topic for revision."
+                result: 'error' in res && res.error ? `Error: ${res.error}` : "Successfully marked topic for revision."
               });
             }
             else if (toolCall.function.name === "end_call") {
               console.log("Tool executing: end call");
+              setIsVoiceActive(false);
+              setIsVoiceLoading(false);
               vapi.stop();
               results.push({
                 toolCallId: toolCall.id,
@@ -130,9 +149,12 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
         // Send tool results back to VAPI
         if (results.length > 0) {
           vapi.send({
-            type: "tool-call-result",
-            toolCallList: results
-          });
+            type: "add-message",
+            message: {
+              role: "tool",
+              content: JSON.stringify(results),
+            }
+          } as any);
         }
       }
     });
@@ -142,9 +164,15 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     };
   }, [sessionId]);
 
+  const endCall = () => {
+    setIsVoiceActive(false);
+    setIsVoiceLoading(false);
+    vapi.stop();
+  };
+
   const handleVoiceClick = async () => {
     if (isVoiceActive) {
-      vapi.stop();
+      endCall();
       return;
     }
     
@@ -152,11 +180,12 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     
     try {
       const basePrompt = `You are ${mentor.name}, a ${mentor.role} teaching ${mentor.subject}.
-TEACHING STYLE: ${mentor.conversation_style}
-STUDENT GOAL: ${mentor.learning_goal}
+TEACHING STYLE: ${mentor.conversationStyle}
+STUDENT GOAL: ${mentor.learningGoal}
 Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
 
       let prompt = cachedPrompt;
+      let greeting = cachedGreeting;
       
       if (!prompt) {
         // Fallback fetch if not cached yet
@@ -171,15 +200,18 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
         }
         const data = await res.json();
         prompt = data.prompt;
+        greeting = data.greeting;
         setCachedPrompt(data.prompt);
+        setCachedGreeting(data.greeting);
       }
       
       // Start VAPI call
       await vapi.start({
+        firstMessage: greeting || "Hi! I am your mentor. Are you ready to begin?",
         model: {
           provider: "openai",
           model: "gpt-4-turbo-preview",
-          messages: [{ role: "system", content: prompt }],
+          messages: [{ role: "system", content: prompt! }],
           tools: [
             {
               type: "function",
@@ -235,7 +267,7 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
         },
         voice: {
           provider: "11labs",
-          voiceId: mentor.voice_id || "21m00Tcm4TlvDq8ikWAM"
+          voiceId: mentor.voiceId || "21m00Tcm4TlvDq8ikWAM"
         }
       });
     } catch (err: any) {
@@ -245,27 +277,39 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     }
   };
 
-  const IconComponent = isVoiceLoading ? Loader2 : isVoiceActive ? Square : Mic;
+  const IconComponent = isVoiceLoading ? Loader2 : isVoiceActive ? Square : AudioLines;
 
   return (
     <>
       <Button 
+        type="button"
         variant={isInputIcon ? "ghost" : (isVoiceActive ? "default" : "ghost")} 
         size={isInputIcon ? "icon" : "sm"} 
         onClick={handleVoiceClick}
         disabled={isVoiceLoading}
-        className={isInputIcon ? 
-          `h-8 w-8 rounded-full ${isVoiceActive ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-foreground'}` 
-          : 
-          `h-7 text-[11px] gap-1.5 rounded-full shrink-0 ${isVoiceActive ? 'bg-red-500 hover:bg-red-600 text-white' : 'text-muted-foreground hover:text-foreground'}`
-        }
+        title="Speak with AI Mentor"
+        className={cn(
+          "transition-all duration-300 rounded-full",
+          isInputIcon
+            ? "h-8 w-8 bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+            : `h-7 text-[11px] gap-1.5 shrink-0 ${isVoiceActive ? 'bg-red-500 hover:bg-red-600 text-white' : 'text-muted-foreground hover:text-foreground'}`,
+          isVoiceLoading && "opacity-70 cursor-wait",
+          isVoiceActive && isInputIcon && "bg-red-500/10 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:bg-red-500/20"
+        )}
       >
-        <IconComponent className={`${isInputIcon ? 'h-4 w-4' : 'h-3.5 w-3.5'} ${isVoiceLoading ? 'animate-spin' : ''} ${isVoiceActive && !isInputIcon ? 'fill-current' : ''}`} />
+        <IconComponent className={cn(
+          isInputIcon ? "h-4 w-4" : "h-3.5 w-3.5",
+          isVoiceLoading && "animate-spin",
+          isVoiceActive && !isInputIcon && "fill-current"
+        )} />
         {!isInputIcon && (isVoiceActive ? "End Voice" : "Voice")}
+        {isInputIcon && !isVoiceActive && !isVoiceLoading && (
+          <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping opacity-20" style={{ animationDuration: '3s' }} />
+        )}
       </Button>
 
       <AnimatePresence>
-        {isVoiceActive && (
+        {(isVoiceActive || isVoiceLoading) && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -273,39 +317,66 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
             className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm"
           >
             <div className="absolute top-8 right-8">
-              <Button variant="ghost" size="icon" onClick={() => vapi.stop()} className="rounded-full h-12 w-12 hover:bg-red-500/10 hover:text-red-500">
+              <Button variant="ghost" size="icon" onClick={endCall} className="rounded-full h-12 w-12 hover:bg-red-500/10 hover:text-red-500">
                 <X className="h-6 w-6" />
               </Button>
             </div>
             
             <div className="flex-1 flex flex-col items-center justify-center gap-12 w-full max-w-md mx-auto">
-              <div className="text-center space-y-4">
-                <h2 className="text-2xl font-semibold tracking-tight">Speaking with {mentor.name}</h2>
-                <p className="text-muted-foreground">The AI is listening and will respond shortly.</p>
-              </div>
+              {isVoiceLoading ? (
+                <div className="flex flex-col items-center gap-8 text-center h-64 justify-center">
+                   <div className="relative h-24 w-24">
+                     <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin" />
+                     <div className="absolute inset-2 rounded-full border-r-2 border-primary/60 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+                   </div>
+                   <div className="h-8 w-full flex items-center justify-center">
+                     <AnimatePresence mode="wait">
+                       <motion.p 
+                         key={connectingMsgIndex}
+                         initial={{ opacity: 0, y: 10 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         exit={{ opacity: 0, y: -10 }}
+                         transition={{ duration: 0.2 }}
+                         className="text-xl font-medium tracking-tight"
+                       >
+                         {connectingMessages[connectingMsgIndex]}
+                       </motion.p>
+                     </AnimatePresence>
+                   </div>
+                </div>
+              ) : (
+                <>
+                  <div className="text-center space-y-4">
+                    <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-semibold tracking-tight">Speaking with {mentor.name}</motion.h2>
+                    <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-muted-foreground">The AI is listening and will respond shortly.</motion.p>
+                  </div>
 
-              <div className="h-64 w-64 flex items-center justify-center">
-                 <SiriOrb 
-                    animationDuration={15}
-                    size="250px"
-                    colors={{
-                      bg: "#1a1a1a",
-                      c1: "#ff3b30",
-                      c2: "#ff9500",
-                      c3: "#ffcc00"
-                    }}
-                 />
-              </div>
+                  <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2 }} className="h-64 w-64 flex items-center justify-center">
+                     <SiriOrb 
+                        animationDuration={15}
+                        size="250px"
+                        colors={{
+                          bg: "#1a1a1a",
+                          c1: "#ff3b30",
+                          c2: "#ff9500",
+                          c3: "#ffcc00"
+                        }}
+                     />
+                  </motion.div>
 
-              <Button 
-                variant="destructive" 
-                size="lg" 
-                onClick={() => vapi.stop()}
-                className="rounded-full px-8 shadow-lg shadow-red-500/20"
-              >
-                <Square className="h-4 w-4 mr-2 fill-current" />
-                End Call
-              </Button>
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                    <Button 
+                      variant="destructive" 
+                      size="lg" 
+                      onClick={endCall}
+                      className="rounded-full px-8 shadow-lg shadow-red-500/20"
+                    >
+                      <Square className="h-4 w-4 mr-2 fill-current" />
+                      End Call
+                    </Button>
+                  </motion.div>
+                </>
+              )}
             </div>
           </motion.div>
         )}

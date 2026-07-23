@@ -7,10 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import Select from "@/components/ui/smoothui/select";
+import { Switch } from "@/components/ui/switch";
+import ElasticSlider from "@/components/ElasticSlider";
 import { Settings, Brain, MessageSquare, Mic, FolderOpen, AlertTriangle, Loader2 } from "lucide-react";
 import type { Mentor, MentorStats } from "@/types/mentor";
 import type { MentorRoadmap } from "@/types/roadmap";
 import { updateMentorAction, deleteMentorAction } from "@/actions/mentorActions";
+import { updateMentorVoiceSettingsAction } from "@/actions/mentorActions";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -159,16 +163,123 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
             <Card>
               <CardHeader>
                 <CardTitle>Voice Integration</CardTitle>
-                <CardDescription>Connect a Vapi or ElevenLabs voice profile.</CardDescription>
+                <CardDescription>Configure Voice AI settings and preferences for this mentor.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="p-4 border border-dashed rounded-lg bg-primary/5 flex flex-col items-center justify-center text-center space-y-3 h-40">
-                  <Mic className="h-8 w-8 text-primary/50" />
-                  <div>
-                    <p className="text-sm font-medium">Voice AI Coming Soon</p>
-                    <p className="text-xs text-muted-foreground max-w-xs mt-1">Live voice sessions will be enabled in the next phase.</p>
+              <CardContent className="space-y-6">
+                <form action={async (formData) => {
+                  const settings = {
+                    voiceProvider: formData.get("voiceProvider"),
+                    voiceModel: formData.get("voiceModel"),
+                    voiceLanguage: formData.get("voiceLanguage"),
+                    voiceSpeed: parseFloat(formData.get("voiceSpeed") as string || "1"),
+                    voiceTemperature: parseFloat(formData.get("voiceTemperature") as string || "0.7"),
+                    voiceInterruptions: formData.get("voiceInterruptions") === "on",
+                    voiceAutoStart: formData.get("voiceAutoStart") === "on",
+                    voiceGreeting: formData.get("voiceGreeting")
+                  };
+                  const promise = updateMentorVoiceSettingsAction(mentor.id, settings).then((res) => {
+                    if (res?.error) throw new Error(res.error);
+                    return res;
+                  });
+
+                  toast.promise(promise, {
+                    loading: "Saving voice settings...",
+                    success: "Voice settings updated successfully!",
+                    error: (err) => err.message || "Failed to update voice settings"
+                  });
+                }} className="space-y-6">
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label>Voice Provider</Label>
+                      <Select 
+                        name="voiceProvider" 
+                        defaultValue={mentor.voiceProvider || "vapi"}
+                        placeholder="Select provider"
+                        options={[
+                          { label: "Vapi", value: "vapi" },
+                          { label: "ElevenLabs", value: "elevenlabs" }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Model</Label>
+                      <Select 
+                        name="voiceModel" 
+                        defaultValue={mentor.voiceModel || "gpt-4-turbo-preview"}
+                        placeholder="Select model"
+                        options={[
+                          { label: "GPT-4 Turbo", value: "gpt-4-turbo-preview" },
+                          { label: "GPT-4o Realtime", value: "gpt-4o" },
+                          { label: "Claude 3 Sonnet", value: "claude-3-sonnet" }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Language</Label>
+                      <Select 
+                        name="voiceLanguage" 
+                        defaultValue={mentor.voiceLanguage || "English"}
+                        placeholder="Select language"
+                        options={[
+                          { label: "English", value: "English" },
+                          { label: "Hindi", value: "Hindi" },
+                          { label: "Hinglish", value: "Hinglish" }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-2 col-span-1 md:col-span-2 mt-4">
+                      <Label className="mb-8 block">Speaking Speed</Label>
+                      <div className="pt-2 pb-6 px-12 md:px-24">
+                        <ElasticSlider 
+                          name="voiceSpeed" 
+                          startingValue={0.5}
+                          maxValue={2.0}
+                          defaultValue={mentor.voiceSpeed || 1.0}
+                          isStepped={true}
+                          stepSize={0.1}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
+
+                  <div className="space-y-2">
+                    <Label>Custom Greeting (Optional)</Label>
+                    <Textarea 
+                      name="voiceGreeting"
+                      placeholder="e.g. Hi! I'm your mentor. Are you ready to begin?" 
+                      defaultValue={mentor.voiceGreeting || ""}
+                      className="resize-none h-20"
+                    />
+                    <p className="text-xs text-muted-foreground">If left blank, the system will automatically generate a dynamic greeting based on your roadmap progress.</p>
+                  </div>
+
+                  <div className="flex flex-col gap-4 py-4 border-y">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Allow Interruptions</Label>
+                        <p className="text-xs text-muted-foreground">Allow the user to interrupt the mentor while it is speaking.</p>
+                      </div>
+                      <Switch name="voiceInterruptions" defaultChecked={mentor.voiceInterruptions ?? true} />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Auto Start</Label>
+                        <p className="text-xs text-muted-foreground">Automatically start the voice session when opening the chat.</p>
+                      </div>
+                      <Switch name="voiceAutoStart" defaultChecked={mentor.voiceAutoStart ?? false} />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button type="submit" className="w-full sm:w-auto">Save Voice Settings</Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </TabsContent>

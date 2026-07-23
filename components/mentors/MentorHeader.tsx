@@ -4,13 +4,14 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Settings, Zap, Home, Clock, BookOpen, Brain, Mic, MessageSquare, Edit2, Check, X } from "lucide-react";
+import { Settings, Zap, Home, Clock, BookOpen, Brain, Mic, MessageSquare, Edit2, Check, X, Loader2 } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 import type { Mentor, MentorStats } from "@/types/mentor";
 import Breadcrumb from "@/components/ui/smoothui/breadcrumb";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { updateMentorAction } from "@/actions/mentorActions";
+import { usePathname, useRouter } from "next/navigation";
 
 interface MentorHeaderProps {
   mentor: Mentor;
@@ -18,17 +19,21 @@ interface MentorHeaderProps {
 }
 
 const DIFFICULTY_COLORS = {
-  beginner: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  beginner: "bg-primary/20 text-primary dark:bg-primary/20 dark:text-primary",
   intermediate: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
   advanced: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
   expert: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
 } as const;
 
 export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const isSettingsView = pathname?.endsWith("/settings");
+  
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(mentor.name);
   const inputRef = useRef<HTMLInputElement>(null);
-  // updateMentor action used directly
+  const [isNavigating, startNavigating] = useTransition();
 
   // Mock knowledge sources count based on subject or random for now
   const knowledgeCount = mentor.knowledgeFocus ? mentor.knowledgeFocus.split(',').length : 3;
@@ -62,113 +67,95 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
   };
 
   return (
-    <header className="border-b bg-background shrink-0 flex flex-col">
-      {/* Row 1: Breadcrumb & Top Actions */}
-      <div className="flex items-center justify-between px-4 pt-2.5 pb-1">
+    <header className="border-b bg-background shrink-0 flex items-center justify-between px-4 py-2 h-14">
+      {/* ── Left: Breadcrumbs & Status ──────────────────── */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         <Breadcrumb
           items={[
-            { label: <Home className="h-3.5 w-3.5" />, href: "/dashboard" },
-            { label: "Mentors", href: "/dashboard" },
+            { label: "Dashboard", href: "/dashboard" },
             { label: mentor.name },
           ]}
         />
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs hidden sm:flex" disabled>
-            <Zap className="h-3 w-3" />
-            Live Mode
-          </Button>
-          <Link href={`/dashboard/mentors/${mentor.id}/settings`}>
-            <Button variant="ghost" size="icon" className="h-7 w-7">
-              <Settings className="h-3.5 w-3.5" />
-              <span className="sr-only">Settings</span>
-            </Button>
-          </Link>
-          <UserButton
-            appearance={{ elements: { avatarBox: "h-7 w-7 ring-1 ring-border" } }}
-          />
+        <Separator orientation="vertical" className="h-4 bg-border/60 hidden md:block" />
+        <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold tracking-wide uppercase border border-primary/20">
+           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+           Online
         </div>
       </div>
 
-      {/* Row 2: Mentor Info & Meta Tags */}
-      <div className="flex flex-col gap-3 px-4 pb-3">
-        {/* Name & Basic Info */}
-        <div className="flex items-center justify-between gap-3 min-w-0">
-          <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
-            {isEditingName ? (
-              <div className="flex items-center gap-1">
-                <Input
-                  ref={inputRef}
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onBlur={handleSaveName}
-                  className="h-7 text-sm font-semibold w-48 px-2 py-0"
-                />
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={handleSaveName}>
-                  <Check className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => { setNameInput(mentor.name); setIsEditingName(false); }}>
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 group">
-                <h1 className="text-sm font-semibold leading-tight truncate">{mentor.name}</h1>
-                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" onClick={() => setIsEditingName(true)}>
-                  <Edit2 className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
-            
-            <Separator orientation="vertical" className="h-4 hidden sm:block" />
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-               <span className="flex items-center gap-1">
-                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                 Online
-               </span>
-               <span>·</span>
-               <span>Using llama-3.1-8b</span>
+      {/* ── Center: Learning Status ──────────────────────── */}
+      <div className="hidden lg:flex items-center justify-center flex-1 min-w-0">
+        {stats?.currentTopic && (
+          <div className="flex items-center gap-3 px-3 py-1 rounded-full bg-muted/30 border shadow-sm max-w-[400px]">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Topic</span>
+              <span className="text-xs font-medium text-foreground truncate max-w-[200px]">{stats.currentTopic}</span>
             </div>
+            {stats.progressPercent > 0 && (
+              <>
+                <Separator orientation="vertical" className="h-3" />
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-500" 
+                      style={{ width: `${stats.progressPercent}%` }} 
+                    />
+                  </div>
+                  <span className="text-[11px] font-bold">{Math.round(stats.progressPercent)}%</span>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Detailed Meta Tags */}
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
-          <span className={`font-medium px-1.5 py-0.5 rounded border ${DIFFICULTY_COLORS[mentor.difficultyLevel]}`}>
-            {mentor.difficultyLevel.charAt(0).toUpperCase() + mentor.difficultyLevel.slice(1)}
-          </span>
-          <Badge variant="secondary" className="font-normal text-[10px] h-5 px-1.5 bg-muted/50 border-muted">
-            {mentor.learningStyle} Learner
-          </Badge>
-          <Badge variant="secondary" className="font-normal text-[10px] h-5 px-1.5 bg-muted/50 border-muted">
-             {mentor.teachingSpeed} Speed
-          </Badge>
-          
-          <Separator orientation="vertical" className="h-3 mx-1 hidden sm:block" />
-          
-          <div className="hidden sm:flex items-center gap-3 text-muted-foreground">
-            <span className="flex items-center gap-1" title="Memory Enabled">
-              <Brain className="h-3 w-3 text-primary/70" />
-              Memory
-            </span>
-             <span className="flex items-center gap-1 opacity-50" title="Voice Coming Soon">
-              <Mic className="h-3 w-3" />
-              Voice
-            </span>
-            <span className="flex items-center gap-1">
-              <BookOpen className="h-3 w-3 text-blue-500/70" />
-              {knowledgeCount} Sources
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageSquare className="h-3 w-3" />
-              {stats?.messagesCount || 0} Messages
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {mentor.sessionDuration}m Session
-            </span>
-          </div>
+      {/* ── Right: Memory, Settings, Profile ─────────────── */}
+      <div className="flex items-center justify-end gap-1.5 flex-1 min-w-0">
+        <div className="hidden md:flex items-center gap-1 mr-2 text-muted-foreground">
+           <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs px-2.5 hover:text-foreground">
+             <Brain className="h-3.5 w-3.5" />
+             <span className="hidden xl:inline">Memory</span>
+           </Button>
+           <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs px-2.5 hover:text-foreground">
+             <BookOpen className="h-3.5 w-3.5" />
+             <span className="hidden xl:inline">Sources</span>
+             <Badge variant="secondary" className="h-4 min-w-4 px-1 ml-1 text-[9px] bg-primary/10 text-primary">{knowledgeCount}</Badge>
+           </Button>
+           {isSettingsView ? (
+             <button 
+               className="h-8 gap-1.5 text-xs px-3 shadow-sm inline-flex items-center justify-center rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 font-medium transition-colors" 
+               title="Back to Chat"
+               onClick={() => {
+                 startNavigating(() => {
+                   router.push(`/dashboard/mentors/${mentor.id}`);
+                 });
+               }}
+             >
+               {isNavigating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />}
+               <span className="hidden xl:inline">Back to Chat</span>
+             </button>
+           ) : (
+             <button 
+               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors inline-flex items-center justify-center rounded-md" 
+               title="Settings"
+               onClick={() => {
+                 startNavigating(() => {
+                   router.push(`/dashboard/mentors/${mentor.id}/settings`);
+                 });
+               }}
+             >
+               {isNavigating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings className="h-4 w-4" />}
+             </button>
+           )}
         </div>
+        <Separator orientation="vertical" className="h-4 mx-1 bg-border/60 hidden md:block" />
+        <UserButton 
+          appearance={{
+            elements: {
+              avatarBox: "h-7 w-7 ring-2 ring-background shadow-sm"
+            }
+          }}
+        />
       </div>
     </header>
   );
