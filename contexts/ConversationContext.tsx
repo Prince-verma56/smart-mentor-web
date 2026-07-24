@@ -54,7 +54,8 @@ interface ConversationContextValue {
   sendMessage: (
     content: string,
     model: string,
-    action?: string
+    action?: string,
+    attachments?: { type: string, url: string }[]
   ) => Promise<void>;
   currentModel: string;
   setCurrentModel: (model: string) => void;
@@ -380,14 +381,28 @@ export function ConversationProvider({
 
   // ── Send message ──────────────────────────────────────────────────────────
   const sendMessage = useCallback(
-    async (content: string, model: string, action?: string) => {
+    async (content: string, model: string, action?: string, attachments?: { type: string, url: string, fileName?: string, size?: number }[]) => {
       if (!user || isStreaming) return;
 
-      const displayContent = action ? `*Requested: ${action}*` : content;
+      let displayContent = action ? `*Requested: ${action}*` : content;
+      const metadata: any = {};
+
+      if (attachments && attachments.length > 0) {
+        if (!displayContent) displayContent = `Sent ${attachments.length} attachment(s)`;
+        
+        metadata.attachments = attachments;
+        // Keep image-specific metadata for backwards compatibility if needed
+        const imageAttach = attachments.find(a => a.type.startsWith("image"));
+        if (imageAttach) {
+           metadata.type = "image";
+           metadata.imageUrl = imageAttach.url;
+        }
+      }
       const tempUserMsg: Message = {
         id: `temp-user-${Date.now()}`,
         role: "user",
         content: displayContent,
+        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       };
       setMessages((prev) => [...prev, tempUserMsg]);
       setIsStreaming(true);
@@ -412,7 +427,7 @@ export function ConversationProvider({
       }
 
       // Save user message to DB
-      await saveMessage(currentSessionId!, "user", content || action || "");
+      await saveMessage(currentSessionId!, "user", content || action || "", undefined, Object.keys(metadata).length > 0 ? metadata : undefined);
 
       // Auto-generate title if this is the first real message
       // NOTE: we now do AI title AFTER the first response completes — see below
@@ -428,6 +443,7 @@ export function ConversationProvider({
         sessionId: currentSessionId,
         model: model || currentModel,
         action,
+        attachments,
       };
 
       // Stream the response
@@ -502,7 +518,7 @@ export function ConversationProvider({
               {
                 ...last,
                 content:
-                  "Sorry, I encountered an error. Please try again.",
+                  "Your message was sent, but the AI service is temporarily unavailable. Please try again.",
               },
             ];
           }

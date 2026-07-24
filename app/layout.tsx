@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { LenisProvider } from "@/components/providers/LenisProvider";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import { Navbar } from "@/components/layout/Navbar";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -31,17 +32,20 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-300">
         <ClerkProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
               <LenisProvider>
-                <Navbar />
-                <div className="flex-1 flex flex-col">
-                  {children}
-                </div>
-                <Toaster position="bottom-right" />
+                <QueryProvider>
+                  <Navbar />
+                  <div className="flex-1 flex flex-col">
+                    {children}
+                  </div>
+                  <Toaster position="bottom-right" />
+                </QueryProvider>
               </LenisProvider>
             </ThemeProvider>
         </ClerkProvider>

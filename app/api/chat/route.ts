@@ -144,6 +144,7 @@ STUDENT GOAL: ${mentor.learning_goal || "Master " + mentor.subject}.`;
       model,
       sessionId,
       system_prompt: systemPrompt,
+      attachments: body.attachments || (body.data && body.data.attachments) || [],
     };
 
     const response = await fetch("http://127.0.0.1:8000/api/v1/chat", {

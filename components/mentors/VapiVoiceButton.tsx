@@ -335,14 +335,14 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
         className={cn(
           "transition-all duration-300 rounded-full",
           isInputIcon
-            ? "h-8 w-8 bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+            ? "h-9 w-9 bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(var(--primary),0.2)]"
             : `h-7 text-[11px] gap-1.5 shrink-0 ${isVoiceActive ? 'bg-red-500 hover:bg-red-600 text-white' : 'text-muted-foreground hover:text-foreground'}`,
           isVoiceLoading && "opacity-70 cursor-wait",
           isVoiceActive && isInputIcon && "bg-red-500/10 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:bg-red-500/20"
         )}
       >
         <IconComponent className={cn(
-          isInputIcon ? "h-4 w-4" : "h-3.5 w-3.5",
+          isInputIcon ? "h-5 w-5" : "h-3.5 w-3.5",
           isVoiceLoading && "animate-spin",
           isVoiceActive && !isInputIcon && "fill-current"
         )} />

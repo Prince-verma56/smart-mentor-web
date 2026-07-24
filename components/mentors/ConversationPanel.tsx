@@ -4,7 +4,7 @@ import {
   CheckCircle2, Copy, HelpCircle, Code2, GraduationCap,
   Sparkles, Loader2, Plus, Send, Mic, FileText,
   Image as ImageIcon, Video, Bookmark, Paperclip,
-  BookOpen, Terminal, Wand2, ChevronDown,
+  BookOpen, Terminal, Wand2, ChevronDown, X
 } from "lucide-react";
 import type { Mentor, MentorStats } from "@/types/mentor";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -33,19 +33,19 @@ const LOADING_STEPS = [
 ];
 
 const MODELS = [
-  { id: "llama-3.1-8b-instant", label: "Llama 3.1 8B", badge: "Fast" },
-  { id: "llama3-70b-8192", label: "Llama 3 70B", badge: "Smart" },
-  { id: "mixtral-8x7b-32768", label: "Mixtral 8x7B", badge: "Balanced" },
-  { id: "llama3-8b-8192", label: "Llama 3 8B", badge: "" },
+  { id: "llama-3.1-8b-instant", label: "Llama 3.1 8B (Groq)", badge: "Fast" },
+  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)", badge: "Smart" },
+  { id: "llama-3.2-90b-vision-preview", label: "Llama 3.2 Vision (Groq)", badge: "Vision" },
+  { id: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (OpenRouter)", badge: "Best" },
+  { id: "openai/gpt-4o", label: "GPT-4o (OpenRouter)", badge: "Smart" },
+  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (OpenRouter)", badge: "New" },
+  { id: "deepseek/deepseek-chat", label: "DeepSeek V3 (OpenRouter)", badge: "Fast" },
 ];
 
 const ATTACH_ITEMS = [
-  { icon: FileText, label: "PDF Document", hint: "Upload a PDF" },
-  { icon: ImageIcon, label: "Image", hint: "JPG, PNG, WebP" },
-  { icon: Video, label: "Video", hint: "MP4, WebM" },
-  { icon: Mic, label: "Audio", hint: "MP3, WAV" },
-  { icon: Terminal, label: "Code Snippet", hint: "Any language" },
-  { icon: BookOpen, label: "Resource", hint: "Link or file" },
+  { id: "pdf", icon: FileText, label: "PDF Document", hint: "Upload a PDF", accept: ".pdf" },
+  { id: "image", icon: ImageIcon, label: "Image", hint: "JPG, PNG, WebP", accept: "image/*" },
+  { id: "text", icon: Terminal, label: "Text Snippet", hint: "TXT, MD, Code", accept: ".txt,.md,.js,.ts,.py,.html,.css" },
 ];
 
 interface ConversationPanelProps {
@@ -72,12 +72,17 @@ const getSuggestedQuestions = (subject: string, currentTopic?: string) => [
 function MessageActions({
   content,
   onAction,
+  alwaysShow = false,
 }: {
   content: string;
   onAction?: (action: string) => void;
+  alwaysShow?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mt-2">
+    <div className={cn(
+      "flex flex-wrap items-center gap-2 transition-opacity duration-300 mt-2",
+      alwaysShow ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+    )}>
       <div className="flex items-center gap-1 bg-card/50 p-0.5 rounded-lg border border-border/60">
         <button
           onClick={() => {
@@ -119,7 +124,7 @@ function MessageActions({
 
 // ─── Attach Popover ───────────────────────────────────────────────────────────
 
-function AttachPopover({ onClose }: { onClose: () => void }) {
+function AttachPopover({ onClose, onSelect }: { onClose: () => void, onSelect: (accept: string) => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 6, scale: 0.97 }}
@@ -131,11 +136,11 @@ function AttachPopover({ onClose }: { onClose: () => void }) {
       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 px-2 py-1">
         Attach
       </p>
-      {ATTACH_ITEMS.map(({ icon: Icon, label, hint }) => (
+      {ATTACH_ITEMS.map(({ id, icon: Icon, label, hint, accept }) => (
         <button
-          key={label}
+          key={id}
           onClick={() => {
-            toast.info(`${label} — Coming soon`);
+            onSelect(accept);
             onClose();
           }}
           className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left hover:bg-muted transition-colors group"
@@ -162,9 +167,22 @@ function ModelPill({
 }) {
   const [open, setOpen] = useState(false);
   const current = MODELS.find((m) => m.id === currentModel) ?? MODELS[0];
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close model popover on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen((p) => !p)}
         className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] text-muted-foreground/60 hover:text-foreground bg-muted/40 hover:bg-muted transition-all border border-transparent hover:border-border/50"
@@ -221,9 +239,14 @@ function Composer({ mentor }: { mentor: Mentor }) {
 
   const [text, setText] = useState("");
   const [showAttach, setShowAttach] = useState(false);
+  const [attachments, setAttachments] = useState<{ file: File; url?: string; uploading: boolean }[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const attachRef = useRef<HTMLDivElement>(null);
-  const hasText = text.trim().length > 0;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasText = text.trim().length > 0 || attachments.some(a => !a.uploading);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
 
   // Auto-resize textarea
   const resize = useCallback(() => {
@@ -249,12 +272,136 @@ function Composer({ mentor }: { mentor: Mentor }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [showAttach]);
 
+  const processFiles = async (files: File[]) => {
+    const validTypes = [
+      "image/png", "image/jpeg", "image/webp", "image/gif",
+      "application/pdf", "text/plain", "text/markdown"
+    ];
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+    const newAttachments: { file: File; uploading: boolean }[] = [];
+    
+    for (const file of files) {
+      if (file.size > MAX_SIZE) {
+        toast.error(`File ${file.name} is too large (max 10MB)`);
+        continue;
+      }
+      
+      // Basic type validation (or let it pass if it's text based on extension)
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      const isTextExt = ['txt', 'md', 'js', 'ts', 'py', 'html', 'css'].includes(ext || '');
+      
+      if (!validTypes.includes(file.type) && !isTextExt && !file.type.startsWith('image/')) {
+        toast.error(`Unsupported file type: ${file.name}`);
+        continue;
+      }
+      newAttachments.push({ file, uploading: true });
+    }
+
+    if (newAttachments.length === 0) return;
+
+    setAttachments((prev) => [...prev, ...newAttachments]);
+    
+    // reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    // Upload each file
+    for (const attach of newAttachments) {
+      try {
+        const formData = new FormData();
+        formData.append("file", attach.file);
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) throw new Error("Upload failed");
+        const data = await res.json();
+
+        setAttachments((prev) => 
+          prev.map(a => a.file === attach.file ? { ...a, url: data.url, uploading: false } : a)
+        );
+      } catch (err) {
+        toast.error(`Failed to upload ${attach.file.name}`);
+        setAttachments((prev) => prev.filter(a => a.file !== attach.file));
+      }
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      processFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      e.preventDefault();
+      processFiles(Array.from(e.clipboardData.files));
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const triggerFileInput = (accept: string) => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = accept;
+      fileInputRef.current.click();
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!hasText || isStreaming) return;
+    if (!hasText || isStreaming || attachments.some(a => a.uploading)) return;
     const val = text.trim();
+    const currentAttachments = [...attachments];
     setText("");
+    setAttachments([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-    await sendMessage(val, currentModel);
+    
+    const mappedAttachments = currentAttachments.map(a => ({
+      type: a.file.type || "text/plain",
+      url: a.url!,
+      fileName: a.file.name,
+      size: a.file.size
+    }));
+
+    await sendMessage(val, currentModel, undefined, mappedAttachments.length > 0 ? mappedAttachments : undefined);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -265,12 +412,71 @@ function Composer({ mentor }: { mentor: Mentor }) {
   };
 
   return (
-    <div className="relative rounded-[20px] bg-card/60 backdrop-blur-xl border border-border/60 shadow-sm transition-all duration-300 focus-within:bg-card focus-within:border-primary/30 focus-within:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:focus-within:shadow-[0_8px_30px_rgba(var(--primary),0.06)] group">
+    <div 
+      className={cn(
+        "relative rounded-[24px] bg-card/60 backdrop-blur-xl border shadow-sm transition-all duration-300 ease-out focus-within:bg-card focus-within:border-primary/30 focus-within:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:focus-within:shadow-[0_8px_30px_rgba(var(--primary),0.06)] focus-within:-mx-2 focus-within:scale-[1.01] group",
+        isDragging ? "border-primary/50 bg-primary/5" : "border-border/60"
+      )}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div className="absolute inset-0 z-50 rounded-[24px] border-2 border-dashed border-primary/50 bg-background/50 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center gap-2 text-primary animate-in zoom-in-95 duration-200">
+            <Plus className="h-8 w-8" />
+            <span className="text-sm font-medium">Drop files to attach</span>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden file input */}
+      <input 
+        type="file" 
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        multiple
+        className="hidden" 
+      />
+
+      {/* Attachment Preview Area */}
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-5 pt-4 pb-1">
+          {attachments.map((a, i) => (
+            <div key={i} className="relative group/att flex items-center gap-2 bg-muted/80 rounded-lg pr-8 p-1.5 border border-border/50 max-w-[200px]">
+              {a.uploading ? (
+                <div className="h-8 w-8 rounded bg-background flex items-center justify-center shrink-0">
+                  <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : a.file.type.startsWith("image/") ? (
+                <div className="h-8 w-8 rounded overflow-hidden shrink-0">
+                  <img src={a.url} alt="preview" className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <div className="h-8 w-8 rounded bg-background flex items-center justify-center shrink-0 text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                </div>
+              )}
+              <span className="text-[11px] font-medium truncate flex-1">{a.file.name}</span>
+              
+              <button 
+                onClick={() => removeAttachment(i)}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 bg-background/80 hover:bg-destructive hover:text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover/att:opacity-100 transition-all"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <textarea
         ref={textareaRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         placeholder={`Ask ${mentor.name} anything...`}
         disabled={isStreaming}
         rows={1}
@@ -288,7 +494,7 @@ function Composer({ mentor }: { mentor: Mentor }) {
         {/* Attach */}
         <div ref={attachRef} className="relative">
           <AnimatePresence>
-            {showAttach && <AttachPopover onClose={() => setShowAttach(false)} />}
+            {showAttach && <AttachPopover onClose={() => setShowAttach(false)} onSelect={triggerFileInput} />}
           </AnimatePresence>
           <button
             type="button"
@@ -313,7 +519,8 @@ function Composer({ mentor }: { mentor: Mentor }) {
         {/* Mic / Voice-to-Text */}
         <VoiceToTextButton
           isStreaming={isStreaming}
-          onTranscript={(t) => setText((prev) => (prev ? prev + " " + t : t))}
+          text={text}
+          setText={setText}
         />
 
         {/* Separator */}
@@ -405,7 +612,10 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const isThinking =
     isStreaming &&
     messages.length > 0 &&
-    messages[messages.length - 1].role === "user";
+    messages[messages.length - 1].role === "assistant" &&
+    messages[messages.length - 1].content === "";
+
+  const lastAssistantMessageIndex = messages.findLastIndex(m => m.role === "assistant" && m.content !== "");
 
   return (
     <div className="flex flex-col h-full bg-background relative">
@@ -439,7 +649,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
         ) : (
           /* Messages */
           <div className="max-w-[700px] mx-auto space-y-8 pb-12">
-            {messages.map((m, index) => (
+            {messages.filter(m => m.content !== "").map((m, index) => (
               <div
                 key={m.id}
                 className={cn(
@@ -471,12 +681,19 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                     className={cn(
                       "leading-relaxed",
                       m.role === "user"
-                        ? "rounded-2xl rounded-tr-sm bg-muted/50 px-5 py-3.5 text-foreground"
+                        ? "rounded-2xl rounded-tr-sm bg-muted/50 px-5 py-3.5 text-foreground overflow-hidden"
                         : "pt-1"
                     )}
                   >
                     {m.role === "user" ? (
-                      <span className="whitespace-pre-wrap text-[15px]">{m.content}</span>
+                      <div className="flex flex-col gap-2">
+                        {m.metadata?.imageUrl && (
+                          <div className="rounded-lg overflow-hidden border border-border/50 max-h-[300px] mb-2 flex justify-end">
+                            <img src={m.metadata.imageUrl} alt="Attached" className="object-contain max-h-[300px]" />
+                          </div>
+                        )}
+                        <span className="whitespace-pre-wrap text-[15px]">{m.content}</span>
+                      </div>
                     ) : (
                       <>
                         <MarkdownRenderer content={m.content} />
@@ -492,6 +709,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                     <MessageActions
                       content={m.content}
                       onAction={handleQuickAction}
+                      alwaysShow={index === lastAssistantMessageIndex}
                     />
                   )}
                 </div>

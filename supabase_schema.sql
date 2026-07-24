@@ -221,3 +221,98 @@ CREATE POLICY "Allow all for development" ON public.voice_sessions
 
 CREATE INDEX IF NOT EXISTS idx_voice_sessions_mentor_id ON public.voice_sessions(mentor_id);
 CREATE INDEX IF NOT EXISTS idx_voice_sessions_session_id ON public.voice_sessions(session_id);
+
+
+-- ============================================================
+-- Phase 2 Backend Architecture (RAG + Knowledge Base) Schema
+-- ============================================================
+
+-- Ensure pgvector extension is enabled
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- RESOURCES TABLE
+-- Represents the original file uploaded to Supabase Storage
+CREATE TABLE IF NOT EXISTS public.resources (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    mentor_id UUID REFERENCES public.mentors(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    storage_url TEXT NOT NULL,
+    status TEXT DEFAULT 'processing' CHECK (status IN ('processing', 'ready', 'failed')),
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.resources ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for development" ON public.resources;
+CREATE POLICY "Allow all for development" ON public.resources
+    FOR ALL USING (true) WITH CHECK (true);
+
+-- DOCUMENTS TABLE
+-- Represents the extracted and normalized text from a resource
+CREATE TABLE IF NOT EXISTS public.documents (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    resource_id UUID REFERENCES public.resources(id) ON DELETE CASCADE,
+    text_content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for development" ON public.documents;
+CREATE POLICY "Allow all for development" ON public.documents
+    FOR ALL USING (true) WITH CHECK (true);
+
+-- DOCUMENT CHUNKS TABLE
+-- Stores semantic chunks and their pgvector embeddings
+CREATE TABLE IF NOT EXISTS public.document_chunks (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    document_id UUID REFERENCES public.documents(id) ON DELETE CASCADE,
+    chunk_index INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    embedding vector(1536), -- 1536 is for text-embedding-3-small / ada-002
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.document_chunks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for development" ON public.document_chunks;
+CREATE POLICY "Allow all for development" ON public.document_chunks
+    FOR ALL USING (true) WITH CHECK (true);
+
+-- Create a HNSW index for faster similarity search on the vector column
+CREATE INDEX ON public.document_chunks USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_document_id ON public.document_chunks(document_id);
+
+-- RETRIEVED SOURCES TABLE
+-- Tracks which chunks were cited in a given message
+CREATE TABLE IF NOT EXISTS public.retrieved_sources (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    message_id UUID REFERENCES public.messages(id) ON DELETE CASCADE,
+    chunk_id UUID REFERENCES public.document_chunks(id) ON DELETE CASCADE,
+    relevance_score FLOAT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.retrieved_sources ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for development" ON public.retrieved_sources;
+CREATE POLICY "Allow all for development" ON public.retrieved_sources
+    FOR ALL USING (true) WITH CHECK (true);
+
+-- MENTOR MEMORY TABLE
+-- For long term learning about the user (Future proofing)
+CREATE TABLE IF NOT EXISTS public.mentor_memory (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    mentor_id UUID REFERENCES public.mentors(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    context TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.mentor_memory ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for development" ON public.mentor_memory;
+CREATE POLICY "Allow all for development" ON public.mentor_memory
+    FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_mentor_memory_lookup ON public.mentor_memory(mentor_id, user_id);
