@@ -77,8 +77,8 @@ function ResetPasswordForm() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
         </div>
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">Invalid reset link</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">This link is missing or expired.</p>
+        <h1 className="text-xl font-semibold text-foreground dark:text-foreground">Invalid reset link</h1>
+        <p className="text-sm text-foreground0 dark:text-muted-foreground">This link is missing or expired.</p>
         <Link href="/forgot-password" className="inline-block rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700">
           Request new reset link
         </Link>
@@ -94,10 +94,10 @@ function ResetPasswordForm() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
+        <h1 className="text-2xl font-semibold text-foreground dark:text-foreground">
           {status === "success" ? "Password updated!" : "Set new password"}
         </h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-sm text-foreground0 dark:text-muted-foreground">
           {status === "success" ? "Redirecting…" : "Choose a strong password for your account."}
         </p>
       </div>
@@ -114,8 +114,8 @@ function ResetPasswordForm() {
             <label htmlFor="rp-password" className="block text-sm font-medium text-slate-700 dark:text-slate-300">New password</label>
             <div className="relative mt-1">
               <input id="rp-password" type={showPassword ? "text" : "password"} required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 8 characters"
-                className="block w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" />
-              <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" aria-label="Toggle password">
+                className="block w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm text-foreground placeholder-slate-400 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-border dark:bg-muted dark:text-foreground" />
+              <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-slate-600" aria-label="Toggle password">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
               </button>
             </div>
@@ -123,7 +123,7 @@ function ResetPasswordForm() {
           <div>
             <label htmlFor="rp-confirm" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Confirm new password</label>
             <input id="rp-confirm" type={showPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat your password"
-              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" />
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-foreground placeholder-slate-400 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-border dark:bg-muted dark:text-foreground" />
             {confirmPassword && password !== confirmPassword && <p className="mt-1 text-xs text-rose-500">Passwords do not match.</p>}
           </div>
           {error && <p role="alert" className="rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-600 dark:bg-rose-900/20 dark:text-rose-400">{error}</p>}
@@ -144,7 +144,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-lg shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/30">
+    <div className="w-full rounded-xl border border-border bg-card p-8 shadow-md">
       <Suspense fallback={<div className="flex items-center justify-center py-12"><svg className="h-6 w-6 animate-spin text-violet-600" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg></div>}>
         <ResetPasswordForm />
       </Suspense>

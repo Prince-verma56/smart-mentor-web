@@ -30,8 +30,8 @@ export function CodeBlock({ language, value }: CodeBlockProps) {
 
   return (
     <div className="relative my-4 rounded-xl overflow-hidden border border-border bg-[#1e1e1e]">
-      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
-        <span className="text-xs font-mono text-zinc-400 select-none">
+      <div className="flex items-center justify-between px-4 py-2 bg-card border-b border-border">
+        <span className="text-xs font-mono text-muted-foreground select-none">
           {language}
         </span>
         <div className="flex items-center gap-2">
@@ -39,7 +39,7 @@ export function CodeBlock({ language, value }: CodeBlockProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-zinc-400 hover:text-white"
+              className="h-6 w-6 text-muted-foreground hover:text-white"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               {isExpanded ? (
@@ -52,7 +52,7 @@ export function CodeBlock({ language, value }: CodeBlockProps) {
           <Button
             variant="ghost"
             size="icon"
-            className={cn("h-6 w-6 text-zinc-400 hover:text-white", isWrapped && "text-white bg-zinc-800")}
+            className={cn("h-6 w-6 text-muted-foreground hover:text-white", isWrapped && "text-white bg-muted")}
             onClick={() => setIsWrapped(!isWrapped)}
             title="Toggle word wrap"
           >
@@ -61,7 +61,7 @@ export function CodeBlock({ language, value }: CodeBlockProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-zinc-400 hover:text-white"
+            className="h-6 w-6 text-muted-foreground hover:text-white"
             onClick={copyToClipboard}
           >
             {isCopied ? (
@@ -97,7 +97,7 @@ export function CodeBlock({ language, value }: CodeBlockProps) {
         </SyntaxHighlighter>
       </div>
       {!isExpanded && (
-        <div className="px-4 py-3 text-xs text-zinc-500 italic bg-[#1e1e1e] flex justify-center cursor-pointer hover:text-zinc-300" onClick={() => setIsExpanded(true)}>
+        <div className="px-4 py-3 text-xs text-foreground0 italic bg-[#1e1e1e] flex justify-center cursor-pointer hover:text-zinc-300" onClick={() => setIsExpanded(true)}>
           Code block collapsed ({codeLines.length} lines). Click to expand.
         </div>
       )}

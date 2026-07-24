@@ -12,9 +12,8 @@ import SiriOrb from "@/components/ui/smoothui/siri-orb";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-// Initialize Vapi outside the component to avoid recreating it
-const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "a3a65c73-9cbd-4e8a-910f-8b5c99d56177");
-
+// We instantiate Vapi inside the component to prevent event listener conflicts
+// between multiple instances of the button.
 interface VapiVoiceButtonProps {
   mentor: Mentor;
   sessionId?: string;
@@ -22,6 +21,14 @@ interface VapiVoiceButtonProps {
 }
 
 export function VapiVoiceButton({ mentor, sessionId, isInputIcon = false }: VapiVoiceButtonProps) {
+  const vapiRef = useRef<Vapi | null>(null);
+  if (!vapiRef.current) {
+    // Only initialize in browser to avoid SSR issues
+    if (typeof window !== "undefined") {
+      vapiRef.current = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "a3a65c73-9cbd-4e8a-910f-8b5c99d56177");
+    }
+  }
+  
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [isVoiceLoading, setIsVoiceLoading] = useState(false);
   const [cachedPrompt, setCachedPrompt] = useState<string | null>(null);
@@ -70,13 +77,16 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
   }, [mentor, sessionId]);
 
   useEffect(() => {
-    vapi.on("call-start", () => {
+    const vapi = vapiRef.current;
+    if (!vapi) return;
+
+    const onCallStart = () => {
       setIsVoiceActive(true);
       setIsVoiceLoading(false);
       transcriptRef.current = ""; // Reset transcript on new call
-    });
+    };
     
-    vapi.on("call-end", async () => {
+    const onCallEnd = async () => {
       setIsVoiceActive(false);
       setIsVoiceLoading(false);
 
@@ -93,17 +103,21 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
           }),
         }).catch((err) => console.warn("[Voice Summary] failed:", err));
       }
-    });
+    };
     
-    vapi.on("error", (e) => {
+    const onError = (e: any) => {
+      // Ignore harmless errors from Daily.co when the meeting ends or is stopped
+      if (e?.type === "daily-error" && e?.error?.errorMsg === "Meeting has ended") {
+        return;
+      }
+      
       console.error("Vapi error", e);
       setIsVoiceLoading(false);
       setIsVoiceActive(false);
       toast.error("Voice call error: " + (e.message || "Unknown error"));
-    });
+    };
 
-    // Listen for messages to sync with our database and execute tools
-    vapi.on("message", async (msg: any) => {
+    const onMessage = async (msg: any) => {
       if (msg.type === "transcript" && msg.transcriptType === "final") {
         const speaker = msg.role === "user" ? "Student" : "Mentor";
         
@@ -178,20 +192,34 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
           } as any);
         }
       }
-    });
+    };
+
+    vapi.on("call-start", onCallStart);
+    vapi.on("call-end", onCallEnd);
+    vapi.on("error", onError);
+    vapi.on("message", onMessage);
 
     return () => {
-      vapi.removeAllListeners();
+      vapi.off("call-start", onCallStart);
+      vapi.off("call-end", onCallEnd);
+      vapi.off("error", onError);
+      vapi.off("message", onMessage);
     };
   }, [sessionId]);
 
   const endCall = () => {
     setIsVoiceActive(false);
     setIsVoiceLoading(false);
-    vapi.stop();
+    vapiRef.current?.stop();
   };
 
   const handleVoiceClick = async () => {
+    const vapi = vapiRef.current;
+    if (!vapi) {
+      toast.error("Voice client not initialized");
+      return;
+    }
+
     if (isVoiceActive) {
       endCall();
       return;
@@ -221,7 +249,7 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
           provider: "deepgram",
           model: "nova-2",
           language: "en",
-          endpointing: 1500 // Adds a 1.5 second patience delay before AI responds
+          endpointing: 500 // Adds a 0.5 second patience delay before AI responds
         },
         voice: {
           provider: "11labs",

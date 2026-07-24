@@ -38,7 +38,7 @@ interface RoadmapCardProps {
 
 const statusConfig: Record<TopicStatus, { label: string; color: string }> = {
   completed: { label: "Completed", color: "text-primary" },
-  "in-progress": { label: "In Progress", color: "text-blue-600 dark:text-blue-400" },
+  "in-progress": { label: "In Progress", color: "text-primary" },
   available: { label: "Available", color: "text-muted-foreground" },
   locked: { label: "Locked", color: "text-muted-foreground/40" },
   skipped: { label: "Skipped", color: "text-orange-500 dark:text-orange-400" },
@@ -105,7 +105,7 @@ function CompletionCircle({
             isCurrent
               ? "bg-primary border-primary shadow-sm shadow-primary/20"
               : isCompleted
-              ? "border-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:border-primary hover:bg-primary/10"
+              ? "border-primary/50 bg-primary/10 hover:border-primary hover:bg-primary/20"
               : "border-muted-foreground/30 bg-transparent hover:border-primary hover:bg-primary/10"
           )}
         >
@@ -126,7 +126,7 @@ function CompletionCircle({
                   key="current"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="h-2 w-2 rounded-full bg-blue-400"
+                  className="h-2 w-2 rounded-full bg-primary"
                 />
               )}
             </AnimatePresence>
@@ -163,8 +163,8 @@ function AnimatedProgressBar({
       {/* Track */}
       <SmoothProgressBar 
         value={value}
-        color={color}
-        className="h-2 w-full"
+        color="#10b981"
+        className="h-2 w-full shadow-[0_0_10px_rgba(16,185,129,0.2)]"
       />
       {/* Labels */}
       <div className="flex items-center justify-between">
@@ -213,7 +213,7 @@ function TopicRow({
         "rounded-xl border overflow-hidden transition-all duration-200",
         // Current lesson: blue ring + soft glow + left accent
         isCurrent &&
-          "border-blue-300/70 dark:border-blue-700/60 bg-blue-50/60 dark:bg-blue-950/30 shadow-[0_0_20px_rgba(59,130,246,0.1)]",
+          "border-primary/50 bg-primary/10 shadow-[0_0_20px_rgba(16,185,129,0.15)]",
         // Completed: primary tint
         isCompleted &&
           "border-primary/40 bg-primary/10",

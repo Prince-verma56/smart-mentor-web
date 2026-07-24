@@ -82,8 +82,8 @@ const features = [
     icon: Code2,
     className: "md:col-span-1 md:row-span-1",
     preview: (
-      <div className="absolute -right-4 bottom-4 w-3/4 h-24 bg-zinc-950 rounded-l-xl p-3 flex flex-col gap-2 font-mono text-[8px] text-zinc-400 overflow-hidden shadow-2xl border-y border-l border-zinc-800">
-        <div className="text-zinc-500">{"// Generate Next.js app"}</div>
+      <div className="absolute -right-4 bottom-4 w-3/4 h-24 bg-background rounded-l-xl p-3 flex flex-col gap-2 font-mono text-[8px] text-muted-foreground overflow-hidden shadow-2xl border-y border-l border-border">
+        <div className="text-foreground0">{"// Generate Next.js app"}</div>
         <div className="text-purple-400">export default <span className="text-blue-400">function</span> <span className="text-yellow-200">App</span>() {'{'}</div>
         <div className="pl-2">return (</div>
         <div className="pl-4 text-primary">{"<div className='flex'>"}</div>

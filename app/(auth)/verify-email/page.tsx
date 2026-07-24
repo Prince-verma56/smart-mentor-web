@@ -63,7 +63,7 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-lg shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/30">
+    <div className="w-full rounded-xl border border-border bg-card p-8 shadow-md">
       {/* Header */}
       <div className="mb-8 text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 dark:bg-violet-900/30">
@@ -73,18 +73,18 @@ export default function VerifyEmailPage() {
         </div>
         {status === "success" ? (
           <>
-            <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Email verified!</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Redirecting to your dashboard…</p>
+            <h1 className="text-2xl font-semibold text-foreground dark:text-foreground">Email verified!</h1>
+            <p className="mt-1 text-sm text-foreground0 dark:text-muted-foreground">Redirecting to your dashboard…</p>
           </>
         ) : status === "no-signup" ? (
           <>
-            <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Nothing to verify</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Start by signing up for an account.</p>
+            <h1 className="text-2xl font-semibold text-foreground dark:text-foreground">Nothing to verify</h1>
+            <p className="mt-1 text-sm text-foreground0 dark:text-muted-foreground">Start by signing up for an account.</p>
           </>
         ) : (
           <>
-            <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Check your email</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <h1 className="text-2xl font-semibold text-foreground dark:text-foreground">Check your email</h1>
+            <p className="mt-1 text-sm text-foreground0 dark:text-muted-foreground">
               {email ? <>Code sent to <strong className="text-slate-700 dark:text-slate-300">{email}</strong>.</> : "Enter the verification code sent to your email."}
             </p>
           </>
@@ -118,7 +118,7 @@ export default function VerifyEmailPage() {
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               placeholder="6-digit code"
-              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-center text-lg font-mono tracking-widest text-slate-900 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-center text-lg font-mono tracking-widest text-foreground outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-border dark:bg-muted dark:text-foreground"
             />
           </div>
           {codeError && <p role="alert" className="rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-600 dark:bg-rose-900/20 dark:text-rose-400">{codeError}</p>}
@@ -127,7 +127,7 @@ export default function VerifyEmailPage() {
             {submitting && <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>}
             {submitting ? "Verifying…" : "Verify email"}
           </button>
-          <button type="button" onClick={handleResend} className="block w-full text-center text-sm text-slate-500 hover:text-violet-600 dark:text-slate-400">
+          <button type="button" onClick={handleResend} className="block w-full text-center text-sm text-foreground0 hover:text-violet-600 dark:text-muted-foreground">
             Didn't receive a code? <span className="underline">Resend</span>
           </button>
         </form>

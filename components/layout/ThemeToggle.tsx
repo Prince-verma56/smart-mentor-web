@@ -13,7 +13,7 @@ export function ThemeToggle() {
   }, []);
 
   if (!mounted) {
-    return <div className="h-9 w-9 rounded-full bg-slate-200/50 dark:bg-slate-800/50 animate-pulse" />;
+    return <div className="h-9 w-9 rounded-full bg-slate-200/50 dark:bg-muted/50 animate-pulse" />;
   }
 
   const currentTheme = theme === "system" ? systemTheme : theme;
@@ -22,7 +22,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+      className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-foreground0 transition-colors hover:bg-slate-200 hover:text-foreground dark:bg-muted dark:text-muted-foreground dark:hover:bg-slate-700 dark:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
       aria-label="Toggle theme"
     >
       <Sun className="h-[1.125rem] w-[1.125rem] rotate-0 scale-100 transition-transform duration-300 dark:-rotate-90 dark:scale-0" />

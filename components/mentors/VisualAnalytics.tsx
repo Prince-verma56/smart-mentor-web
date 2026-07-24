@@ -29,8 +29,8 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
     <div className="space-y-4 pb-4">
       {/* 🧠 AI Mentor Insight */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <Card className="border-[#10b981]/20 bg-[#06150F] overflow-hidden relative shadow-[0_0_15px_rgba(16,185,129,0.05)]">
-          <div className="absolute -right-10 -top-10 w-32 h-32 bg-[#10b981]/10 blur-3xl rounded-full" />
+        <Card className="border-primary/20 bg-gradient-to-br from-[#022c22]/80 to-background overflow-hidden relative shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+          <div className="absolute -right-10 -top-10 w-48 h-48 bg-primary/10 blur-[50px] rounded-full pointer-events-none" />
           <CardContent className="p-5 space-y-4 relative z-10">
             <div className="flex items-center gap-2 mb-1">
               <Brain className="h-4 w-4 text-[#10b981] animate-pulse" />
@@ -47,7 +47,7 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
                 <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">Difficulty</p>
                 <div className="flex gap-1">
                   {difficultyBars.map((filled, i) => (
-                    <div key={i} className={`h-1.5 w-5 rounded-sm ${filled ? 'bg-[#10b981] shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-[#10b981]/10'}`} />
+                    <div key={i} className={`h-1.5 w-5 rounded-sm ${filled ? 'bg-primary shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-primary/10'}`} />
                   ))}
                 </div>
               </div>

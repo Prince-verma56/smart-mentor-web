@@ -113,7 +113,7 @@ export function AIMentorShowcase() {
                       </div>
                       
                       {msg.isCode ? (
-                        <div className="rounded-2xl rounded-tl-none bg-zinc-950 border border-zinc-800 p-4 text-xs font-mono text-zinc-300 shadow-sm w-full overflow-hidden">
+                        <div className="rounded-2xl rounded-tl-none bg-background border border-border p-4 text-xs font-mono text-zinc-300 shadow-sm w-full overflow-hidden">
                           <pre className="whitespace-pre-wrap">{msg.text}</pre>
                         </div>
                       ) : (

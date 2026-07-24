@@ -60,7 +60,7 @@ export function CTA() {
     <section ref={containerRef} className="py-24 relative w-full overflow-hidden flex items-center justify-center">
       <motion.div 
         style={{ scale, opacity, y }}
-        className="w-[95%] max-w-6xl mx-auto rounded-[3rem] relative overflow-hidden bg-zinc-950 border border-white/10 shadow-2xl p-12 md:p-24 text-center flex flex-col items-center gap-8"
+        className="w-[95%] max-w-6xl mx-auto rounded-[3rem] relative overflow-hidden bg-background border border-white/10 shadow-2xl p-12 md:p-24 text-center flex flex-col items-center gap-8"
       >
         {/* Background Gradients */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/10 pointer-events-none" />
@@ -79,7 +79,7 @@ export function CTA() {
           Start building your career with AI <span className="text-gradient-primary">Today</span>
         </h2>
 
-        <p className="relative z-10 text-xl text-zinc-400 max-w-xl">
+        <p className="relative z-10 text-xl text-muted-foreground max-w-xl">
           Join thousands of developers and students accelerating their learning journey. It's free to get started.
         </p>
 
