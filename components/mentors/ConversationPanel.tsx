@@ -702,10 +702,11 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-background chat-workspace-bg relative">
 
-      <div 
-        className="flex-1 min-h-0 h-full w-full overflow-y-auto relative" 
-        ref={scrollContainerRef}
+      <ScrollArea 
+        className="flex-1 min-h-0 h-full w-full relative" 
+        viewportRef={scrollContainerRef}
         onScroll={handleScroll}
+        data-lenis-prevent="true"
       >
         <div className="px-4 py-8 md:px-6 min-h-full">
         {isLoadingMessages ? (
@@ -849,7 +850,6 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
           </div>
         )}
         </div>
-
         <AnimatePresence>
           {showScrollDown && (
             <motion.button
@@ -864,7 +864,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
             </motion.button>
           )}
         </AnimatePresence>
-      </div>
+      </ScrollArea>
 
       {/* ── Composer ──────────────────────────────── */}
       <div className="px-4 pb-5 pt-3 bg-background border-t shrink-0">
