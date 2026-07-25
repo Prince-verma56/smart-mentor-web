@@ -14,14 +14,14 @@ interface VoiceControlDockProps {
   toggleSpeaker: () => void;
   endCall: () => void;
   vapiRef: any;
+  isSettingsOpen: boolean;
+  setIsSettingsOpen: (isOpen: boolean) => void;
 }
 
-export function VoiceControlDock({ mentorId, isMuted, isSpeakerMuted, toggleMute, toggleSpeaker, endCall, vapiRef }: VoiceControlDockProps) {
+export function VoiceControlDock({ mentorId, isMuted, isSpeakerMuted, toggleMute, toggleSpeaker, endCall, vapiRef, isSettingsOpen, setIsSettingsOpen }: VoiceControlDockProps) {
   const { 
     microphones, speakers, selectedMicId, selectedSpeakerId, setMicrophone, setSpeaker 
   } = useAudioDevices(vapiRef);
-
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Mute AI audio by querying the DOM for the audio element Vapi creates
   useEffect(() => {
@@ -134,11 +134,6 @@ export function VoiceControlDock({ mentorId, isMuted, isSpeakerMuted, toggleMute
         </Popover>
       </div>
 
-      <VoiceSettingsCenter 
-        mentorId={mentorId} 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-      />
     </div>
   );
 }

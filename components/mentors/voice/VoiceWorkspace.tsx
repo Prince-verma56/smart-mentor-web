@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Loader2 } from "lucide-react";
 import type { Mentor } from "@/types/mentor";
@@ -9,6 +9,7 @@ import { WaveformStatusPill } from "./WaveformStatusPill";
 import { TranscriptPanel } from "./TranscriptPanel";
 import { VoiceControlDock } from "./VoiceControlDock";
 import { SessionInfo } from "./SessionInfo";
+import { VoiceSettingsCenter } from "./VoiceSettingsCenter";
 
 interface VoiceWorkspaceProps {
   mentor: Mentor;
@@ -33,6 +34,8 @@ export function VoiceWorkspace({ mentor, sessionId, onClose }: VoiceWorkspacePro
     vapiRef,
     session
   } = useVoiceSession({ mentor, sessionId, onCallEnded: onClose });
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Start the call automatically when the workspace mounts
   useEffect(() => {
@@ -173,10 +176,17 @@ export function VoiceWorkspace({ mentor, sessionId, onClose }: VoiceWorkspacePro
                 toggleSpeaker={toggleSpeaker}
                 endCall={() => { endCall(); onClose(); }}
                 vapiRef={vapiRef}
+                isSettingsOpen={isSettingsOpen}
+                setIsSettingsOpen={setIsSettingsOpen}
               />
             </motion.div>
           </div>
           
+          <VoiceSettingsCenter 
+            mentorId={mentor.id} 
+            isOpen={isSettingsOpen} 
+            onClose={() => setIsSettingsOpen(false)} 
+          />
         </motion.div>
       )}
     </AnimatePresence>

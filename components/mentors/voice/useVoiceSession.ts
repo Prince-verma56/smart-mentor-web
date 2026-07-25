@@ -249,24 +249,27 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
       const currentCallState = callStateRef.current;
       if (currentCallState === "listening" || currentCallState === "waiting") {
         const silentSeconds = (Date.now() - lastMessageTimeRef.current) / 1000;
+        const lang = lastGlobalRef.current.preferredLanguage;
         
         if (silentSeconds > 30 && !idleWarningSentRef.current) {
           idleWarningSentRef.current = true;
+          let content = "The user has been silent for 30 seconds. Say this exactly: 'I noticed things have been quiet for a while. I'll stay connected a little longer in case you have another question.'";
+          if (lang === "Hindi") content = "The user has been silent for 30 seconds. Say this exactly in Hindi: 'मुझे लग रहा है कि आप कुछ समय से शांत हैं। अगर आपका कोई सवाल है तो मैं थोड़ी देर और कनेक्टेड रहूँगा।'";
+          else if (lang === "Hinglish") content = "The user has been silent for 30 seconds. Say this exactly in Hinglish: 'Aisa lag raha hai aap kaafi der se shant hain. Agar aapka koi aur question hai toh main thodi der aur connected rahunga.'";
+          
           vapi.send({
             type: "add-message",
-            message: { 
-              role: "system", 
-              content: "The user has been silent for 30 seconds. Say this exactly: 'I noticed things have been quiet for a while. I'll stay connected a little longer in case you have another question.'" 
-            }
+            message: { role: "system", content }
           } as any);
         } else if (silentSeconds > 50 && idleWarningSentRef.current) {
           // It's been 20s since the warning (50s total)
+          let content = "The user is still silent. Say this exactly: 'Looks like we're done for now. Feel free to start another conversation anytime. Have a great day.' And then trigger the end_call tool immediately.";
+          if (lang === "Hindi") content = "The user is still silent. Say this exactly in Hindi: 'लगता है कि अभी के लिए हम समाप्त कर चुके हैं। आप कभी भी नई बातचीत शुरू कर सकते हैं। आपका दिन शुभ हो!' And then trigger the end_call tool immediately.";
+          else if (lang === "Hinglish") content = "The user is still silent. Say this exactly in Hinglish: 'Lagta hai abhi ke liye hum done hain. Aap kabhi bhi nayi conversation start kar sakte hain. Have a great day!' And then trigger the end_call tool immediately.";
+          
           vapi.send({
             type: "add-message",
-            message: { 
-              role: "system", 
-              content: "The user is still silent. Say this exactly: 'Looks like we're done for now. Feel free to start another conversation anytime. Have a great day.' And then trigger the end_call tool immediately." 
-            }
+            message: { role: "system", content }
           } as any);
           clearInterval(idleInterval);
         }
@@ -367,8 +370,21 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
         ? "Provide detailed, comprehensive answers with examples and explanations." 
         : "Keep your answers balanced and conversational.";
 
-      let prompt = (cachedPrompt || basePrompt) + "\n\n" + lengthPrompt;
+      const initialOverrides = `
+CRITICAL INITIALIZATION INSTRUCTIONS:
+- You must speak entirely in ${global.preferredLanguage} starting from your very first response.
+- Your teaching style is set to "${mentorPrefs.teachingStyle}".
+- Your correction level is set to "${mentorPrefs.correctionLevel}".
+`;
+
+      let prompt = (cachedPrompt || basePrompt) + "\n\n" + lengthPrompt + "\n" + initialOverrides;
+      
       let greeting = cachedGreeting || "Hi! I am your AI mentor. Let's get started whenever you're ready.";
+      if (global.preferredLanguage === "Hindi") {
+        greeting = "नमस्ते! मैं आपका एआई मेंटर हूँ। जब आप तैयार हों, हम शुरू कर सकते हैं।";
+      } else if (global.preferredLanguage === "Hinglish") {
+        greeting = "Hi! Main aapka AI mentor hoon. Jab aap ready ho, hum start kar sakte hain.";
+      }
       
       await vapi.start({
         firstMessage: greeting,
