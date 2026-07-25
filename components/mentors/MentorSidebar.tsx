@@ -97,23 +97,25 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
           <div className="relative shrink-0">
             <Avatar className={cn(
               "ring-1 ring-border/80 shadow-sm transition-transform duration-300 group-hover/header:scale-[1.02]",
-              collapsed && !mobile ? "h-8 w-8" : "h-10 w-10"
+              collapsed && !mobile ? "h-10 w-10" : "h-12 w-12"
             )}>
               {mentor.avatarUrl ? (
                 <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
               ) : null}
-              <AvatarFallback style={{ backgroundColor: mentor.avatarColor }} className="text-white font-semibold text-xs">
+              <AvatarFallback style={{ backgroundColor: mentor.avatarColor }} className="text-white font-semibold text-sm">
                 {getInitials(mentor.name)}
               </AvatarFallback>
             </Avatar>
             {/* Online Indicator */}
-            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-[2px] border-background shadow-sm" />
+            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-[2px] border-background shadow-sm">
+              <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
+            </span>
           </div>
 
           {(!collapsed || mobile) && (
-            <div className="flex flex-col flex-1 min-w-0">
-              <span className="font-bold text-[13px] leading-tight truncate text-foreground/90">{mentor.name}</span>
-              <span className="text-[11px] text-muted-foreground truncate">{mentor.role || "AI Mentor"}</span>
+            <div className="flex flex-col flex-1 min-w-0 justify-center">
+              <span className="font-bold text-[14px] leading-tight truncate text-foreground/90 tracking-tight">{mentor.name}</span>
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/80 truncate mt-0.5">{mentor.role || "AI Mentor"}</span>
             </div>
           )}
 
@@ -124,24 +126,23 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
               size="icon"
               onClick={(e) => { e.stopPropagation(); onToggleCollapse?.(); }}
               className={cn(
-                "text-muted-foreground/60 hover:text-foreground hover:bg-muted shrink-0 rounded-md transition-colors",
-                collapsed && !mobile ? "h-8 w-8" : "h-6 w-6"
+                "text-muted-foreground/60 hover:text-foreground hover:bg-muted shrink-0 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer h-10 w-10"
               )}
               title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
-              <Menu className={cn(collapsed && !mobile ? "h-4 w-4" : "h-3 w-3")} />
+              <Menu className="h-6 w-6" />
             </Button>
           </div>
         </div>
       </div>
 
-      <ScrollArea className="flex-1 overflow-y-auto" data-lenis-prevent="true">
-        <div className={cn("flex flex-col pb-4", collapsed && !mobile ? "items-center gap-2 px-0 pt-2" : "px-2 pt-1")}>
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className={cn("flex flex-col shrink-0", collapsed && !mobile ? "items-center gap-2 px-0 pt-2" : "px-2 pt-1")}>
           
           {/* Navigation Groups */}
           {navGroups.map((group, groupIdx) => (
             <SidebarAccordion key={group.title} title={group.title} collapsed={collapsed && !mobile} storageKey={group.title}>
-              <div className={cn("flex flex-col gap-[2px]", collapsed && !mobile ? "items-center w-full" : "w-full")}>
+              <div className={cn("flex flex-col gap-[4px]", collapsed && !mobile ? "items-center w-full" : "w-full")}>
                 {group.items.map((item) => {
                   const isActive = item.implemented && pathname === item.href;
 
@@ -169,23 +170,23 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
                         href={item.implemented ? item.href : "#"}
                         onClick={(e) => !item.implemented && e.preventDefault()}
                         className={cn(
-                          "relative flex items-center transition-all duration-200 group shrink-0",
+                          "relative flex items-center transition-all duration-150 group shrink-0 cursor-pointer",
                           collapsed && !mobile
                             ? "h-11 w-11 justify-center rounded-xl mx-auto"
-                            : "h-[34px] px-3 gap-2.5 rounded-md mx-1",
+                            : "h-[36px] px-3 gap-3 rounded-lg mx-2",
                           isActive
-                            ? "bg-card/60 text-foreground font-medium shadow-sm border border-border/40 shadow-primary/5 relative overflow-hidden"
+                            ? "bg-card/80 text-foreground font-medium shadow-[0_2px_10px_-2px_rgba(0,0,0,0.05)] border border-border/50 shadow-primary/10 relative overflow-hidden ring-1 ring-primary/5"
                             : item.implemented
-                            ? "text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent"
+                            ? "text-muted-foreground hover:bg-muted/60 hover:text-foreground border border-transparent hover:shadow-sm"
                             : "text-muted-foreground/30 cursor-not-allowed pointer-events-none border border-transparent"
                         )}
                       >
                         {isActive && (
-                          <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-primary rounded-r-full" />
+                          <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
                         )}
-                        <item.icon className={cn(collapsed && !mobile ? "h-5 w-5" : "h-4 w-4 shrink-0", isActive ? "text-primary ml-0.5" : "text-muted-foreground/70")} strokeWidth={isActive ? 2.5 : 2} />
+                        <item.icon className={cn(collapsed && !mobile ? "h-5 w-5" : "h-5 w-5 shrink-0 transition-colors duration-150", isActive ? "text-primary ml-0.5 drop-shadow-[0_0_8px_rgba(var(--primary),0.3)]" : "text-muted-foreground/70 group-hover:text-foreground/80")} strokeWidth={isActive ? 2.5 : 2} />
                         {(!collapsed || mobile) && (
-                          <span className="text-[13px] truncate">{item.label}</span>
+                          <span className={cn("text-[13px] truncate transition-colors duration-150", isActive ? "font-semibold" : "font-medium")}>{item.label}</span>
                         )}
                         {(!collapsed || mobile) && !item.implemented && (
                           <span className="ml-auto text-[9px] text-muted-foreground/40 font-mono uppercase hidden group-hover:block border rounded px-1">
@@ -216,24 +217,26 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
           ))}
 
           {/* Conversations — full production sidebar */}
+          </div>
           {(!collapsed || mobile) ? (
-            <div className="mt-1">
-              <div className="px-3 py-1 flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+            <div className="mt-2 flex-1 flex flex-col min-h-0">
+              <div className="px-5 mb-2 shrink-0">
+                <div className="h-[1px] w-full bg-border/40" />
+              </div>
+              <div className="px-4 py-1 flex items-center justify-between mb-1 shrink-0">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
                   Conversations
                 </span>
               </div>
               <ConversationSidebar collapsed={false} />
             </div>
           ) : (
-            <div className="mt-3 w-full flex flex-col items-center">
-              <div className="w-8 h-[1px] bg-border/60 mb-2" />
+            <div className="mt-3 flex-1 flex flex-col min-h-0 w-full items-center">
+              <div className="w-8 h-[1px] bg-border/60 mb-2 shrink-0" />
               <ConversationSidebar collapsed />
             </div>
           )}
-
-        </div>
-      </ScrollArea>
+      </div>
 
       {/* ── Settings (Bottom) ─────────────────────── */}
       <div className={cn("shrink-0 pb-3 pt-2", collapsed && !mobile ? "px-0 flex flex-col items-center" : "px-3")}>
@@ -264,25 +267,25 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
                 });
               }}
               className={cn(
-                "relative flex items-center transition-all duration-200 group shrink-0",
+                "relative flex items-center transition-all duration-150 group shrink-0 cursor-pointer",
                 collapsed && !mobile
                   ? "h-11 w-11 justify-center rounded-xl mx-auto"
-                  : "h-[34px] px-3 gap-2.5 rounded-md mx-1",
+                  : "h-[40px] px-4 gap-3 rounded-xl mx-1",
                 pathname === `/dashboard/mentors/${mentor.id}/settings`
-                  ? "bg-card/60 text-foreground font-medium shadow-sm border border-border/40 shadow-primary/5 relative overflow-hidden"
-                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent"
+                  ? "bg-card/80 text-foreground font-medium shadow-[0_2px_10px_-2px_rgba(0,0,0,0.05)] border border-border/50 shadow-primary/10 relative overflow-hidden ring-1 ring-primary/5"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground border border-transparent hover:shadow-sm"
               )}
             >
               {pathname === `/dashboard/mentors/${mentor.id}/settings` && (
-                <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-primary rounded-r-full" />
+                <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
               )}
               {isNavigatingSettings ? (
-                <Loader2 className={cn("animate-spin", collapsed && !mobile ? "h-5 w-5" : "h-4 w-4 shrink-0")} />
+                <Loader2 className={cn("animate-spin", collapsed && !mobile ? "h-5 w-5" : "h-5 w-5 shrink-0")} />
               ) : (
-                <Settings className={cn(collapsed && !mobile ? "h-5 w-5" : "h-4 w-4 shrink-0")} strokeWidth={pathname === `/dashboard/mentors/${mentor.id}/settings` ? 2.5 : 2} />
+                <Settings className={cn("transition-transform duration-150 group-hover:rotate-45", collapsed && !mobile ? "h-5 w-5" : "h-5 w-5 shrink-0", pathname === `/dashboard/mentors/${mentor.id}/settings` ? "text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.3)]" : "text-muted-foreground/70 group-hover:text-foreground/80")} strokeWidth={pathname === `/dashboard/mentors/${mentor.id}/settings` ? 2.5 : 2} />
               )}
               {(!collapsed || mobile) && (
-                <span className="text-[13px] truncate">Settings</span>
+                <span className={cn("text-[13.5px] truncate transition-colors duration-150", pathname === `/dashboard/mentors/${mentor.id}/settings` ? "font-semibold" : "font-medium")}>Settings</span>
               )}
             </button>
           );

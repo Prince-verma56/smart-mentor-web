@@ -37,23 +37,25 @@ export function RoadmapProgress({
   return (
     <div className="space-y-4 mt-4">
       {/* Overview Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-2">
-        <div className="flex flex-col gap-1 rounded-xl bg-muted/40 p-3 border border-border/40">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <BookOpen className="h-3.5 w-3.5" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider">Remaining</span>
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="relative group flex flex-col gap-1 rounded-xl bg-card/60 p-3 border border-border/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] hover:shadow-md hover:bg-card/80 transition-all duration-300 overflow-hidden">
+          <div className="absolute -right-4 -top-4 h-16 w-16 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition-colors" />
+          <div className="flex items-center gap-1.5 text-muted-foreground relative z-10">
+            <BookOpen className="h-[14px] w-[14px]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Remaining</span>
           </div>
-          <span className="text-lg font-semibold text-foreground">
-            {total - completed} <span className="text-sm font-normal text-muted-foreground/70">lessons</span>
+          <span className="text-xl font-bold text-foreground tracking-tight relative z-10">
+            {total - completed} <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">lessons</span>
           </span>
         </div>
-        <div className="flex flex-col gap-1 rounded-xl bg-muted/40 p-3 border border-border/40">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider">Est. Time</span>
+        <div className="relative group flex flex-col gap-1 rounded-xl bg-card/60 p-3 border border-border/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] hover:shadow-md hover:bg-card/80 transition-all duration-300 overflow-hidden">
+          <div className="absolute -right-4 -top-4 h-16 w-16 bg-blue-500/5 rounded-full blur-xl group-hover:bg-blue-500/10 transition-colors" />
+          <div className="flex items-center gap-1.5 text-muted-foreground relative z-10">
+            <Clock className="h-[14px] w-[14px]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Est. Time</span>
           </div>
-          <span className="text-lg font-semibold text-foreground">
-            {remainingHours > 0 && `${remainingHours}h`} {remainingMins}m
+          <span className="text-xl font-bold text-foreground tracking-tight relative z-10">
+            {remainingHours > 0 && `${remainingHours}h `}{remainingMins}m
           </span>
         </div>
       </div>
@@ -61,12 +63,12 @@ export function RoadmapProgress({
       {/* Progress Track */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-[12px] font-semibold text-foreground">Course Progress</span>
-          <span className="text-[12px] font-semibold text-primary">{value}%</span>
+          <span className="text-[12px] font-bold text-foreground">Course Progress</span>
+          <span className="text-[12px] font-bold text-primary">{value}%</span>
         </div>
-        <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden border border-border/30 shadow-inner">
+        <div className="h-2.5 w-full rounded-full bg-muted/50 overflow-hidden border border-border/40 shadow-inner relative">
           <motion.div
-            className={cn("h-full rounded-full bg-gradient-to-r", gradientColor)}
+            className={cn("absolute inset-y-0 left-0 rounded-full bg-gradient-to-r", gradientColor)}
             initial={{ width: 0 }}
             animate={{ width: `${value}%` }}
             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }} // Smooth spring-like ease

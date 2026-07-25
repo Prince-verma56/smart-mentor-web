@@ -26,6 +26,11 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
   const [optimisticRoadmap, setOptimisticRoadmap] = useState(roadmap);
   const [showReset, setShowReset] = useState(false);
 
+  const allTopics = optimisticRoadmap.phases.flatMap((p) => p.topics);
+  const currentTopic = allTopics.find((t) => t.status === "in-progress");
+  
+  const [expandedTopicId, setExpandedTopicId] = useState<string | null>(currentTopic?.id || null);
+
   const updateTopicOptimistically = (topicId: string, newStatus: TopicStatus) => {
     setOptimisticRoadmap((prev) => ({
       ...prev,
@@ -115,11 +120,9 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
     });
   };
 
-  const allTopics = optimisticRoadmap.phases.flatMap((p) => p.topics);
   const completedCount = allTopics.filter((t) => t.status === "completed").length;
   const totalCount = allTopics.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-  const currentTopic = allTopics.find((t) => t.status === "in-progress");
 
   return (
     <div
@@ -132,11 +135,11 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
       <div className="px-4 pt-4 pb-3 border-b border-border/50 shrink-0 bg-card z-10">
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold leading-snug text-foreground truncate">
+            <h3 className="text-sm font-bold leading-snug text-foreground truncate tracking-tight">
               {optimisticRoadmap.title}
             </h3>
             {currentTopic && (
-              <p className="text-[11px] text-blue-500 mt-0.5 flex items-center gap-1">
+              <p className="text-[11px] font-medium text-primary/80 mt-0.5 flex items-center gap-1">
                 <Zap className="h-3 w-3 shrink-0" />
                 <span className="truncate">Now: {currentTopic.title}</span>
               </p>
@@ -175,7 +178,10 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
               <div key={topic.id} className="relative group/topic">
                 {/* Timeline connector */}
                 {idx !== phase.topics.length - 1 && (
-                  <div className="absolute left-6 top-[34px] bottom-[-16px] w-[2px] bg-border/40 group-hover/topic:bg-border/60 transition-colors z-0" />
+                  <div className={cn(
+                    "absolute left-6 top-[34px] bottom-[-16px] w-[2px] transition-colors z-0",
+                    topic.status === "completed" ? "bg-emerald-500/40" : "bg-border/40"
+                  )} />
                 )}
                 
                 <div className="relative z-10">
@@ -186,6 +192,8 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
                     onRevision={handleRevision}
                     onResume={handleResume}
                     isPending={isPending}
+                    isExpanded={expandedTopicId === topic.id || (expandedTopicId === null && topic.status === "in-progress")}
+                    onToggleExpand={() => setExpandedTopicId(expandedTopicId === topic.id ? null : topic.id)}
                   />
                 </div>
               </div>

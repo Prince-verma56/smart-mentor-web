@@ -207,11 +207,11 @@ function SessionRow({
     <ContextMenu items={menuItems}>
       <div
         className={cn(
-          "group relative flex items-start gap-2 rounded-lg mx-1.5 my-[1px] transition-all duration-300 cursor-pointer border overflow-hidden",
-          "min-h-[38px] p-1.5",
+          "group relative flex items-start gap-2.5 rounded-xl mx-2 my-1 transition-all duration-150 cursor-pointer border overflow-hidden",
+          "min-h-[44px] p-2",
           isActive
-            ? "bg-card/60 text-foreground border-border/50 shadow-sm"
-            : "border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+            ? "bg-card/90 text-foreground border-border/50 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] scale-[1.01]"
+            : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:shadow-sm"
         )}
         onClick={() => !isEditing && onSelect()}
       >
@@ -219,16 +219,16 @@ function SessionRow({
       {isActive && (
         <motion.div 
           layoutId="active-indicator"
-          className="absolute left-0 top-1 bottom-1 w-[3px] bg-primary rounded-r-full"
+          className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.6)]"
         />
       )}
 
       {/* Left icon */}
       <div className={cn(
-        "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md transition-colors mt-[1px] relative z-10",
-        isActive ? colorClass : "text-muted-foreground/40 group-hover:text-muted-foreground/70 group-hover:bg-muted/50"
+        "flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg transition-colors mt-[2px] relative z-10",
+        isActive ? "text-primary bg-primary/15 ring-1 ring-primary/20" : "text-muted-foreground/50 group-hover:text-muted-foreground/80 group-hover:bg-muted/80"
       )}>
-        <MessageSquare className="h-3.5 w-3.5" strokeWidth={isActive ? 2.5 : 2} />
+        <MessageSquare className="h-[16px] w-[16px]" strokeWidth={isActive ? 2.5 : 2} />
       </div>
 
       {/* Title / Edit input */}
@@ -258,63 +258,53 @@ function SessionRow({
         ) : (
           <>
             <span className={cn(
-              "text-[12.5px] leading-tight truncate font-medium",
-              isActive ? "text-foreground" : "text-foreground/90 group-hover:text-foreground"
+              "text-[13px] leading-snug truncate",
+              isActive ? "text-foreground font-semibold" : "text-foreground/90 font-medium group-hover:text-foreground"
             )}>
               {session.title || "New Conversation"}
             </span>
             {preview && (
-              <span className="text-[10.5px] text-muted-foreground/50 truncate leading-tight mt-1 opacity-80 group-hover:opacity-100 transition-opacity">
+              <span className="text-[11px] text-muted-foreground/60 truncate leading-tight mt-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
                 {preview}
               </span>
             )}
+            
+            {/* Compact Metadata Row */}
+            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-muted-foreground/50 font-medium">
+              <span>{timeAgo}</span>
+              {(session.is_pinned || session.is_favorite || (session.voice_count || 0) > 0) && (
+                <span className="w-1 h-1 rounded-full bg-border/80" />
+              )}
+              {session.is_pinned && <Pin className="h-3 w-3 text-primary/80 shrink-0" />}
+              {session.is_favorite && <Star className="h-3 w-3 fill-amber-500/50 text-amber-500 shrink-0" />}
+              {(session.voice_count || 0) > 0 && <Mic className="h-3 w-3 text-blue-400/80 shrink-0" />}
+            </div>
           </>
         )}
       </div>
 
-      {/* Right meta + menu */}
+      {/* Menu on hover */}
       {!isEditing && (
-        <div className="flex flex-col items-end gap-1 shrink-0 mt-[1px]">
-          {/* Time */}
-          <span className="text-[10px] font-medium text-muted-foreground/40 group-hover:opacity-0 transition-opacity whitespace-nowrap">
-            {timeAgo}
-          </span>
-
-          {/* Icons + Menu on hover */}
-          <div className={cn(
-            "flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all absolute right-2 top-2 translate-x-2 group-hover:translate-x-0 pl-4 z-20",
-            isActive ? "bg-gradient-to-l from-card/90 to-transparent" : "bg-gradient-to-l from-muted/90 to-transparent"
-          )}>
-            <button
-              onClick={(e) => { 
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                e.currentTarget.dispatchEvent(
-                  new MouseEvent("contextmenu", {
-                    bubbles: true,
-                    clientX: rect.x,
-                    clientY: rect.y + 10,
-                  })
-                );
-              }}
-              className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-background hover:shadow-sm transition-all"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Always-visible status icons (not on hover) */}
-          <div className="flex items-center gap-0.5 group-hover:opacity-0 transition-opacity">
-            {session.is_pinned && (
-              <Pin className="h-3.5 w-3.5 text-primary/70 shrink-0" />
-            )}
-            {session.is_favorite && (
-              <Star className="h-3.5 w-3.5 text-amber-400/80 fill-amber-400/60 shrink-0" />
-            )}
-            {(session.voice_count || 0) > 0 && (
-              <Mic className="h-3.5 w-3.5 text-blue-400/60 shrink-0" />
-            )}
-          </div>
+        <div className={cn(
+          "flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all absolute right-2 top-1/2 -translate-y-1/2 z-20",
+          isActive ? "bg-card/90" : "bg-card/60 backdrop-blur-sm rounded-md"
+        )}>
+          <button
+            onClick={(e) => { 
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.dispatchEvent(
+                new MouseEvent("contextmenu", {
+                  bubbles: true,
+                  clientX: rect.x,
+                  clientY: rect.y + 10,
+                })
+              );
+            }}
+            className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-background hover:shadow-sm transition-all cursor-pointer"
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
         </div>
       )}
     </div>
@@ -340,7 +330,7 @@ function SectionHeader({
   return (
     <div
       className={cn(
-        "flex items-center justify-between px-2.5 pt-4 pb-1.5 mt-2",
+        "flex items-center justify-between px-3 pt-5 pb-2 mt-2 border-t border-border/40 first:border-0 first:pt-2 first:mt-0",
         collapsible && "cursor-pointer hover:text-foreground"
       )}
       onClick={collapsible ? onToggle : undefined}
@@ -348,15 +338,15 @@ function SectionHeader({
       <div className="flex items-center gap-1">
         {collapsible && (
           sectionCollapsed
-            ? <ChevronRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-            : <ChevronDown className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+            ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 transition-transform hover:text-foreground" />
+            : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 transition-transform hover:text-foreground" />
         )}
-        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest pl-1">
           {label}
         </span>
       </div>
       {count !== undefined && count > 0 && (
-        <span className="text-[10px] font-medium text-muted-foreground/40 bg-muted px-1.5 rounded-sm">
+        <span className="text-[10px] font-medium text-muted-foreground/40 bg-muted/80 px-2 py-0.5 rounded-full border border-border/50">
           {count}
         </span>
       )}
@@ -486,19 +476,19 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
   return (
     <>
       {/* Universal Search (Command Palette Style) */}
-      <div className="px-3 mb-4 mt-2">
+      <div className="px-4 mb-4 mt-2">
         <div className="relative group/search cursor-pointer">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-lg opacity-0 group-hover/search:opacity-100 transition-opacity blur-md" />
-          <div className="relative flex items-center h-8 bg-card/60 border border-border/50 hover:border-primary/30 rounded-lg shadow-sm overflow-hidden transition-colors">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 group-hover/search:text-primary transition-colors" />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-xl opacity-0 group-hover/search:opacity-100 transition-opacity blur-md" />
+          <div className="relative flex items-center h-10 bg-card/60 border border-border/60 hover:border-primary/40 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 rounded-xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] overflow-hidden transition-all duration-300">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 group-hover/search:text-primary transition-colors" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search conversations, notes..."
-              className="w-full h-full pl-8 pr-12 text-[12px] bg-transparent text-foreground placeholder:text-muted-foreground/50 outline-none"
+              placeholder="Search conversations..."
+              className="w-full h-full pl-9 pr-12 text-[13px] bg-transparent text-foreground placeholder:text-muted-foreground/40 outline-none"
             />
-            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-              <span className="flex items-center justify-center h-5 px-1.5 rounded bg-muted/80 text-[9px] font-medium text-muted-foreground/70 border shadow-sm pointer-events-none select-none">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <span className="flex items-center justify-center h-[22px] px-2 rounded-md bg-muted/80 text-[10px] font-semibold text-muted-foreground/70 border border-border/50 shadow-sm pointer-events-none select-none">
                 ⌘K
               </span>
             </div>
@@ -527,38 +517,32 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
 
       {/* View Toggle */}
       {!isLoadingSessions && sessions.length > 0 && !search && (
-        <div className="px-4 mb-3">
-          <div className="flex items-center border-b border-border/40 relative">
+        <div className="px-5 mb-3">
+          <div className="flex items-center border-b border-border/40 relative h-9">
             <button
               onClick={() => setViewArchived(false)}
               className={cn(
-                "flex-1 text-[11px] font-medium py-2 transition-all border-b-2 border-transparent -mb-[1px] relative",
-                !viewArchived ? "text-foreground" : "text-muted-foreground hover:text-foreground hover:border-border/60"
+                "flex-1 text-[12px] font-semibold py-2 transition-all relative flex items-center justify-center gap-1.5",
+                !viewArchived ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Active
-              {!viewArchived && (
-                <motion.div
-                  layoutId="tab-indicator"
-                  className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-primary"
-                />
-              )}
             </button>
             <button
               onClick={() => setViewArchived(true)}
               className={cn(
-                "flex-1 text-[11px] font-medium py-2 transition-all border-b-2 border-transparent -mb-[1px] relative",
-                viewArchived ? "text-foreground" : "text-muted-foreground hover:text-foreground hover:border-border/60"
+                "flex-1 text-[12px] font-semibold py-2 transition-all relative flex items-center justify-center gap-1.5",
+                viewArchived ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Archived {archived.length > 0 && <span className="ml-1 text-[10px] text-muted-foreground">({archived.length})</span>}
-              {viewArchived && (
-                <motion.div
-                  layoutId="tab-indicator"
-                  className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-primary"
-                />
-              )}
+              Archived {archived.length > 0 && <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground">{archived.length}</span>}
             </button>
+            <motion.div
+              layout
+              className="absolute bottom-0 h-[2px] bg-primary w-1/2 rounded-t-full shadow-[0_-1px_6px_rgba(var(--primary),0.5)]"
+              animate={{ x: viewArchived ? "100%" : "0%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            />
           </div>
         </div>
       )}
@@ -577,7 +561,8 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
       )}
 
       {/* ── Active View ───────────────────────────────────────────────────────── */}
-      <div className="relative">
+      <ScrollArea className="flex-1 overflow-y-auto" data-lenis-prevent="true">
+        <div className="relative pb-12">
         <AnimatePresence mode="popLayout">
           {(!viewArchived || search) && (
             <motion.div
@@ -697,7 +682,8 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+        </div>
+      </ScrollArea>
 
       {/* No search results */}
       {!isLoadingSessions && search && filtered.length === 0 && (
