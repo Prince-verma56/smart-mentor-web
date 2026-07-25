@@ -102,11 +102,13 @@ function RightPanelContent({
   roadmap,
   roadmapPromise,
   mentorId,
+  onCollapse,
 }: {
   stats: MentorStats;
   roadmap?: MentorRoadmap;
   roadmapPromise?: Promise<MentorRoadmap | null>;
   mentorId: string;
+  onCollapse?: () => void;
 }) {
   // Live roadmap subscription — patches state from Supabase Realtime
   const { roadmap: liveRoadmap } = useRealtimeRoadmap(mentorId, roadmap);
@@ -116,15 +118,26 @@ function RightPanelContent({
 
   return (
     <Tabs defaultValue="roadmap" className="flex flex-col h-full overflow-hidden">
-      <div className="px-3 pt-3 pb-2 border-b shrink-0">
-        <TabsList className="w-full grid grid-cols-3 h-8">
-          <TabsTrigger value="progress" className="text-xs">
+      <div className="px-3 pt-3 pb-2 border-b shrink-0 flex items-center gap-2 bg-card/40 backdrop-blur-md">
+        {onCollapse && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCollapse}
+            className="h-8 w-8 shrink-0 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+            title="Collapse Sidebar"
+          >
+            <PanelRight className="h-4 w-4" />
+          </Button>
+        )}
+        <TabsList className="flex-1 grid grid-cols-3 h-8 bg-muted/50 p-0.5 rounded-lg">
+          <TabsTrigger value="progress" className="text-xs rounded-md transition-all duration-150 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             Stats
           </TabsTrigger>
-          <TabsTrigger value="roadmap" className="text-xs">
+          <TabsTrigger value="roadmap" className="text-xs rounded-md transition-all duration-150 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             Roadmap
           </TabsTrigger>
-          <TabsTrigger value="resources" className="text-xs">
+          <TabsTrigger value="resources" className="text-xs rounded-md transition-all duration-150 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             Files
           </TabsTrigger>
         </TabsList>
@@ -161,10 +174,12 @@ function AsyncRoadmapRightPanel({
   stats,
   roadmapPromise,
   mentorId,
+  onCollapse,
 }: {
   stats: MentorStats;
   roadmapPromise: Promise<MentorRoadmap | null>;
   mentorId: string;
+  onCollapse?: () => void;
 }) {
   const resolvedRoadmap = use(roadmapPromise);
   return (
@@ -172,6 +187,7 @@ function AsyncRoadmapRightPanel({
       stats={stats}
       roadmap={resolvedRoadmap ?? undefined}
       mentorId={mentorId}
+      onCollapse={onCollapse}
     />
   );
 }
@@ -296,37 +312,23 @@ export function MentorWorkspace({
                   !rightCollapsed ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
                 )}
               >
-                <div className="absolute top-3 right-4 z-50">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setRightCollapsed(true)}
-                    className="h-7 w-7 rounded-sm shadow-sm bg-background/80 backdrop-blur-sm text-muted-foreground hover:text-foreground border"
-                  >
-                    <PanelRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+
                 <div className="h-full overflow-hidden flex flex-col">
                   {roadmapPromise ? (
-                    <Suspense
-                      fallback={
-                        <RightPanelContent
-                          stats={stats}
-                          mentorId={mentor.id}
-                        />
-                      }
-                    >
+                    <Suspense fallback={<RoadmapPlaceholder />}>
                       <AsyncRoadmapRightPanel
                         stats={stats}
                         roadmapPromise={roadmapPromise}
                         mentorId={mentor.id}
+                        onCollapse={() => setRightCollapsed(true)}
                       />
                     </Suspense>
                   ) : (
-                    <RightPanelContent
-                      stats={stats}
-                      roadmap={roadmap}
-                      mentorId={mentor.id}
+                    <RightPanelContent 
+                      stats={stats} 
+                      roadmap={roadmap} 
+                      mentorId={mentor.id} 
+                      onCollapse={() => setRightCollapsed(true)}
                     />
                   )}
                 </div>

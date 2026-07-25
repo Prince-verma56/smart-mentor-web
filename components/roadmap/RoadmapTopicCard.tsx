@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Lock, ChevronDown, SkipForward, RotateCcw, AlertTriangle, BookOpen, Clock, Zap } from "lucide-react";
+import { Check, Lock, ChevronDown, SkipForward, RotateCcw, AlertTriangle, BookOpen, Clock, Zap } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -74,7 +74,7 @@ function CompletionCircle({
                 "hover:scale-110 active:scale-95",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
                 isCompleted
-                  ? "bg-emerald-500 border-emerald-500 shadow-sm shadow-emerald-500/20"
+                  ? "bg-emerald-500/15 border-emerald-500/30 shadow-none text-emerald-600 dark:text-emerald-400"
                   : isCurrent
                   ? "border-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                   : "border-muted-foreground/30 bg-transparent hover:border-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20"
@@ -89,7 +89,7 @@ function CompletionCircle({
                     exit={{ scale: 0, opacity: 0 }}
                     transition={{ type: "spring", stiffness: 400, damping: 20 }}
                   >
-                    <CheckCircle2 className="h-3 w-3 text-white" />
+                    <Check className="h-3 w-3 stroke-[2.5]" />
                   </motion.div>
                 )}
                 {isCurrent && !isCompleted && (
@@ -146,18 +146,24 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "rounded-2xl border overflow-hidden transition-all duration-300 w-full",
+        "rounded-2xl border overflow-hidden transition-all duration-300 w-full group/card",
         // Active (Hero) State
         isCurrent && "border-primary/50 bg-card shadow-[0_4px_24px_-4px_rgba(var(--primary),0.15)] ring-1 ring-primary/20 scale-[1.01] z-20 my-2",
         // Completed State
-        isCompleted && "border-emerald-500/20 dark:border-emerald-900/30 bg-emerald-50/10 dark:bg-emerald-950/10 opacity-75 hover:opacity-100",
+        isCompleted && "border-border/40 bg-card/40 hover:bg-card/80 hover:border-border/80",
         // Locked State
-        isLocked && "border-border/20 opacity-40 bg-muted/10",
+        isLocked && "border-border/10 opacity-40 bg-muted/10",
         // Other States
         topic.status === "revision-required" && "border-yellow-200/50 bg-yellow-50/10",
         topic.status === "skipped" && "border-orange-200/50 bg-orange-50/10",
-        !isLocked && !isCurrent && !isCompleted && "border-border/40 hover:border-border/80 hover:bg-muted/30 hover:shadow-sm"
+        !isLocked && !isCurrent && !isCompleted && "border-border/40 hover:border-border/80 hover:bg-muted/30 hover:shadow-sm",
+        !isLocked && !isCurrent && "cursor-pointer"
       )}
+      onClick={() => {
+        if (!isLocked && !isCurrent) {
+          onToggleExpand();
+        }
+      }}
     >
       {isCurrent && (
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary/80 to-primary rounded-l-xl" />
@@ -187,11 +193,6 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
             >
               {topic.title}
             </p>
-            {isCurrent && topic.description && (
-               <p className="text-[12px] text-muted-foreground/80 mt-1.5 line-clamp-2 leading-relaxed">
-                 {topic.description}
-               </p>
-            )}
           </div>
 
           {!isLocked && topic.description && !isCurrent && (
@@ -245,12 +246,8 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
             className={cn("overflow-hidden", isCurrent ? "bg-transparent" : "bg-muted/10 border-t border-border/30")}
           >
             <div className={cn("p-3 pl-11 space-y-3", isCurrent && "pt-1")}>
-              {topic.description && !isCurrent && (
+              {topic.description && (
                 <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    <BookOpen className="h-3.5 w-3.5" />
-                    Overview
-                  </div>
                   <p className="text-[12px] text-muted-foreground leading-relaxed break-words whitespace-pre-wrap">
                     {topic.description}
                   </p>
@@ -263,7 +260,7 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
                     variant="outline"
                     size="sm"
                     className="h-8 text-[11.5px] font-medium gap-1.5 px-3 rounded-full bg-background hover:bg-muted hover:shadow-sm transition-all duration-200 hover:-translate-y-[1px]"
-                    onClick={() => onResume(topic.id)}
+                    onClick={(e) => { e.stopPropagation(); onResume(topic.id); }}
                     disabled={isPending}
                   >
                     <Zap className="h-3.5 w-3.5 text-primary" />
@@ -275,17 +272,17 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
                     <Button
                       size="sm"
                       className="h-8 text-[11.5px] font-semibold gap-1.5 px-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_2px_10px_rgba(var(--primary),0.3)] hover:shadow-[0_4px_12px_rgba(var(--primary),0.4)] transition-all duration-200 hover:-translate-y-[1px]"
-                      onClick={() => onToggle(topic.id, topic.status)}
+                      onClick={(e) => { e.stopPropagation(); onToggle(topic.id, topic.status); }}
                       disabled={isPending}
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <Check className="h-3.5 w-3.5" />
                       Complete Lesson
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       className="h-8 text-[11.5px] font-medium gap-1.5 px-3 rounded-full bg-background hover:bg-muted hover:shadow-sm transition-all duration-200 hover:-translate-y-[1px]"
-                      onClick={() => onSkip(topic.id)}
+                      onClick={(e) => { e.stopPropagation(); onSkip(topic.id); }}
                       disabled={isPending}
                     >
                       <SkipForward className="h-3.5 w-3.5" />
@@ -295,7 +292,7 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
                       variant="outline"
                       size="sm"
                       className="h-8 text-[11.5px] font-medium gap-1.5 px-3 rounded-full bg-background hover:bg-yellow-50/50 hover:text-yellow-700 hover:border-yellow-200 hover:shadow-sm transition-all duration-200 hover:-translate-y-[1px]"
-                      onClick={() => onRevision(topic.id)}
+                      onClick={(e) => { e.stopPropagation(); onRevision(topic.id); }}
                       disabled={isPending}
                     >
                       <AlertTriangle className="h-3.5 w-3.5" />
@@ -308,7 +305,7 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
                     variant="outline"
                     size="sm"
                     className="h-8 text-[11.5px] font-medium gap-1.5 px-3 rounded-full bg-background hover:bg-blue-50/50 hover:text-blue-600 hover:border-blue-200 hover:shadow-sm transition-all duration-200 hover:-translate-y-[1px]"
-                    onClick={() => onResume(topic.id)}
+                    onClick={(e) => { e.stopPropagation(); onResume(topic.id); }}
                     disabled={isPending}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -332,6 +329,7 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
   return (
     prev.topic.id === next.topic.id &&
     prev.topic.status === next.topic.status &&
-    prev.isPending === next.isPending
+    prev.isPending === next.isPending &&
+    prev.isExpanded === next.isExpanded
   );
 });

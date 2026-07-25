@@ -179,8 +179,8 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
                 {/* Timeline connector */}
                 {idx !== phase.topics.length - 1 && (
                   <div className={cn(
-                    "absolute left-6 top-[34px] bottom-[-16px] w-[2px] transition-colors z-0",
-                    topic.status === "completed" ? "bg-emerald-500/40" : "bg-border/40"
+                    "absolute left-6 top-[34px] bottom-[-16px] w-[1px] transition-colors z-0",
+                    topic.status === "completed" && phase.topics[idx + 1]?.status === "in-progress" ? "bg-primary/40" : "bg-border/30"
                   )} />
                 )}
                 
