@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { saveMessage } from "@/actions/chatActions";
 import { markTopicComplete, markTopicIncomplete } from "@/actions/progressActions";
 import type { Mentor } from "@/types/mentor";
-import { useVoiceSettingsManager } from "./useVoiceSettingsManager";
+import { useVoicePreferences } from "./useVoicePreferences";
 
 export type ConversationState = "idle" | "connecting" | "listening" | "recording" | "transcribing" | "understanding" | "thinking" | "generating" | "speaking" | "waiting" | "searching knowledge base";
 
@@ -38,7 +38,9 @@ export function useVoiceSession({ mentor, sessionId, onCallEnded }: UseVoiceSess
   const [cachedGreeting, setCachedGreeting] = useState<string | null>(null);
   const [sessionDuration, setSessionDuration] = useState(0);
 
-  const { preferences } = useVoiceSettingsManager(mentor.id);
+  const { global, mentor: mentorPrefs, session } = useVoicePreferences(mentor.id);
+  const lastGlobalRef = useRef(global);
+  const lastMentorPrefsRef = useRef(mentorPrefs);
   const lastMessageTimeRef = useRef<number>(Date.now());
   const idleWarningSentRef = useRef<boolean>(false);
 
@@ -77,10 +79,13 @@ export function useVoiceSession({ mentor, sessionId, onCallEnded }: UseVoiceSess
   // Pre-fetch prompt
   useEffect(() => {
     async function prefetchPrompt() {
-      const basePrompt = `You are ${mentor.name}, a ${mentor.role} teaching ${mentor.subject}.
-TEACHING STYLE: ${preferences.conversationStyle} (originally ${mentor.conversationStyle})
+        const basePrompt = `You are ${mentor.name}, a ${mentor.role} teaching ${mentor.subject}.
+TEACHING STYLE: ${mentorPrefs.teachingStyle} (${mentor.conversationStyle})
+CORRECTION LEVEL: ${mentorPrefs.correctionLevel}
+PREFERRED LANGUAGE: ${global.preferredLanguage}
+CODE STYLE: ${mentorPrefs.codeStyle}
 STUDENT GOAL: ${mentor.learningGoal}
-RESPONSE LENGTH: ${preferences.responseLength}
+RESPONSE LENGTH: ${mentorPrefs.responseLength}
 Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
 
       try {
@@ -178,7 +183,7 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
             lastMessageTimeRef.current = Date.now();
             idleWarningSentRef.current = false;
             
-            if (preferences.autoContinue) {
+            if (session.autoContinue) {
               setTimeout(() => { setCallState("listening"); }, 1000);
             }
             
@@ -276,7 +281,49 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
       vapi.off("message", onMessage);
       vapi.off("volume-level", onVolumeLevel);
     };
-  }, [sessionId, mentor.id, onCallEnded, preferences]);
+  }, [sessionId, mentor.id, onCallEnded, session.autoContinue]);
+
+  // Handle mid-call preference updates via Vapi system messages
+  useEffect(() => {
+    if (!isVoiceActive || !vapiRef.current) {
+      lastGlobalRef.current = global;
+      lastMentorPrefsRef.current = mentorPrefs;
+      return;
+    }
+
+    const messages: string[] = [];
+    const prevGlobal = lastGlobalRef.current;
+    const prevMentor = lastMentorPrefsRef.current;
+
+    if (global.preferredLanguage !== prevGlobal.preferredLanguage) {
+      messages.push(`The user has changed their preferred language to ${global.preferredLanguage}. From now on, you MUST speak entirely in ${global.preferredLanguage}. Briefly acknowledge this change in ${global.preferredLanguage}.`);
+    }
+
+    if (mentorPrefs.teachingStyle !== prevMentor.teachingStyle) {
+      messages.push(`The user has changed your teaching style to "${mentorPrefs.teachingStyle}". Adjust your tone and approach accordingly. Briefly acknowledge this change.`);
+    }
+
+    if (mentorPrefs.correctionLevel !== prevMentor.correctionLevel) {
+      messages.push(`The user has set the correction level to "${mentorPrefs.correctionLevel}". Adjust how strictly you point out mistakes.`);
+    }
+
+    if (mentorPrefs.responseLength !== prevMentor.responseLength) {
+      messages.push(`The user wants your response length to be "${mentorPrefs.responseLength}". Please confirm this briefly.`);
+    }
+
+    if (messages.length > 0) {
+      vapiRef.current.send({
+        type: "add-message",
+        message: {
+          role: "system",
+          content: `SYSTEM UPDATE: ${messages.join(" ")}`
+        }
+      } as any);
+    }
+
+    lastGlobalRef.current = global;
+    lastMentorPrefsRef.current = mentorPrefs;
+  }, [global, mentorPrefs, isVoiceActive]);
 
   const endCall = useCallback(() => {
     setIsVoiceActive(false);
@@ -307,13 +354,16 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     
     try {
       const basePrompt = `You are ${mentor.name}, a ${mentor.role} teaching ${mentor.subject}.
-TEACHING STYLE: ${mentor.conversationStyle}
+TEACHING STYLE: ${mentorPrefs.teachingStyle} (${mentor.conversationStyle})
+CORRECTION LEVEL: ${mentorPrefs.correctionLevel}
+PREFERRED LANGUAGE: ${global.preferredLanguage}
+CODE STYLE: ${mentorPrefs.codeStyle}
 STUDENT GOAL: ${mentor.learningGoal}
 Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
 
-      const lengthPrompt = preferences.responseLength === "Short" 
+      const lengthPrompt = mentorPrefs.responseLength === "Short" 
         ? "Keep your answers very short and to the point (1-2 sentences). Do not ramble." 
-        : preferences.responseLength === "Detailed" 
+        : mentorPrefs.responseLength === "Detailed" 
         ? "Provide detailed, comprehensive answers with examples and explanations." 
         : "Keep your answers balanced and conversational.";
 
@@ -329,7 +379,7 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
           provider: "11labs",
           voiceId: mentor.voiceId || "21m00Tcm4TlvDq8ikWAM",
           model: "eleven_turbo_v2_5",
-          speed: preferences.voiceSpeed
+          speed: global.voiceSpeed
         },
         model: {
           provider: "openai",
@@ -376,7 +426,7 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
       }
       if (onCallEnded) onCallEnded();
     }
-  }, [mentor, isVoiceActive, cachedPrompt, cachedGreeting, endCall, onCallEnded, preferences]);
+  }, [mentor, isVoiceActive, cachedPrompt, cachedGreeting, endCall, onCallEnded, mentorPrefs, global]);
 
   // Handle component unmount safely
   useEffect(() => {
@@ -413,6 +463,8 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     toggleMute,
     toggleSpeaker,
     vapiRef,
-    preferences
+    global,
+    mentorPrefs,
+    session
   };
 }

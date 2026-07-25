@@ -31,7 +31,7 @@ export function VoiceWorkspace({ mentor, sessionId, onClose }: VoiceWorkspacePro
     toggleMute,
     toggleSpeaker,
     vapiRef,
-    preferences
+    session
   } = useVoiceSession({ mentor, sessionId, onCallEnded: onClose });
 
   // Start the call automatically when the workspace mounts
@@ -154,7 +154,7 @@ export function VoiceWorkspace({ mentor, sessionId, onClose }: VoiceWorkspacePro
 
           {/* ZONE 3: BOTTOM - Transcript & Controls */}
           <div className="relative z-10 w-full flex flex-col items-center justify-end pb-8 pt-4 shrink-0 h-[220px]">
-            {!isVoiceLoading && preferences.showLiveTranscript && (
+            {!isVoiceLoading && session.showLiveTranscript && (
               <div className="mb-4 w-full flex justify-center">
                 <TranscriptPanel transcript={activeTranscript} callState={callState} />
               </div>
