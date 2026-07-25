@@ -1,21 +1,14 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useConversation } from "@/contexts/ConversationContext";
 import type { Mentor, MentorStats } from "@/types/mentor";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { 
-  Play, 
-  BrainCircuit, 
   Code2, 
-  Mic,
-  TrendingUp,
-  Target,
-  Clock,
-  CheckCircle2
+  Map, 
+  FileText, 
+  ImageIcon,
+  Sparkles
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import MaskRevealUp from "@/components/ui/smoothui/mask-reveal-up";
 import { cn } from "@/lib/utils";
 
@@ -28,134 +21,59 @@ interface WelcomeDashboardProps {
 export function WelcomeDashboard({ mentor, stats, onSendMessage }: WelcomeDashboardProps) {
   const { user } = useUser();
   const firstName = user?.firstName || "there";
-  const { sessions, setActiveSession } = useConversation();
 
-  const quickActions = [
-    { label: "Continue Lesson", icon: Play, query: "I want to continue with the current lesson on " + stats.currentTopic },
-    { label: "Quiz Me", icon: BrainCircuit, query: "Give me a quiz on the current topic" },
-    { label: "Coding Exercise", icon: Code2, query: "Give me a coding exercise for " + stats.currentTopic },
-    { label: "Start Voice Session", icon: Mic, query: "Let's do a voice session" },
+  const timeOfDay = new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening";
+
+  const suggestedPrompts = [
+    { label: "Explain a concept", icon: Sparkles, query: "Can you explain how React hooks work under the hood?" },
+    { label: "Review this code", icon: Code2, query: "I have some code that I'd like you to review for best practices." },
+    { label: "Analyze image", icon: ImageIcon, query: "I'm going to upload an image of a UI. Can you break it down for me?" },
+    { label: "Continue roadmap", icon: Map, query: "Let's continue with my roadmap. What's the next topic?" },
   ];
 
   return (
-    <div className="flex flex-col max-w-4xl mx-auto space-y-6 px-4 pb-12 w-full mt-4">
+    <div className="flex flex-col items-center justify-center h-full max-w-3xl mx-auto px-4 w-full pt-12 pb-20">
       
-      <div className="flex flex-col space-y-2 mb-6 animate-in slide-in-from-bottom-2 fade-in duration-500">
-        <MaskRevealUp className="text-3xl font-bold tracking-tight text-foreground">
-          {`👋 Welcome Back, ${firstName}`}
-        </MaskRevealUp>
-        {stats.currentTopic && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
-            <span className="text-muted-foreground text-sm font-medium">Continue Learning:</span>
-            <div className="flex items-center gap-2">
-              <span className="text-primary font-semibold text-sm bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-md shadow-sm">
-                {stats.currentTopic}
-              </span>
-              <span className="text-[10px] uppercase tracking-wider font-bold text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded">
-                Intermediate
-              </span>
-              <span className="text-xs text-muted-foreground ml-1">
-                4 lessons remaining
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Main Stats Grid ───────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-bottom-4 fade-in duration-700">
+      <div className="flex flex-col items-center text-center space-y-4 mb-16 animate-in slide-in-from-bottom-4 fade-in duration-700">
+        <div className="h-16 w-16 rounded-3xl bg-primary/10 flex items-center justify-center mb-2 shadow-sm ring-1 ring-primary/20">
+          <span className="text-3xl">👋</span>
+        </div>
         
-        {/* Progress Card */}
-        <Card className="p-5 flex flex-col justify-between border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <TrendingUp className="h-4 w-4" />
-              <h3 className="font-semibold text-sm uppercase tracking-wider">Progress</h3>
-            </div>
-            <span className="text-2xl font-bold tracking-tight">{Math.round(stats.progressPercent)}%</span>
-          </div>
-          
-          <div className="space-y-2">
-            <Progress value={stats.progressPercent} className="h-2 w-full" />
-            <div className="flex justify-between text-xs text-muted-foreground font-medium">
-              <span>{stats.completedTopics} Completed</span>
-              <span>12 Total Topics</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Today's Goal Card */}
-        <Card className="p-5 flex flex-col justify-between border-border/60 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10 flex justify-between items-start mb-2">
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary">
-              <Target className="h-4 w-4" />
-              <h3 className="font-semibold text-sm uppercase tracking-wider">Today's Goal</h3>
-            </div>
-            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              45% Done
-            </span>
-          </div>
-          
-          <div className="relative z-10 flex flex-col gap-1 mt-2">
-            <span className="text-lg font-bold truncate">Complete {stats.currentTopic}</span>
-            <div className="flex items-center justify-between mt-1">
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Clock className="h-3.5 w-3.5 text-orange-500" />
-                <span>25 min remaining</span>
-              </div>
-            </div>
-            <Progress value={45} className="h-1.5 w-full mt-2 bg-muted/50" />
-          </div>
-        </Card>
+        <MaskRevealUp className="text-3xl font-semibold tracking-tight text-foreground">
+          {`Good ${timeOfDay}, ${firstName}`}
+        </MaskRevealUp>
+        
+        <p className="text-muted-foreground text-[15px]">
+          What would you like to learn with {mentor.name} today?
+        </p>
       </div>
 
-      {/* ── Quick Actions ─────────────────────────────── */}
-      <div className="flex flex-col space-y-3 animate-in slide-in-from-bottom-6 fade-in duration-700 delay-100 fill-mode-both">
-        <h3 className="text-sm font-semibold tracking-wider uppercase text-muted-foreground/80 px-1">
-          Quick Actions
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {quickActions.map((action, i) => (
+      <div className="w-full flex flex-col space-y-4 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-100 fill-mode-both">
+        <div className="flex items-center gap-4">
+          <div className="h-px bg-border/60 flex-1"></div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+            Suggested Prompts
+          </span>
+          <div className="h-px bg-border/60 flex-1"></div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+          {suggestedPrompts.map((prompt, i) => (
             <button
               key={i}
-              onClick={() => onSendMessage(action.query)}
-              className={cn(
-                "flex flex-col items-center justify-center p-4 gap-3 rounded-xl border bg-card hover:bg-muted/50 hover:border-primary/40 transition-all duration-200 group text-center shadow-sm hover:shadow-md hover:-translate-y-0.5",
-                i === 0 ? "border-primary/30 bg-primary/5" : ""
-              )}
+              onClick={() => onSendMessage(prompt.query)}
+              className="flex items-center gap-4 p-4 rounded-2xl border border-border/50 bg-card/40 hover:bg-card hover:border-primary/30 transition-all duration-300 group text-left shadow-sm hover:shadow-md hover:-translate-y-0.5"
             >
-              <div className={cn(
-                "p-2.5 rounded-full transition-colors",
-                i === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-foreground group-hover:bg-primary group-hover:text-primary-foreground"
-              )}>
-                <action.icon className="h-4 w-4" />
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground shrink-0">
+                <prompt.icon className="h-4 w-4" />
               </div>
-              <span className="text-[13px] font-semibold leading-tight px-1">{action.label}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[14px] font-medium text-foreground">{prompt.label}</span>
+                <span className="text-[12px] text-muted-foreground truncate">{prompt.query}</span>
+              </div>
             </button>
           ))}
         </div>
-      </div>
-
-      {/* ── Recent Activity ───────────────────────────── */}
-      <div className="flex flex-col space-y-3 pt-4 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-200 fill-mode-both">
-        <h3 className="text-sm font-semibold tracking-wider uppercase text-muted-foreground/80 px-1">
-          Recent Activity
-        </h3>
-        <Card className="p-0 overflow-hidden border-border/60">
-           <div className="flex items-center justify-between p-4 bg-muted/20 border-b">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Yesterday</span>
-           </div>
-           <div className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors">
-             <div className="flex h-8 w-8 rounded-full bg-primary/10 items-center justify-center shrink-0">
-               <CheckCircle2 className="h-4 w-4 text-primary" />
-             </div>
-             <div className="flex flex-col min-w-0">
-               <span className="text-[13px] font-medium text-foreground">Completed Database Fundamentals</span>
-               <span className="text-xs text-muted-foreground truncate">You mastered SQL joins and basic indexing.</span>
-             </div>
-           </div>
-        </Card>
       </div>
 
     </div>

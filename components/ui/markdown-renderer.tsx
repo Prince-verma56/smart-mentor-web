@@ -4,6 +4,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CodeBlock } from "./code-block";
+import { Loader2, Settings } from "lucide-react";
 
 interface MarkdownRendererProps {
   content: string;
@@ -47,54 +48,43 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
 
           // ── Headings ───────────────────────────────────────────────────────
           h1: ({ children }) => (
-            <h1 className="text-[1.35em] font-bold mt-7 mb-4 pb-2 border-b border-border/40 tracking-tight text-foreground">
+            <h1 className="text-[1.35em] font-semibold mt-7 mb-4 tracking-tight text-foreground">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-[1.15em] font-bold mt-6 mb-3 tracking-tight text-foreground">
+            <h2 className="text-[1.15em] font-semibold mt-6 mb-3 tracking-tight text-foreground">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-[1.05em] font-semibold mt-5 mb-2.5 text-foreground/90">
+            <h3 className="text-[1.05em] font-medium mt-5 mb-2.5 text-foreground/90">
               {children}
             </h3>
           ),
           h4: ({ children }) => (
-            <h4 className="text-[0.95em] font-semibold mt-4 mb-2 text-foreground/80">
+            <h4 className="text-[0.95em] font-medium mt-4 mb-2 text-foreground/80">
               {children}
             </h4>
           ),
 
           // ── Paragraph ──────────────────────────────────────────────────────
           p: ({ children }) => (
-            <p className="mb-4 leading-[1.85] last:mb-0 text-foreground/90 tracking-[0.01em]">{children}</p>
+            <p className="mb-4 leading-[1.7] last:mb-0 text-foreground/90">{children}</p>
           ),
 
           // ── Lists ──────────────────────────────────────────────────────────
           ul: ({ children }) => (
-            <ul className="list-none pl-0 mb-4 space-y-2">{children}</ul>
+            <ul className="list-disc pl-5 mb-4 space-y-1.5 text-foreground/90 leading-[1.7] marker:text-muted-foreground/70">{children}</ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal pl-5 mb-4 space-y-2 marker:text-muted-foreground marker:font-medium">
+            <ol className="list-decimal pl-5 mb-4 space-y-1.5 text-foreground/90 leading-[1.7] marker:text-muted-foreground/70">
               {children}
             </ol>
           ),
-          li: ({ children, ordered, ...props }: any) => {
-            // For ordered list items React renders them inside ol — don't prepend dot
-            const isOrdered = (props as any).node?.parent?.type === "list" &&
-              (props as any).node?.parent?.ordered;
-            if (isOrdered) {
-              return (
-                <li className="leading-[1.8] pl-1.5 text-foreground/90">{children}</li>
-              );
-            }
+          li: ({ children }) => {
             return (
-              <li className="flex items-start gap-3 leading-[1.8]">
-                <span className="mt-[9px] h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 shadow-sm" />
-                <span className="flex-1 text-foreground/90">{children}</span>
-              </li>
+              <li className="pl-1">{children}</li>
             );
           },
 
@@ -104,7 +94,7 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline-offset-2 underline hover:text-primary/75 transition-colors font-medium"
+              className="text-primary underline-offset-4 hover:underline transition-all font-medium"
             >
               {children}
             </a>
@@ -112,12 +102,46 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
 
           // ── Blockquote ─────────────────────────────────────────────────────
           blockquote: ({ children }) => {
-            return (
-              <blockquote className="relative border-l-4 border-primary/60 pl-5 my-5 py-3 pr-4 bg-primary/[0.03] rounded-r-xl overflow-hidden shadow-[inset_1px_0_0_0_rgba(var(--primary),0.05)]">
-                <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-primary/10 to-transparent" />
-                <div className="text-foreground/80 text-[0.95em] leading-[1.8] italic font-medium">
-                  {children}
+            const extractText = (node: any): string => {
+              if (typeof node === "string") return node;
+              if (typeof node === "number") return String(node);
+              if (Array.isArray(node)) return node.map(extractText).join("");
+              if (node && node.props && node.props.children) return extractText(node.props.children);
+              return "";
+            };
+            const text = extractText(children);
+            
+            if (text.includes("Executing action:")) {
+              const isComplete = text.includes("Action completed successfully.") || text.includes("Action failed:");
+              return (
+                <div className="my-5 rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden flex flex-col">
+                  <div className="px-4 py-2.5 border-b border-border/50 bg-muted/40 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[0.85em] font-semibold text-foreground/80 tracking-wide uppercase">
+                      {isComplete ? (
+                        <Settings className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <Settings className="w-4 h-4 text-primary animate-[spin_3s_linear_infinite]" />
+                      )}
+                      System Action
+                    </div>
+                    {!isComplete && (
+                      <div className="flex space-x-1.5 px-2">
+                        <div className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                        <div className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                        <div className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce"></div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 text-[0.9em] text-muted-foreground bg-background/50 leading-relaxed font-mono">
+                    {children}
+                  </div>
                 </div>
+              );
+            }
+
+            return (
+              <blockquote className="border-l-2 border-primary/50 pl-4 my-4 py-0.5 text-foreground/70 italic text-[0.95em]">
+                {children}
               </blockquote>
             );
           },

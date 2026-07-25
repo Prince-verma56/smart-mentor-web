@@ -145,12 +145,12 @@ export function VoiceToTextButton({ text, setText, isStreaming }: VoiceToTextBut
       aria-label={status === "listening" ? "Stop listening" : "Start Voice Input"}
       title="Voice Typing"
       className={cn(
-        "h-9 w-9 flex items-center justify-center rounded-lg transition-all relative overflow-hidden",
+        "h-10 w-10 flex items-center justify-center rounded-lg transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] relative overflow-hidden",
         status === "listening"
-          ? "bg-primary/10 text-primary hover:bg-primary/20 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
+          ? "bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25 shadow-[0_0_15px_rgba(16,185,129,0.3)] scale-[1.15]"
           : status === "processing"
           ? "bg-blue-500/10 text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
-          : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
+          : "text-foreground/70 bg-muted/30 hover:text-foreground hover:bg-muted hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] border border-border/30 hover:border-border/60 hover:scale-[1.15] active:scale-[0.95]"
       )}
     >
       <AnimatePresence mode="wait">

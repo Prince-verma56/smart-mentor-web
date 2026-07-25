@@ -1,0 +1,354 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import Vapi from "@vapi-ai/web";
+import { toast } from "sonner";
+import { saveMessage } from "@/actions/chatActions";
+import { markTopicComplete, markTopicIncomplete } from "@/actions/progressActions";
+import type { Mentor } from "@/types/mentor";
+
+export type ConversationState = "idle" | "connecting" | "listening" | "recording" | "transcribing" | "understanding" | "thinking" | "generating" | "speaking" | "waiting" | "searching knowledge base";
+
+interface UseVoiceSessionProps {
+  mentor: Mentor;
+  sessionId?: string;
+  onCallEnded?: () => void;
+}
+
+// Global Vapi singleton to prevent "Duplicate DailyIframe instances"
+let globalVapiInstance: Vapi | null = null;
+
+export function useVoiceSession({ mentor, sessionId, onCallEnded }: UseVoiceSessionProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  
+  const vapiRef = useRef<Vapi | null>(null);
+  const transcriptRef = useRef<string>("");
+
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [isVoiceLoading, setIsVoiceLoading] = useState(false);
+  
+  const [callState, setCallState] = useState<ConversationState>("idle");
+  const [volume, setVolume] = useState(0);
+  const [activeTranscript, setActiveTranscript] = useState<{ text: string, role: "user" | "assistant" | null }>({ text: "", role: null });
+  
+  const [isMuted, setIsMuted] = useState(false);
+  const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
+
+  const [cachedPrompt, setCachedPrompt] = useState<string | null>(null);
+  const [cachedGreeting, setCachedGreeting] = useState<string | null>(null);
+  const [sessionDuration, setSessionDuration] = useState(0);
+
+  // Initialize Vapi instance safely
+  if (!vapiRef.current && typeof window !== "undefined") {
+    if (!globalVapiInstance) {
+      globalVapiInstance = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "a3a65c73-9cbd-4e8a-910f-8b5c99d56177");
+      
+      // @ts-ignore
+      if (!window.__vapi_error_suppressed) {
+        const originalError = console.error;
+        console.error = (...args) => {
+          if (args[0] && typeof args[0] === 'string' && args[0].includes('Error unloading krisp processor')) return;
+          originalError(...args);
+        };
+        // @ts-ignore
+        window.__vapi_error_suppressed = true;
+      }
+    }
+    vapiRef.current = globalVapiInstance;
+  }
+
+  // Session Duration Timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isVoiceActive) {
+      interval = setInterval(() => {
+        setSessionDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setSessionDuration(0);
+    }
+    return () => clearInterval(interval);
+  }, [isVoiceActive]);
+
+  // Pre-fetch prompt
+  useEffect(() => {
+    async function prefetchPrompt() {
+      const basePrompt = `You are ${mentor.name}, a ${mentor.role} teaching ${mentor.subject}.
+TEACHING STYLE: ${mentor.conversationStyle}
+STUDENT GOAL: ${mentor.learningGoal}
+Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
+
+      try {
+        const res = await fetch(`/api/vapi/prompt`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mentorId: mentor.id, basePrompt, sessionId })
+        });
+        if (res.ok) {
+          const { prompt, greeting } = await res.json();
+          setCachedPrompt(prompt);
+          setCachedGreeting(greeting);
+        }
+      } catch (err) {
+        console.error("Prefetch error", err);
+      }
+    }
+    prefetchPrompt();
+  }, [mentor, sessionId]);
+
+  // Vapi Event Listeners
+  useEffect(() => {
+    const vapi = vapiRef.current;
+    if (!vapi) return;
+
+    // DO NOT USE removeAllListeners()! It breaks internal Vapi SDK events.
+    
+    const onCallStart = () => {
+      setIsVoiceActive(true);
+      setIsVoiceLoading(false);
+      setCallState("listening");
+      setActiveTranscript({ text: "", role: null });
+      transcriptRef.current = ""; 
+    };
+    
+    const onCallEnd = async () => {
+      setIsVoiceActive(false);
+      setIsVoiceLoading(false);
+      setCallState("idle");
+      setVolume(0);
+
+      const fullTranscript = transcriptRef.current.trim();
+      if (fullTranscript.length > 50) {
+        fetch("/api/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript: fullTranscript, mentorId: mentor.id, sessionId: sessionId || null }),
+        }).catch((err) => console.warn("[Voice Summary] failed:", err));
+      }
+      if (onCallEnded) onCallEnded();
+    };
+    
+    const onError = (e: any) => {
+      if (e?.type === "daily-error" && e?.error?.errorMsg === "Meeting has ended") return;
+      console.error("Vapi error", e);
+      setIsVoiceLoading(false);
+      setIsVoiceActive(false);
+      setCallState("idle");
+      
+      // Stop the Vapi instance if it errors out to prevent ghost audio
+      vapi.stop();
+      
+      if (e?.message !== "Call ended") {
+        toast.error("Voice call error: " + (e.message || "Unknown error"));
+      }
+      if (onCallEnded) onCallEnded();
+    };
+
+    const onMessage = async (msg: any) => {
+      if (msg.type === "transcript") {
+        if (msg.transcriptType === "partial") {
+          setActiveTranscript({ text: msg.transcript, role: msg.role });
+          if (msg.role === "user") {
+            setCallState("recording");
+          }
+        } else if (msg.transcriptType === "final") {
+          setActiveTranscript({ text: msg.transcript, role: msg.role });
+          const speaker = msg.role === "user" ? "Student" : "Mentor";
+          
+          if (msg.role === "user") {
+            setCallState("understanding");
+            setTimeout(() => { if (callState !== "speaking" && callState !== "searching knowledge base") setCallState("thinking"); }, 800);
+            if (sessionId) await saveMessage(sessionId, "user", msg.transcript);
+          } else if (msg.role === "assistant") {
+            setCallState("waiting");
+            setTimeout(() => { setCallState("listening"); }, 1000);
+            if (sessionId) await saveMessage(sessionId, "assistant", msg.transcript);
+            setTimeout(() => {
+              setActiveTranscript(t => t.text === msg.transcript ? { text: "", role: null } : t);
+            }, 3000);
+          }
+          transcriptRef.current += `${speaker}: ${msg.transcript}\n`;
+        }
+      }
+
+      if (msg.type === "speech-update") {
+        if (msg.role === "assistant" && msg.status === "started") {
+          setCallState("speaking");
+        }
+      }
+      
+      if (msg.type === "function-call") {
+        setCallState("searching knowledge base");
+      }
+
+      if (msg.type === "tool-calls") {
+        const results = [];
+        for (const toolCall of msg.toolCallList) {
+          try {
+            if (toolCall.function.name === "update_roadmap_topic_complete") {
+              const args = typeof toolCall.function.arguments === "string" ? JSON.parse(toolCall.function.arguments) : toolCall.function.arguments;
+              const res = await markTopicComplete(args.topic_id);
+              results.push({ toolCallId: toolCall.id, result: 'error' in res && res.error ? `Error: ${res.error}` : "Topic complete." });
+            } 
+            else if (toolCall.function.name === "update_roadmap_revision_required") {
+              const args = typeof toolCall.function.arguments === "string" ? JSON.parse(toolCall.function.arguments) : toolCall.function.arguments;
+              const res = await markTopicIncomplete(args.topic_id);
+              results.push({ toolCallId: toolCall.id, result: 'error' in res && res.error ? `Error: ${res.error}` : "Topic marked for revision." });
+            }
+            else if (toolCall.function.name === "end_call") {
+              setIsVoiceActive(false);
+              setIsVoiceLoading(false);
+              vapi.stop();
+              results.push({ toolCallId: toolCall.id, result: "Call ended." });
+            }
+          } catch (e: any) {
+            results.push({ toolCallId: toolCall.id, result: `Error: ${e.message}` });
+          }
+        }
+        if (results.length > 0) {
+          vapi.send({ type: "add-message", message: { role: "tool", content: JSON.stringify(results) } } as any);
+        }
+      }
+    };
+
+    const onVolumeLevel = (level: number) => setVolume(level);
+
+    vapi.on("call-start", onCallStart);
+    vapi.on("call-end", onCallEnd);
+    vapi.on("error", onError);
+    vapi.on("message", onMessage);
+    vapi.on("volume-level", onVolumeLevel);
+
+    return () => {
+      vapi.off("call-start", onCallStart);
+      vapi.off("call-end", onCallEnd);
+      vapi.off("error", onError);
+      vapi.off("message", onMessage);
+      vapi.off("volume-level", onVolumeLevel);
+    };
+  }, [sessionId, mentor.id, callState, onCallEnded]);
+
+  const endCall = useCallback(() => {
+    setIsVoiceActive(false);
+    setIsVoiceLoading(false);
+    
+    // Stop the call immediately to cut audio
+    if (vapiRef.current) {
+      try { vapiRef.current.stop(); } catch (e) {}
+    }
+    
+    if (onCallEnded) onCallEnded();
+  }, [onCallEnded]);
+
+  const startCall = useCallback(async () => {
+    const vapi = vapiRef.current;
+    if (!vapi) {
+      toast.error("Voice client not initialized");
+      return;
+    }
+
+    if (isVoiceActive) {
+      endCall();
+      return;
+    }
+    
+    setIsVoiceLoading(true);
+    setCallState("connecting");
+    
+    try {
+      const basePrompt = `You are ${mentor.name}, a ${mentor.role} teaching ${mentor.subject}.
+TEACHING STYLE: ${mentor.conversationStyle}
+STUDENT GOAL: ${mentor.learningGoal}
+Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
+
+      let prompt = cachedPrompt || basePrompt;
+      let greeting = cachedGreeting || "Hi! I am your AI mentor. Let's get started whenever you're ready.";
+      
+      await vapi.start({
+        firstMessage: greeting,
+        voice: {
+          provider: "11labs",
+          voiceId: mentor.voiceId || "21m00Tcm4TlvDq8ikWAM",
+          model: "eleven_turbo_v2_5"
+        },
+        model: {
+          provider: "openai",
+          model: mentor.voiceModel || "gpt-4-turbo-preview",
+          messages: [{ role: "system", content: prompt }],
+          tools: [
+            {
+              type: "function",
+              messages: [{ type: "request-start", content: "I'll mark that topic as complete." }, { type: "request-complete", content: "Topic is complete." }],
+              function: {
+                name: "update_roadmap_topic_complete",
+                description: "Mark a roadmap topic as complete.",
+                parameters: { type: "object", properties: { topic_id: { type: "string" } }, required: ["topic_id"] }
+              }
+            },
+            {
+              type: "function",
+              messages: [{ type: "request-start", content: "I'll flag that topic for revision." }, { type: "request-complete", content: "Topic marked for revision." }],
+              function: {
+                name: "update_roadmap_revision_required",
+                description: "Mark a roadmap topic as requiring revision.",
+                parameters: { type: "object", properties: { topic_id: { type: "string" } }, required: ["topic_id"] }
+              }
+            },
+            {
+              type: "function",
+              messages: [{ type: "request-start", content: "Ending the call now. Goodbye!" }],
+              function: {
+                name: "end_call",
+                description: "End the current voice call.",
+                parameters: { type: "object", properties: {} }
+              }
+            }
+          ]
+        }
+      });
+    } catch (err: any) {
+      console.error("Vapi start crash:", err);
+      setIsVoiceLoading(false);
+      setCallState("idle");
+      vapi.stop(); // Aggressively stop to prevent ghost connections
+      toast.error(err.message || "Failed to start voice call");
+      if (onCallEnded) onCallEnded();
+    }
+  }, [mentor, isVoiceActive, cachedPrompt, cachedGreeting, endCall, onCallEnded]);
+
+  // Handle component unmount safely
+  useEffect(() => {
+    return () => {
+      // We do NOT destroy the globalVapiInstance here. 
+      // We only stop the call if it's currently active.
+      if (globalVapiInstance && isVoiceActive) {
+        try { globalVapiInstance.stop(); } catch (e) {}
+      }
+    };
+  }, [isVoiceActive]);
+
+  const toggleMute = useCallback(() => {
+    setIsMuted(!isMuted);
+    vapiRef.current?.setMuted(!isMuted);
+  }, [isMuted]);
+
+  const toggleSpeaker = useCallback(() => {
+    setIsSpeakerMuted(!isSpeakerMuted);
+  }, [isSpeakerMuted]);
+
+  return {
+    mounted,
+    isVoiceActive,
+    isVoiceLoading,
+    callState,
+    volume,
+    activeTranscript,
+    isMuted,
+    isSpeakerMuted,
+    sessionDuration,
+    startCall,
+    endCall,
+    toggleMute,
+    toggleSpeaker,
+    vapiRef
+  };
+}

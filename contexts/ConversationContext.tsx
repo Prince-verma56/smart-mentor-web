@@ -57,6 +57,7 @@ interface ConversationContextValue {
     action?: string,
     attachments?: { type: string, url: string }[]
   ) => Promise<void>;
+  stopMessage: () => void;
   currentModel: string;
   setCurrentModel: (model: string) => void;
 
@@ -110,6 +111,9 @@ export function ConversationProvider({
 
   // Track whether user explicitly clicked "New Chat" to avoid auto-restoring
   const isNewChatRef = useRef(false);
+  
+  // AbortController for stopping generation
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // ── Load initial sessions ─────────────────────────────────────────────────
   useEffect(() => {
@@ -380,6 +384,14 @@ export function ConversationProvider({
   );
 
   // ── Send message ──────────────────────────────────────────────────────────
+  const stopMessage = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  }, []);
+
   const sendMessage = useCallback(
     async (content: string, model: string, action?: string, attachments?: { type: string, url: string, fileName?: string, size?: number }[]) => {
       if (!user || isStreaming) return;
@@ -454,10 +466,13 @@ export function ConversationProvider({
           { id: tempAssistantId, role: "assistant", content: "" },
         ]);
 
+        abortControllerRef.current = new AbortController();
+
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(chatBody),
+          signal: abortControllerRef.current.signal,
         });
 
         if (!res.ok) throw new Error(`API Error ${res.status}`);
@@ -507,7 +522,11 @@ export function ConversationProvider({
           }
           return next;
         });
-      } catch (err) {
+      } catch (err: any) {
+        if (err.name === "AbortError") {
+          console.log("Chat generation stopped by user.");
+          return;
+        }
         console.error("Chat error:", err);
         setMessages((prev) => {
           const next = [...prev];
@@ -518,19 +537,22 @@ export function ConversationProvider({
               {
                 ...last,
                 content:
-                  "Your message was sent, but the AI service is temporarily unavailable. Please try again.",
+                  "Oops! Something went wrong while connecting to the AI. Please try again.",
               },
             ];
           }
           return next;
         });
-        toast.error("Connection error. Please try again.");
       } finally {
         setIsStreaming(false);
+        abortControllerRef.current = null;
+        // Refresh server components (e.g. Roadmap) to reflect DB changes
+        router.refresh();
       }
     },
     [
       user,
+      isStreaming,
       activeSessionId,
       messages,
       mentorId,
@@ -539,7 +561,6 @@ export function ConversationProvider({
       pathname,
       router,
       triggerAITitle,
-      isStreaming,
     ]
   );
 
@@ -559,6 +580,7 @@ export function ConversationProvider({
     favoriteSession,
     duplicateSession,
     sendMessage,
+    stopMessage,
     currentModel,
     setCurrentModel,
     mentorId,

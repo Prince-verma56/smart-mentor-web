@@ -2,13 +2,13 @@
 
 import {
   CheckCircle2, Copy, HelpCircle, Code2, GraduationCap,
-  Sparkles, Loader2, Plus, Send, Mic, FileText,
+  Sparkles, Loader2, Plus, Send, Square, Mic, FileText,
   Image as ImageIcon, Video, Bookmark, Paperclip,
   BookOpen, Terminal, Wand2, ChevronDown, X
 } from "lucide-react";
 import type { Mentor, MentorStats } from "@/types/mentor";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { WelcomeDashboard } from "./WelcomeDashboard";
 import { Button } from "@/components/ui/button";
@@ -25,13 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const LOADING_STEPS = [
-  { icon: "👤", text: "Reading mentor profile..." },
-  { icon: "🗺️", text: "Checking your roadmap..." },
-  { icon: "📊", text: "Reviewing progress..." },
-  { icon: "💬", text: "Scanning conversation history..." },
-  { icon: "🧠", text: "Generating response..." },
-];
+
 
 const MODELS = [
   { id: "auto", label: "Auto (Optimal)", badge: "Smart" },
@@ -182,21 +176,21 @@ function ModelPill({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen((p) => !p)}
-        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-foreground/80 hover:text-foreground bg-muted/80 hover:bg-muted transition-all border border-border/40 hover:border-border/80 shadow-sm"
+        className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium text-foreground/70 bg-muted/30 hover:text-foreground hover:bg-muted transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95 border border-border/30 hover:border-border/60 hover:shadow-sm"
       >
-        <Wand2 className="h-3 w-3" />
-        {current.label}
-        <ChevronDown className="h-3 w-3" />
+        <Wand2 className="h-4 w-4" />
+        {current.label.split(" ")[0]}
+        <ChevronDown className="h-4 w-4 opacity-50" />
       </button>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.12 }}
-            className="absolute bottom-full left-0 mb-2 w-48 rounded-xl border bg-popover shadow-xl p-1 z-50"
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-border/50 bg-popover/80 backdrop-blur-xl shadow-lg p-1.5 z-50"
           >
             {MODELS.map((m) => (
               <button
@@ -206,18 +200,20 @@ function ModelPill({
                   setOpen(false);
                 }}
                 className={cn(
-                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left hover:bg-muted transition-colors",
-                  m.id === currentModel && "bg-primary/10"
+                  "w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-muted/80 transition-colors",
+                  m.id === currentModel && "bg-primary/10 hover:bg-primary/15"
                 )}
               >
-                <span className="text-[12px] font-medium">{m.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-medium text-foreground">{m.label}</span>
+                  {m.id === currentModel && (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                  )}
+                </div>
                 {m.badge && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  <span className="text-[10px] font-semibold tracking-wide uppercase px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/50">
                     {m.badge}
                   </span>
-                )}
-                {m.id === currentModel && (
-                  <CheckCircle2 className="h-3 w-3 text-primary" />
                 )}
               </button>
             ))}
@@ -231,7 +227,7 @@ function ModelPill({
 // ─── Composer ─────────────────────────────────────────────────────────────────
 
 function Composer({ mentor }: { mentor: Mentor }) {
-  const { sendMessage, isStreaming, activeSessionId, currentModel, setCurrentModel } =
+  const { sendMessage, stopMessage, isStreaming, activeSessionId, currentModel, setCurrentModel } =
     useConversation();
 
   const [text, setText] = useState("");
@@ -243,6 +239,7 @@ function Composer({ mentor }: { mentor: Mentor }) {
   const hasText = text.trim().length > 0 || attachments.some(a => !a.uploading);
 
   const [isDragging, setIsDragging] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const dragCounter = useRef(0);
 
   // Auto-resize textarea
@@ -428,8 +425,9 @@ function Composer({ mentor }: { mentor: Mentor }) {
   return (
     <div 
       className={cn(
-        "relative rounded-[24px] bg-card/60 backdrop-blur-xl border shadow-sm transition-all duration-500 ease-out focus-within:bg-card focus-within:border-primary/50 focus-within:shadow-[0_0_40px_rgba(var(--primary),0.25),_0_0_15px_rgba(var(--primary),0.3)] dark:focus-within:shadow-[0_0_40px_rgba(var(--primary),0.25),_0_0_15px_rgba(var(--primary),0.3)] focus-within:-mx-2 focus-within:scale-[1.01] group",
-        isDragging ? "border-primary/50" : "border-border/60"
+        "relative flex flex-col rounded-3xl bg-card/60 backdrop-blur-2xl shadow-md ring-1 ring-border/40 transition-all duration-500 ease-out group",
+        isInputFocused && "bg-card/90 shadow-[0_8px_30px_rgba(16,185,129,0.2),inset_0_1px_1px_rgba(255,255,255,0.05)] ring-2 ring-primary/60 -translate-y-1",
+        isDragging ? "ring-2 ring-primary bg-primary/5" : "border border-border/50"
       )}
     >
       {/* Global Full-screen Dropzone Overlay */}
@@ -459,27 +457,34 @@ function Composer({ mentor }: { mentor: Mentor }) {
 
       {/* Attachment Preview Area */}
       {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-5 pt-4 pb-1">
+        <div className="flex flex-wrap gap-3 px-5 pt-4 pb-1">
           {attachments.map((a, i) => (
-            <div key={i} className="relative group/att flex items-center gap-2 bg-muted/80 rounded-lg pr-8 p-1.5 border border-border/50 max-w-[200px]">
+            <div key={i} className="relative group/att flex items-center gap-3 bg-card/60 backdrop-blur-sm rounded-xl pr-4 p-2 border border-border/60 max-w-[240px] shadow-sm transition-all hover:shadow-md hover:bg-card/90">
               {a.uploading ? (
-                <div className="h-8 w-8 rounded bg-background flex items-center justify-center shrink-0">
-                  <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <div className="h-10 w-10 rounded-lg bg-background/50 flex items-center justify-center shrink-0">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 </div>
               ) : a.file.type.startsWith("image/") ? (
-                <div className="h-8 w-8 rounded overflow-hidden shrink-0">
-                  <img src={a.url} alt="preview" className="h-full w-full object-cover" />
+                <div className="h-10 w-10 rounded-lg overflow-hidden shrink-0 bg-muted relative">
+                  <img src={a.url} alt="preview" className="h-full w-full object-cover transition-transform duration-300 group-hover/att:scale-110" />
+                  <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-lg"></div>
                 </div>
               ) : (
-                <div className="h-8 w-8 rounded bg-background flex items-center justify-center shrink-0 text-muted-foreground">
-                  <FileText className="h-4 w-4" />
+                <div className="h-10 w-10 rounded-lg bg-background/50 flex items-center justify-center shrink-0 text-muted-foreground ring-1 ring-inset ring-border/50">
+                  <FileText className="h-5 w-5" />
                 </div>
               )}
-              <span className="text-[11px] font-medium truncate flex-1">{a.file.name}</span>
+              
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-[12px] font-medium text-foreground truncate">{a.file.name}</span>
+                <span className="text-[10px] text-muted-foreground truncate">
+                  {(a.file.size / 1024).toFixed(1)} KB • {a.file.type.split('/')[1]?.toUpperCase() || 'FILE'}
+                </span>
+              </div>
               
               <button 
                 onClick={() => removeAttachment(i)}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 bg-background/80 hover:bg-destructive hover:text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover/att:opacity-100 transition-all"
+                className="absolute -right-2 -top-2 h-6 w-6 bg-background hover:bg-destructive hover:text-destructive-foreground border border-border/50 shadow-sm rounded-full flex items-center justify-center opacity-0 scale-90 group-hover/att:opacity-100 group-hover/att:scale-100 transition-all z-10"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -488,90 +493,97 @@ function Composer({ mentor }: { mentor: Mentor }) {
         </div>
       )}
 
+      {/* Input Area */}
       <textarea
         ref={textareaRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
+        onFocus={() => setIsInputFocused(true)}
+        onBlur={() => setIsInputFocused(false)}
         placeholder={`Ask ${mentor.name} anything...`}
         disabled={isStreaming}
         rows={1}
         aria-label="Chat input"
         className={cn(
-          "w-full bg-transparent resize-none text-[15px] leading-relaxed px-5 pt-3.5 pb-1",
-          "placeholder:text-muted-foreground/40 focus:outline-none",
-          "min-h-[48px] max-h-[200px] overflow-y-auto no-scrollbar"
+          "w-full bg-transparent resize-none text-[15px] leading-relaxed px-5",
+          attachments.length > 0 ? "pt-2 pb-2" : "py-4",
+          "placeholder:text-muted-foreground/50 focus:outline-none",
+          "min-h-[56px] max-h-[250px] overflow-y-auto no-scrollbar"
         )}
         style={{ height: "auto" }}
       />
 
-      {/* Bottom bar */}
-      <div className="flex items-center gap-1 px-3 pb-2.5 pt-0">
-        {/* Attach */}
-        <div ref={attachRef} className="relative">
-          <AnimatePresence>
-            {showAttach && <AttachPopover onClose={() => setShowAttach(false)} onSelect={triggerFileInput} />}
-          </AnimatePresence>
-          <button
-            type="button"
-            onClick={() => setShowAttach((p) => !p)}
-            aria-label="Attach file"
-            title="Attach file"
-            className={cn(
-              "h-8 w-8 flex items-center justify-center rounded-xl text-muted-foreground/60 hover:text-foreground hover:bg-muted/80 transition-all duration-200",
-              showAttach && "bg-muted text-foreground"
-            )}
-          >
-            <Paperclip className="h-4 w-4" />
-          </button>
+      {/* Bottom bar: Attach, Model, Voice & Send */}
+      <div className="flex items-center justify-between px-3 pb-3 pt-1">
+        
+        {/* Left Controls */}
+        <div className="flex items-center gap-2 pl-1">
+          <div ref={attachRef} className="relative">
+            <AnimatePresence>
+              {showAttach && <AttachPopover onClose={() => setShowAttach(false)} onSelect={triggerFileInput} />}
+            </AnimatePresence>
+            <button
+              type="button"
+              onClick={() => setShowAttach((p) => !p)}
+              aria-label="Attach file"
+              title="Attach file"
+              className={cn(
+                "h-10 w-10 flex items-center justify-center rounded-full text-foreground/70 bg-muted/30 hover:text-foreground hover:bg-muted transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-110 active:scale-95 border border-border/30 hover:border-border/60 hover:shadow-md",
+                showAttach && "bg-muted text-foreground border-border/60 shadow-md scale-105"
+              )}
+            >
+              <Paperclip className="h-5 w-5" />
+            </button>
+          </div>
+
+          <ModelPill currentModel={currentModel} onChange={setCurrentModel} />
         </div>
 
-        {/* Model selector */}
-        <ModelPill currentModel={currentModel} onChange={setCurrentModel} />
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Right side actions */}
-        <div className="flex items-center gap-3.5 pr-1">
-          {/* Mic / Voice-to-Text */}
+        {/* Right Controls */}
+        <div className="flex items-center gap-3 pr-1">
           <VoiceToTextButton
             isStreaming={isStreaming}
             text={text}
             setText={setText}
           />
 
-          {/* Separator */}
-          <div className="h-4 w-px bg-border/60 mx-1" />
+          <div className="h-4 w-px bg-border/40 mx-0.5" />
 
-          {/* Large AI Voice Button */}
           <VapiVoiceButton
             mentor={mentor}
             sessionId={activeSessionId || undefined}
             isInputIcon={true}
           />
 
-          {/* Send — visible only when input has text */}
-          <AnimatePresence>
-            {hasText && (
-              <motion.button
-                key="send"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.12 }}
-                type="button"
-                onClick={handleSubmit}
-                disabled={isStreaming}
-                aria-label="Send message"
-                title="Send (Enter)"
-                className="h-8 w-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all shadow-sm shadow-primary/20"
-              >
-                <Send className="h-4 w-4" />
-              </motion.button>
-            )}
-          </AnimatePresence>
+          {isStreaming ? (
+            <button
+              type="button"
+              onClick={stopMessage}
+              aria-label="Stop generating"
+              title="Stop"
+              className="h-10 w-10 flex items-center justify-center rounded-lg transition-all duration-300 bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:scale-105 active:scale-95 shadow-[0_4px_15px_rgba(239,68,68,0.3)]"
+            >
+              <Square className="h-5 w-5 fill-current" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!hasText || attachments.some(a => a.uploading)}
+              aria-label="Send message"
+              title="Send (Enter)"
+              className={cn(
+                "h-10 w-10 flex items-center justify-center rounded-lg transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                hasText && !attachments.some(a => a.uploading)
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-[1.15] active:scale-[0.95] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] shadow-md border border-primary/20"
+                  : "bg-muted/60 text-foreground/40 border border-border/40 cursor-not-allowed"
+              )}
+            >
+              <Send className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -597,6 +609,21 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   } = useConversation();
 
   const [loadingStep, setLoadingStep] = useState(0);
+
+  const lastUserMessage = [...messages].reverse().find(m => m.role === "user");
+  const hasImage = lastUserMessage?.metadata?.attachments?.some((a: any) => a.type?.startsWith("image/"));
+  
+  const currentLoadingSteps = useMemo(() => {
+    const baseSteps = [
+      { icon: "🤔", text: "Understanding the request" },
+      { icon: "🔍", text: "Searching relevant knowledge" },
+      { icon: "✨", text: "Preparing response" },
+    ];
+    if (hasImage) {
+      return [{ icon: "👀", text: "Analyzing your image" }, ...baseSteps];
+    }
+    return baseSteps;
+  }, [hasImage]);
   const suggestedQuestions = getSuggestedQuestions(mentor.subject, stats.currentTopic);
 
   // Scroll to bottom
@@ -609,7 +636,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
     if (isStreaming) {
       setLoadingStep(0);
       const interval = setInterval(() => {
-        setLoadingStep((p) => (p < LOADING_STEPS.length - 1 ? p + 1 : p));
+        setLoadingStep((p) => (p < currentLoadingSteps.length - 1 ? p + 1 : p));
       }, 650);
       return () => clearInterval(interval);
     } else {
@@ -633,10 +660,10 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
     messages[messages.length - 1].role === "assistant" &&
     messages[messages.length - 1].content === "";
 
-  const lastAssistantMessageIndex = messages.findLastIndex(m => m.role === "assistant" && m.content !== "");
+  const lastAssistantMessageId = [...messages].reverse().find(m => m.role === "assistant" && m.content !== "")?.id;
 
   return (
-    <div className="flex flex-col h-full bg-background relative">
+    <div className="flex flex-col h-full bg-background chat-workspace-bg relative">
 
       {/* Removed floating New Chat button from here */}
 
@@ -666,27 +693,36 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
           />
         ) : (
           /* Messages */
-          <div className="max-w-[700px] mx-auto space-y-8 pb-12">
-            {messages.filter(m => m.content !== "").map((m, index) => (
-              <div
+          <div className="w-full max-w-4xl mx-auto space-y-12 pb-12">
+            {messages.filter(m => m.content !== "").map((m, index) => {
+              const displayContent = m.content.replace(/\*?\[Analyzing context\.\.\.\]\*?\n*/g, "").trimStart();
+              
+              return (
+              <motion.div
                 key={m.id}
+                initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                 className={cn(
-                  "group flex gap-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200",
+                  "group flex gap-4",
                   m.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
                 {m.role === "assistant" && (
-                  <Avatar className="h-8 w-8 ring-2 ring-background shadow-sm shrink-0 mt-1 z-10">
-                    {mentor.avatarUrl ? (
-                      <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
-                    ) : null}
-                    <AvatarFallback
-                      style={{ backgroundColor: mentor.avatarColor }}
-                      className="text-white text-[11px] font-bold"
-                    >
-                      {getInitials(mentor.name)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative mt-1 z-10 shrink-0">
+                    <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm">
+                      {mentor.avatarUrl ? (
+                        <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
+                      ) : null}
+                      <AvatarFallback
+                        style={{ background: `linear-gradient(135deg, ${mentor.avatarColor} 0%, rgba(0,0,0,0.8) 100%)` }}
+                        className="text-white text-[12px] font-bold"
+                      >
+                        {getInitials(mentor.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background"></span>
+                  </div>
                 )}
 
                 <div
@@ -699,7 +735,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                     className={cn(
                       "leading-relaxed",
                       m.role === "user"
-                        ? "rounded-2xl rounded-tr-sm bg-muted/50 px-5 py-3.5 text-foreground overflow-hidden"
+                        ? "rounded-2xl rounded-tr-sm bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 shadow-[0_2px_15px_rgba(16,185,129,0.08)] backdrop-blur-md px-5 py-4 text-foreground overflow-hidden relative"
                         : "pt-1"
                     )}
                   >
@@ -724,21 +760,31 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                         <span className="whitespace-pre-wrap text-[15px]">{m.content}</span>
                       </div>
                     ) : (
-                      <>
-                        <MarkdownRenderer content={m.content} />
-                        {/* Streaming cursor */}
-                        {index === messages.length - 1 && isStreaming && m.content.length > 0 && (
-                          <span className="inline-block w-0.5 h-[1em] bg-primary ml-0.5 animate-[blink_1s_ease-in-out_infinite] align-middle" />
+                      <div className="bg-gradient-to-br from-card/80 to-card/40 border border-border/60 rounded-2xl p-6 shadow-md backdrop-blur-md min-h-[60px] flex items-center w-full">
+                        {displayContent === "" ? (
+                          <div className="flex items-center gap-1.5 px-2">
+                            <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                        ) : (
+                          <div className="w-full">
+                            <MarkdownRenderer content={displayContent} />
+                            {/* Streaming cursor */}
+                            {m.id === messages[messages.length - 1].id && isStreaming && displayContent.length > 0 && (
+                              <span className="inline-block w-2 h-[1em] bg-primary ml-1 animate-[blink_1s_ease-in-out_infinite] align-middle rounded-sm" />
+                            )}
+                          </div>
                         )}
-                      </>
+                      </div>
                     )}
                   </div>
 
-                  {m.role === "assistant" && m.content && (
+                  {m.role === "assistant" && displayContent.length > 0 && (
                     <MessageActions
-                      content={m.content}
+                      content={displayContent}
                       onAction={handleQuickAction}
-                      alwaysShow={index === lastAssistantMessageIndex}
+                      alwaysShow={m.id === lastAssistantMessageId}
                     />
                   )}
                 </div>
@@ -750,52 +796,66 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                     </AvatarFallback>
                   </Avatar>
                 )}
-              </div>
-            ))}
+              </motion.div>
+            );
+            })}
 
             {/* Thinking indicator */}
             {isThinking && (
-              <div className="flex gap-3 justify-start animate-in fade-in-0 duration-200 mt-2">
-                <Avatar className="h-8 w-8 ring-2 ring-background shadow-sm shrink-0 mt-1 z-10">
-                  {mentor.avatarUrl ? (
-                    <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
-                  ) : null}
-                  <AvatarFallback
-                    style={{ backgroundColor: mentor.avatarColor }}
-                    className="text-white text-[11px] font-bold"
-                  >
-                    {getInitials(mentor.name)}
-                  </AvatarFallback>
-                </Avatar>
+              <div className="flex gap-4 justify-start animate-in fade-in-0 slide-in-from-bottom-2 duration-300 mt-2">
+                <div className="relative mt-1 z-10 shrink-0">
+                  <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm">
+                    {mentor.avatarUrl ? (
+                      <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
+                    ) : null}
+                    <AvatarFallback
+                      style={{ background: `linear-gradient(135deg, ${mentor.avatarColor} 0%, rgba(0,0,0,0.8) 100%)` }}
+                      className="text-white text-[12px] font-bold"
+                    >
+                      {getInitials(mentor.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background animate-pulse"></span>
+                </div>
 
-                <div className="pt-1 min-w-[220px]">
-                  <div className="flex items-center gap-2 text-[12px] font-semibold text-primary mb-3">
-                    <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                    {mentor.name} is thinking...
-                  </div>
-                  <div className="space-y-2">
-                    {LOADING_STEPS.map((step, i) => (
-                      <div
-                        key={i}
-                        className={cn(
-                          "flex items-center gap-2.5 text-[12px] transition-all duration-300",
-                          i < loadingStep && "text-muted-foreground/50",
-                          i === loadingStep && "text-foreground font-medium",
-                          i > loadingStep && "text-muted-foreground/20"
-                        )}
-                      >
-                        {i < loadingStep ? (
-                          <div className="h-4 w-4 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                             <CheckCircle2 className="h-3 w-3" />
-                          </div>
-                        ) : i === loadingStep ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-                        ) : (
-                          <span className="h-4 w-4 rounded-full border border-border/50 shrink-0" />
-                        )}
-                        <span>{step.icon} {step.text}</span>
+                <div className="pt-1 min-w-[260px]">
+                  <div className="bg-gradient-to-br from-card/80 to-card/40 border border-border/60 rounded-2xl p-6 shadow-md backdrop-blur-md">
+                    <div className="flex items-center gap-2 text-[13px] font-semibold text-primary mb-4">
+                      <div className="flex gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
-                    ))}
+                      <span className="ml-1">Thinking...</span>
+                    </div>
+                    <div className="space-y-3">
+                      {currentLoadingSteps.map((step, i) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "flex items-center gap-3 text-[13px] transition-all duration-500 ease-out",
+                            i < loadingStep && "text-muted-foreground/60",
+                            i === loadingStep && "text-foreground font-medium translate-x-1",
+                            i > loadingStep && "text-muted-foreground/20"
+                          )}
+                        >
+                          {i < loadingStep ? (
+                            <div className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                               <CheckCircle2 className="h-3.5 w-3.5" />
+                            </div>
+                          ) : i === loadingStep ? (
+                            <div className="h-5 w-5 flex items-center justify-center shrink-0">
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            </div>
+                          ) : (
+                            <div className="h-5 w-5 flex items-center justify-center shrink-0">
+                              <span className="h-2 w-2 rounded-full bg-muted-foreground/20" />
+                            </div>
+                          )}
+                          <span>{step.icon} {step.text}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -808,7 +868,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
       {/* ── Composer ──────────────────────────────── */}
       <div className="px-4 pb-5 pt-3 bg-background border-t shrink-0">
-        <div className="max-w-[760px] mx-auto">
+        <div className="max-w-[760px] focus-within:max-w-4xl mx-auto transition-[max-width] duration-500 ease-out">
           <Composer mentor={mentor} />
           <p className="text-center text-[10px] text-muted-foreground/30 mt-2">
             {mentor.name} can make mistakes. Verify important info.
