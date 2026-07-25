@@ -9,6 +9,7 @@ import {
 import type { Mentor, MentorStats } from "@/types/mentor";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { WelcomeDashboard } from "./WelcomeDashboard";
 import { Button } from "@/components/ui/button";
 import MaskRevealUp from "@/components/ui/smoothui/mask-reveal-up";
@@ -33,13 +34,9 @@ const LOADING_STEPS = [
 ];
 
 const MODELS = [
-  { id: "llama-3.1-8b-instant", label: "Llama 3.1 8B (Groq)", badge: "Fast" },
-  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)", badge: "Smart" },
-  { id: "llama-3.2-90b-vision-preview", label: "Llama 3.2 Vision (Groq)", badge: "Vision" },
-  { id: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (OpenRouter)", badge: "Best" },
-  { id: "openai/gpt-4o", label: "GPT-4o (OpenRouter)", badge: "Smart" },
-  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (OpenRouter)", badge: "New" },
-  { id: "deepseek/deepseek-chat", label: "DeepSeek V3 (OpenRouter)", badge: "Fast" },
+  { id: "auto", label: "Auto (Optimal)", badge: "Smart" },
+  { id: "fast", label: "Fast & Lightweight", badge: "Speed" },
+  { id: "reasoning", label: "Deep Reasoning", badge: "Quality" },
 ];
 
 const ATTACH_ITEMS = [
@@ -185,11 +182,11 @@ function ModelPill({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen((p) => !p)}
-        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] text-muted-foreground/60 hover:text-foreground bg-muted/40 hover:bg-muted transition-all border border-transparent hover:border-border/50"
+        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-foreground/80 hover:text-foreground bg-muted/80 hover:bg-muted transition-all border border-border/40 hover:border-border/80 shadow-sm"
       >
-        <Wand2 className="h-2.5 w-2.5" />
+        <Wand2 className="h-3 w-3" />
         {current.label}
-        <ChevronDown className="h-2.5 w-2.5" />
+        <ChevronDown className="h-3 w-3" />
       </button>
 
       <AnimatePresence>
@@ -310,6 +307,9 @@ function Composer({ mentor }: { mentor: Mentor }) {
       try {
         const formData = new FormData();
         formData.append("file", attach.file);
+        if (mentor?.id) {
+          formData.append("mentor_id", mentor.id);
+        }
 
         const res = await fetch("/api/upload", {
           method: "POST",
@@ -320,7 +320,7 @@ function Composer({ mentor }: { mentor: Mentor }) {
         const data = await res.json();
 
         setAttachments((prev) => 
-          prev.map(a => a.file === attach.file ? { ...a, url: data.url, uploading: false } : a)
+          prev.map(a => a.file === attach.file ? { ...a, url: data.previewUrl || data.publicUrl, uploading: false } : a)
         );
       } catch (err) {
         toast.error(`Failed to upload ${attach.file.name}`);
@@ -342,38 +342,52 @@ function Composer({ mentor }: { mentor: Mentor }) {
     }
   };
 
-  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current += 1;
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      setIsDragging(true);
-    }
-  };
+  useEffect(() => {
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter.current += 1;
+      if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+        setIsDragging(true);
+      }
+    };
 
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current -= 1;
-    if (dragCounter.current === 0) {
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter.current -= 1;
+      if (dragCounter.current === 0) {
+        setIsDragging(false);
+      }
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
       setIsDragging(false);
-    }
-  };
+      dragCounter.current = 0;
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        processFiles(Array.from(e.dataTransfer.files));
+      }
+    };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+    window.addEventListener('dragenter', handleDragEnter);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    dragCounter.current = 0;
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFiles(Array.from(e.dataTransfer.files));
-    }
-  };
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, [mentor.id]);
 
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
@@ -414,21 +428,24 @@ function Composer({ mentor }: { mentor: Mentor }) {
   return (
     <div 
       className={cn(
-        "relative rounded-[24px] bg-card/60 backdrop-blur-xl border shadow-sm transition-all duration-300 ease-out focus-within:bg-card focus-within:border-primary/30 focus-within:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:focus-within:shadow-[0_8px_30px_rgba(var(--primary),0.06)] focus-within:-mx-2 focus-within:scale-[1.01] group",
-        isDragging ? "border-primary/50 bg-primary/5" : "border-border/60"
+        "relative rounded-[24px] bg-card/60 backdrop-blur-xl border shadow-sm transition-all duration-500 ease-out focus-within:bg-card focus-within:border-primary/50 focus-within:shadow-[0_0_40px_rgba(var(--primary),0.25),_0_0_15px_rgba(var(--primary),0.3)] dark:focus-within:shadow-[0_0_40px_rgba(var(--primary),0.25),_0_0_15px_rgba(var(--primary),0.3)] focus-within:-mx-2 focus-within:scale-[1.01] group",
+        isDragging ? "border-primary/50" : "border-border/60"
       )}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
     >
-      {isDragging && (
-        <div className="absolute inset-0 z-50 rounded-[24px] border-2 border-dashed border-primary/50 bg-background/50 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-          <div className="flex flex-col items-center gap-2 text-primary animate-in zoom-in-95 duration-200">
-            <Plus className="h-8 w-8" />
-            <span className="text-sm font-medium">Drop files to attach</span>
+      {/* Global Full-screen Dropzone Overlay */}
+      {isDragging && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] bg-background/20 backdrop-blur-md flex items-center justify-center pointer-events-none transition-all duration-200">
+          <div className="flex flex-col items-center justify-center gap-5 text-primary animate-in zoom-in-95 duration-300 bg-card/90 border-2 border-dashed border-primary/50 rounded-[32px] p-16 min-w-[450px] shadow-2xl">
+            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+              <Plus className="h-10 w-10 text-primary" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-2xl font-bold">Drop files to attach</h3>
+              <p className="text-base text-muted-foreground mt-2">Upload images, PDFs, or code snippets instantly</p>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Hidden file input */}
@@ -516,45 +533,46 @@ function Composer({ mentor }: { mentor: Mentor }) {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Mic / Voice-to-Text */}
-        <VoiceToTextButton
-          isStreaming={isStreaming}
-          text={text}
-          setText={setText}
-        />
+        {/* Right side actions */}
+        <div className="flex items-center gap-3.5 pr-1">
+          {/* Mic / Voice-to-Text */}
+          <VoiceToTextButton
+            isStreaming={isStreaming}
+            text={text}
+            setText={setText}
+          />
 
-        {/* Separator */}
-        <div className="h-4 w-px bg-border/60 mx-1" />
+          {/* Separator */}
+          <div className="h-4 w-px bg-border/60 mx-1" />
 
-        {/* Large AI Voice Button */}
-        <div className="relative">
+          {/* Large AI Voice Button */}
           <VapiVoiceButton
             mentor={mentor}
             sessionId={activeSessionId || undefined}
             isInputIcon={true}
           />
-        </div>
 
-        {/* Send — visible only when input has text */}
-        <AnimatePresence>
-          {hasText && (
-            <motion.button
-              key="send"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.12 }}
-              type="button"
-              onClick={handleSubmit}
-              disabled={isStreaming}
-              aria-label="Send message"
-              title="Send (Enter)"
-              className="h-7 w-7 flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all shadow-sm shadow-primary/20"
-            >
-              <Send className="h-3.5 w-3.5" />
-            </motion.button>
-          )}
-        </AnimatePresence>
+          {/* Send — visible only when input has text */}
+          <AnimatePresence>
+            {hasText && (
+              <motion.button
+                key="send"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.12 }}
+                type="button"
+                onClick={handleSubmit}
+                disabled={isStreaming}
+                aria-label="Send message"
+                title="Send (Enter)"
+                className="h-8 w-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all shadow-sm shadow-primary/20"
+              >
+                <Send className="h-4 w-4" />
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
@@ -687,9 +705,20 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                   >
                     {m.role === "user" ? (
                       <div className="flex flex-col gap-2">
-                        {m.metadata?.imageUrl && (
-                          <div className="rounded-lg overflow-hidden border border-border/50 max-h-[300px] mb-2 flex justify-end">
-                            <img src={m.metadata.imageUrl} alt="Attached" className="object-contain max-h-[300px]" />
+                        {m.metadata?.attachments && m.metadata.attachments.length > 0 && (
+                          <div className="flex flex-wrap gap-2 justify-end mb-2">
+                            {m.metadata.attachments.map((att: any, attIdx: number) => (
+                              att.type?.startsWith("image/") ? (
+                                <div key={attIdx} className="rounded-lg overflow-hidden border border-border/50 max-h-[300px]">
+                                  <img src={att.url} alt={att.fileName || "Attached"} className="object-contain max-h-[300px]" />
+                                </div>
+                              ) : (
+                                <div key={attIdx} className="bg-background/80 rounded px-3 py-2 text-sm border flex items-center gap-2">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <span className="truncate max-w-[200px]">{att.fileName}</span>
+                                </div>
+                              )
+                            ))}
                           </div>
                         )}
                         <span className="whitespace-pre-wrap text-[15px]">{m.content}</span>

@@ -26,6 +26,20 @@ export function VapiVoiceButton({ mentor, sessionId, isInputIcon = false }: Vapi
     // Only initialize in browser to avoid SSR issues
     if (typeof window !== "undefined") {
       vapiRef.current = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "a3a65c73-9cbd-4e8a-910f-8b5c99d56177");
+      
+      // Suppress unactionable Krisp unload error from Vapi which crashes Next.js dev overlay
+      // @ts-ignore
+      if (!window.__vapi_error_suppressed) {
+        const originalError = console.error;
+        console.error = (...args) => {
+          if (args[0] && typeof args[0] === 'string' && args[0].includes('Error unloading krisp processor')) {
+            return;
+          }
+          originalError(...args);
+        };
+        // @ts-ignore
+        window.__vapi_error_suppressed = true;
+      }
     }
   }
   
@@ -333,7 +347,7 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
         disabled={isVoiceLoading}
         title="Speak with AI Mentor"
         className={cn(
-          "transition-all duration-300 rounded-full",
+          "relative transition-all duration-300 rounded-full",
           isInputIcon
             ? "h-9 w-9 bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(var(--primary),0.2)]"
             : `h-7 text-[11px] gap-1.5 shrink-0 ${isVoiceActive ? 'bg-red-500 hover:bg-red-600 text-white' : 'text-muted-foreground hover:text-foreground'}`,

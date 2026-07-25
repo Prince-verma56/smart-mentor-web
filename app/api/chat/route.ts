@@ -140,9 +140,9 @@ STUDENT GOAL: ${mentor.learning_goal || "Master " + mentor.subject}.`;
     // ── Step 2: Proxy to Python Backend ───────────────────────────────────────
     const payload = {
       messages,
-      mentorId,
+      mentor_id: mentorId,
       model,
-      sessionId,
+      session_id: sessionId,
       system_prompt: systemPrompt,
       attachments: body.attachments || (body.data && body.data.attachments) || [],
     };

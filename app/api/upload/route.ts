@@ -1,62 +1,39 @@
 import { auth } from "@clerk/nextjs/server";
-import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
+    const { userId, getToken } = await auth();
     if (!userId) {
       return new Response("Unauthorized", { status: 401 });
     }
+    const token = await getToken();
 
     const formData = await req.formData();
-    const file = formData.get("file") as File;
-
-    if (!file) {
-      return new Response("No file provided", { status: 400 });
-    }
-
-    // Connect to Supabase using the service key (which the anon key currently acts as)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const bucketName = "mentor-resources";
     
-    // Convert File to ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // We need to forward the formData to the FastAPI backend
+    const response = await fetch("http://127.0.0.1:8000/api/v1/resources/upload", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`
+        // Do NOT set Content-Type here, let fetch handle the boundary for FormData
+      },
+      body: formData,
+    });
 
-    const { data, error } = await supabase.storage
-      .from(bucketName)
-      .upload(`chat-attachments/${fileName}`, buffer, {
-        contentType: file.type,
-        upsert: false
-      });
-
-    if (error) {
-      console.error("Supabase storage error:", error);
-      return new Response(`Upload error: ${error.message}`, { status: 500 });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("FastAPI Upload Error:", errorText);
+      return new Response(errorText, { status: response.status });
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from(bucketName)
-      .getPublicUrl(`chat-attachments/${fileName}`);
-
-    return new Response(JSON.stringify({
-      url: publicUrl,
-      fileName: file.name,
-      type: file.type,
-      size: file.size,
-    }), {
+    const data = await response.json();
+    return new Response(JSON.stringify(data), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
 
   } catch (error) {
-    console.error("Upload handler error:", error);
+    console.error("Upload proxy error:", error);
     return new Response("Internal Server Error", { status: 500 });
   }
 }

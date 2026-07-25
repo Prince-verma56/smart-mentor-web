@@ -106,7 +106,7 @@ export function ConversationProvider({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [currentModel, setCurrentModel] = useState("llama-3.1-8b-instant");
+  const [currentModel, setCurrentModel] = useState("auto");
 
   // Track whether user explicitly clicked "New Chat" to avoid auto-restoring
   const isNewChatRef = useRef(false);

@@ -11,12 +11,15 @@ import {
   Upload,
   Bookmark,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import type { Resource, ResourceType } from "@/types/resource";
+import { useState, useRef, useEffect } from "react";
+import { getResources, uploadResource } from "@/lib/resources";
+import { toast } from "sonner";
 
 interface ResourcePanelProps {
   mentorId: string;
-  resources?: Resource[];
 }
 
 const TYPE_ICON: Record<ResourceType, React.ReactNode> = {
@@ -42,7 +45,48 @@ const UPCOMING_TOPICS = [
   "Image Optimization",
 ];
 
-export function ResourcePanel({ mentorId, resources = [] }: ResourcePanelProps) {
+export function ResourcePanel({ mentorId }: ResourcePanelProps) {
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function loadResources() {
+      try {
+        const data = await getResources(mentorId);
+        setResources(data);
+      } catch (err) {
+        console.error("Failed to load resources", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadResources();
+  }, [mentorId]);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const newResource = await uploadResource(mentorId, file);
+      setResources((prev) => [newResource, ...prev]);
+      toast.success("Resource uploaded successfully!");
+    } catch (err: any) {
+      console.error("Upload failed", err);
+      toast.error(err.response?.data?.detail || "Failed to upload resource");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4">
@@ -73,14 +117,31 @@ export function ResourcePanel({ mentorId, resources = [] }: ResourcePanelProps) 
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium">Resources</CardTitle>
               {/* Extension point: file upload */}
-              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" disabled>
-                <Upload className="h-3 w-3" />
-                Upload
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                className="hidden" 
+                accept=".pdf,.txt,.md,image/*" 
+              />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 gap-1 text-xs" 
+                onClick={handleUploadClick}
+                disabled={isUploading || isLoading}
+              >
+                {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                {isUploading ? "Uploading..." : "Upload"}
               </Button>
             </div>
           </CardHeader>
           <CardContent className="pb-4">
-            {resources.length === 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : resources.length === 0 ? (
               <div className="flex flex-col items-center py-6 text-center">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted mb-2">
                   <FolderIcon className="h-5 w-5 text-muted-foreground" />
@@ -92,10 +153,10 @@ export function ResourcePanel({ mentorId, resources = [] }: ResourcePanelProps) 
             ) : (
               <div className="space-y-2">
                 {resources.map((r) => (
-                  <div key={r.id} className="flex items-center gap-2 rounded-md p-2 hover:bg-muted transition-colors">
-                    {TYPE_ICON[r.type]}
-                    <span className="text-sm truncate flex-1">{r.title}</span>
-                    <Badge variant="outline" className="text-xs">{r.type}</Badge>
+                  <div key={r.id} className="flex items-center gap-2 rounded-md p-2 hover:bg-muted transition-colors cursor-pointer" onClick={() => window.open(r.previewUrl, "_blank")}>
+                    {TYPE_ICON[r.type] || <FileText className="h-4 w-4 text-gray-500" />}
+                    <span className="text-sm truncate flex-1">{r.fileName || r.title}</span>
+                    <Badge variant="outline" className="text-[10px] uppercase">{r.status}</Badge>
                   </div>
                 ))}
               </div>
