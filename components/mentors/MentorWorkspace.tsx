@@ -130,14 +130,14 @@ function RightPanelContent({
             <PanelRight className="h-4 w-4" />
           </Button>
         )}
-        <TabsList className="flex-1 grid grid-cols-3 h-8 bg-muted/50 p-0.5 rounded-lg">
-          <TabsTrigger value="progress" className="text-xs rounded-md transition-all duration-150 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+        <TabsList className="flex-1 grid grid-cols-3 h-8 bg-muted/30 p-0.5 rounded-lg border border-border/20">
+          <TabsTrigger value="progress" className="text-xs rounded-md transition-all duration-200 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary/20 text-muted-foreground hover:text-foreground hover:bg-muted/50 font-semibold cursor-pointer">
             Stats
           </TabsTrigger>
-          <TabsTrigger value="roadmap" className="text-xs rounded-md transition-all duration-150 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="roadmap" className="text-xs rounded-md transition-all duration-200 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary/20 text-muted-foreground hover:text-foreground hover:bg-muted/50 font-semibold cursor-pointer">
             Roadmap
           </TabsTrigger>
-          <TabsTrigger value="resources" className="text-xs rounded-md transition-all duration-150 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="resources" className="text-xs rounded-md transition-all duration-200 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary/20 text-muted-foreground hover:text-foreground hover:bg-muted/50 font-semibold cursor-pointer">
             Files
           </TabsTrigger>
         </TabsList>
@@ -234,14 +234,17 @@ export function MentorWorkspace({
             {/* Center Panel */}
             <motion.div layout className="flex-1 min-w-0 flex flex-col bg-background relative overflow-hidden h-full">
               <MentorHeader mentor={mentor} stats={stats} />
-              <div className="flex-1 min-h-0 overflow-hidden">
-                {view === "conversation" ? (
+              <div className="flex-1 min-h-0 overflow-hidden relative">
+                <div className={cn("absolute inset-0 flex flex-col transition-opacity duration-200", view === "conversation" ? "z-10 opacity-100 pointer-events-auto delay-100" : "z-0 opacity-0 pointer-events-none")}>
                   <ConversationPanel mentor={mentor} stats={stats} />
-                ) : (
-                  <div className="h-full overflow-y-auto p-6 md:p-10">
-                    {children}
-                  </div>
-                )}
+                </div>
+                <div className={cn("absolute inset-0 flex flex-col transition-opacity duration-200", view !== "conversation" ? "z-10 opacity-100 pointer-events-auto delay-100" : "z-0 opacity-0 pointer-events-none")}>
+                  <ScrollArea className="flex-1 h-full min-h-0 bg-background" data-lenis-prevent="true">
+                    <div className="p-6 md:p-10 min-h-full">
+                      {children}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             </motion.div>
 
@@ -372,12 +375,17 @@ export function MentorWorkspace({
           </div>
 
           {/* Mobile main content */}
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-            {view === "conversation" ? (
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+            <div className={cn("absolute inset-0 flex flex-col transition-opacity duration-200", view === "conversation" ? "z-10 opacity-100 pointer-events-auto delay-100" : "z-0 opacity-0 pointer-events-none")}>
               <ConversationPanel mentor={mentor} stats={stats} />
-            ) : (
-              <div className="flex-1 overflow-y-auto p-6">{children}</div>
-            )}
+            </div>
+            <div className={cn("absolute inset-0 flex flex-col transition-opacity duration-200", view !== "conversation" ? "z-10 opacity-100 pointer-events-auto delay-100" : "z-0 opacity-0 pointer-events-none")}>
+              <ScrollArea className="flex-1 h-full min-h-0 bg-background" data-lenis-prevent="true">
+                <div className="p-6 min-h-full">
+                  {children}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
         </div>
 

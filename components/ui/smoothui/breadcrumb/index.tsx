@@ -64,7 +64,7 @@ export default function Breadcrumb({
               {index > 0 && (
                 <span
                   aria-hidden="true"
-                  className="mr-1.5 [&>svg]:size-3.5"
+                  className="mr-1.5 [&>svg]:size-3.5 opacity-40"
                   role="presentation"
                 >
                   {separator ?? <ChevronRight className="size-3.5" />}
@@ -73,13 +73,13 @@ export default function Breadcrumb({
               {isLast ? (
                 <span
                   aria-current="page"
-                  className="font-normal text-foreground"
+                  className="font-medium text-foreground"
                 >
                   {item.label}
                 </span>
               ) : (
                 <a
-                  className="transition-colors hover:text-foreground"
+                  className="font-medium text-muted-foreground/60 transition-colors duration-150 hover:text-foreground"
                   href={item.href ?? "#"}
                 >
                   {item.label}

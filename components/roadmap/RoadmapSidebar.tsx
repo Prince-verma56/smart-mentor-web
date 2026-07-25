@@ -19,9 +19,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface RoadmapSidebarProps {
   roadmap: MentorRoadmap;
+  disableScroll?: boolean;
 }
 
-export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
+export function RoadmapSidebar({ roadmap, disableScroll = false }: RoadmapSidebarProps) {
   const [isPending, startTransition] = useTransition();
   const [optimisticRoadmap, setOptimisticRoadmap] = useState(roadmap);
   const [showReset, setShowReset] = useState(false);
@@ -127,7 +128,8 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-card overflow-hidden flex flex-col h-full",
+        "rounded-2xl border bg-card flex flex-col",
+        disableScroll ? "" : "h-full overflow-hidden",
         isPending && "opacity-70 pointer-events-none"
       )}
     >
@@ -162,8 +164,11 @@ export function RoadmapSidebar({ roadmap }: RoadmapSidebarProps) {
         />
       </div>
 
-      {/* ── Scrollable Topic List ─────────────────── */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2 no-scrollbar" data-lenis-prevent="true">
+      {/* ── Topic List ─────────────────── */}
+      <div 
+        className={cn("px-3 py-3 space-y-2", disableScroll ? "" : "flex-1 overflow-y-auto no-scrollbar")} 
+        data-lenis-prevent={disableScroll ? undefined : "true"}
+      >
         {optimisticRoadmap.phases.map((phase) => (
           <div key={phase.id} className="space-y-1.5 w-full">
             {optimisticRoadmap.phases.length > 1 && (

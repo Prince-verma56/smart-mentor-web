@@ -38,7 +38,8 @@ export function RoadmapProgress({
     <div className="space-y-4 mt-4">
       {/* Overview Grid */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="relative group flex flex-col gap-1.5 rounded-xl bg-card/40 p-3 transition-colors overflow-hidden border border-border/30">
+        <div className="relative group flex flex-col gap-1.5 rounded-xl bg-muted/20 backdrop-blur-sm p-3 transition-all overflow-hidden border border-border/60 hover:border-border hover:bg-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="flex items-center gap-1.5 text-muted-foreground relative z-10">
             <BookOpen className="h-[14px] w-[14px]" />
             <span className="text-[10px] font-bold uppercase tracking-widest">Remaining</span>
@@ -47,7 +48,8 @@ export function RoadmapProgress({
             {total - completed} <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">left</span>
           </span>
         </div>
-        <div className="relative group flex flex-col gap-1.5 rounded-xl bg-card/40 p-3 transition-colors overflow-hidden border border-border/30">
+        <div className="relative group flex flex-col gap-1.5 rounded-xl bg-muted/20 backdrop-blur-sm p-3 transition-all overflow-hidden border border-border/60 hover:border-border hover:bg-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+          <div className="absolute inset-0 bg-gradient-to-bl from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="flex items-center gap-1.5 text-muted-foreground relative z-10">
             <Clock className="h-[14px] w-[14px]" />
             <span className="text-[10px] font-bold uppercase tracking-widest">Est. Time</span>

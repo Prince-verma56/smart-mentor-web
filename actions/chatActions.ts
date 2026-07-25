@@ -20,7 +20,7 @@ export async function createChatSession(mentorId: string, title?: string) {
       is_archived: false,
       message_count: 0
     })
-    .select("id")
+    .select("id, title, created_at, is_pinned, is_archived, is_favorite, summary, ai_summary, message_count, last_message_at, voice_count, color, description")
     .single();
 
   if (error || !data) {
@@ -28,7 +28,7 @@ export async function createChatSession(mentorId: string, title?: string) {
   }
 
   revalidatePath(`/dashboard/mentors/${mentorId}`);
-  return data.id;
+  return data;
 }
 
 // ─── Read ───────────────────────────────────────────────────────────────────

@@ -25,6 +25,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AppButton } from "@/components/ui/app-button";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useConversation } from "@/contexts/ConversationContext";
@@ -260,34 +261,35 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
           }, []);
 
           const content = (
-            <button
+            <AppButton
+              variant={pathname === `/dashboard/mentors/${mentor.id}/settings` ? "secondary" : "ghost"}
+              size={collapsed && !mobile ? "icon" : "default"}
+              isLoading={isNavigatingSettings}
               onClick={() => {
                 startNavigatingSettings(() => {
                   router.push(`/dashboard/mentors/${mentor.id}/settings`);
                 });
               }}
               className={cn(
-                "relative flex items-center transition-all duration-150 group shrink-0 cursor-pointer",
-                collapsed && !mobile
-                  ? "h-11 w-11 justify-center rounded-xl mx-auto"
-                  : "h-[40px] px-4 gap-3 rounded-xl mx-1",
-                pathname === `/dashboard/mentors/${mentor.id}/settings`
-                  ? "bg-card/80 text-foreground font-medium shadow-[0_2px_10px_-2px_rgba(0,0,0,0.05)] border border-border/50 shadow-primary/10 relative overflow-hidden ring-1 ring-primary/5"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground border border-transparent hover:shadow-sm"
+                "w-full justify-start",
+                collapsed && !mobile ? "h-11 w-11 justify-center rounded-xl mx-auto p-0" : "h-[40px] px-4 gap-3 rounded-xl mx-1",
+                pathname === `/dashboard/mentors/${mentor.id}/settings` && "border-primary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(16,185,129,0.1)] ring-1 ring-primary/10"
               )}
             >
-              {pathname === `/dashboard/mentors/${mentor.id}/settings` && (
-                <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
-              )}
-              {isNavigatingSettings ? (
-                <Loader2 className={cn("animate-spin", collapsed && !mobile ? "h-5 w-5" : "h-5 w-5 shrink-0")} />
-              ) : (
-                <Settings className={cn("transition-transform duration-150 group-hover:rotate-45", collapsed && !mobile ? "h-5 w-5" : "h-5 w-5 shrink-0", pathname === `/dashboard/mentors/${mentor.id}/settings` ? "text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.3)]" : "text-muted-foreground/70 group-hover:text-foreground/80")} strokeWidth={pathname === `/dashboard/mentors/${mentor.id}/settings` ? 2.5 : 2} />
+              {!isNavigatingSettings && (
+                <Settings 
+                  className={cn(
+                    "transition-transform duration-150 group-hover:rotate-45", 
+                    collapsed && !mobile ? "h-5 w-5" : "h-5 w-5 shrink-0", 
+                    pathname === `/dashboard/mentors/${mentor.id}/settings` ? "text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.3)]" : ""
+                  )} 
+                  strokeWidth={pathname === `/dashboard/mentors/${mentor.id}/settings` ? 2.5 : 2} 
+                />
               )}
               {(!collapsed || mobile) && (
-                <span className={cn("text-[13.5px] truncate transition-colors duration-150", pathname === `/dashboard/mentors/${mentor.id}/settings` ? "font-semibold" : "font-medium")}>Settings</span>
+                <span className="text-[13.5px] truncate">Settings</span>
               )}
-            </button>
+            </AppButton>
           );
 
           if (!collapsed || mobile) return content;

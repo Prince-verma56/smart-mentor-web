@@ -192,6 +192,7 @@
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
     min-height: 100vh;
+    overscroll-behavior: none;
   }
   
   .dark body {
@@ -226,27 +227,6 @@
     50% { opacity: 0; }
   }
 
-  /* Custom Scrollbar for Chat */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: var(--muted-foreground);
-    border-radius: 10px;
-    opacity: 0.2;
-    transition: background 0.3s ease;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--primary);
-  }
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--muted-foreground) transparent;
-  }
 
   /* Subtle workspace background */
   .chat-workspace-bg {

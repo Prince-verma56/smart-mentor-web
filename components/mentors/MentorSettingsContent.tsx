@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import Select from "@/components/ui/smoothui/select";
+import { Plus, Volume1, Volume2, Save, Wand2, Archive, Trash2 } from "lucide-react";
+import Scrubber from "@/components/ui/smoothui/scrubber";
+import SlideTextButton from "@/components/kokonutui/slide-text-button";
 import { Switch } from "@/components/ui/switch";
 import ElasticSlider from "@/components/ElasticSlider";
 import { Settings, Brain, MessageSquare, Mic, FolderOpen, AlertTriangle, Loader2 } from "lucide-react";
@@ -15,7 +18,7 @@ import type { Mentor, MentorStats } from "@/types/mentor";
 import type { MentorRoadmap } from "@/types/roadmap";
 import { updateMentorAction, deleteMentorAction } from "@/actions/mentorActions";
 import { updateMentorVoiceSettingsAction } from "@/actions/mentorActions";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -35,6 +38,7 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
     role: mentor.role,
     learningGoal: mentor.learningGoal,
   });
+  const voiceSpeedInputRef = useRef<HTMLInputElement>(null);
 
   const handleSaveGeneral = async () => {
     setIsSaving(true);
@@ -74,23 +78,23 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
         </div>
 
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 bg-muted/50 rounded-lg">
-            <TabsTrigger value="general" className="gap-2">
+          <TabsList className="w-full relative justify-start overflow-x-auto h-auto p-1 bg-muted/50 rounded-lg">
+            <TabsTrigger value="general" className="gap-2 z-10">
               <Settings className="h-4 w-4" /> General
             </TabsTrigger>
-            <TabsTrigger value="style" className="gap-2">
+            <TabsTrigger value="style" className="gap-2 z-10">
               <Brain className="h-4 w-4" /> Teaching Style
             </TabsTrigger>
-            <TabsTrigger value="conversation" className="gap-2">
+            <TabsTrigger value="conversation" className="gap-2 z-10">
               <MessageSquare className="h-4 w-4" /> Conversation
             </TabsTrigger>
-            <TabsTrigger value="voice" className="gap-2">
+            <TabsTrigger value="voice" className="gap-2 z-10">
               <Mic className="h-4 w-4" /> Voice
             </TabsTrigger>
-            <TabsTrigger value="resources" className="gap-2">
+            <TabsTrigger value="resources" className="gap-2 z-10">
               <FolderOpen className="h-4 w-4" /> Resources
             </TabsTrigger>
-            <TabsTrigger value="danger" className="gap-2 text-destructive data-active:bg-destructive/15 data-active:text-destructive">
+            <TabsTrigger value="danger" className="gap-2 z-10 text-destructive data-active:text-destructive-foreground">
               <AlertTriangle className="h-4 w-4" /> Danger Zone
             </TabsTrigger>
           </TabsList>
@@ -123,10 +127,16 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                     onChange={e => setFormData(f => ({ ...f, learningGoal: e.target.value }))}
                   />
                 </div>
-                <Button onClick={handleSaveGeneral} disabled={isSaving}>
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
+                <div className="flex justify-start">
+                  <SlideTextButton 
+                    as="button"
+                    onClick={handleSaveGeneral}
+                    text={isSaving ? "Saving..." : "Save Changes"}
+                    hoverText={isSaving ? "Saving..." : "Confirm"}
+                    icon={<Save className="h-3.5 w-3.5" />}
+                    disabled={isSaving}
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -224,16 +234,23 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
 
                     <div className="space-y-2 col-span-1 md:col-span-2 mt-4">
                       <Label className="mb-8 block">Speaking Speed</Label>
-                      <div className="pt-2 pb-6 px-12 md:px-24">
-                        <ElasticSlider 
-                          name="voiceSpeed" 
-                          startingValue={0.5}
-                          maxValue={2.0}
+                      <div className="pt-2 pb-6 px-12 md:px-24 flex items-center gap-4">
+                        <Volume1 className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <Scrubber
+                          className="flex-1"
+                          min={0.5}
+                          max={2.0}
+                          step={0.01}
+                          decimals={1}
                           defaultValue={mentor.voiceSpeed || 1.0}
-                          isStepped={true}
-                          stepSize={0.1}
-                          className="w-full"
+                          onValueChange={(v) => {
+                            if (voiceSpeedInputRef.current) {
+                              voiceSpeedInputRef.current.value = v.toString();
+                            }
+                          }}
                         />
+                        <input type="hidden" name="voiceSpeed" ref={voiceSpeedInputRef} defaultValue={mentor.voiceSpeed || 1.0} />
+                        <Volume2 className="h-4 w-4 text-muted-foreground shrink-0" />
                       </div>
                     </div>
                   </div>
@@ -268,7 +285,13 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                   </div>
 
                   <div className="flex justify-end pt-2">
-                    <Button type="submit" className="w-full sm:w-auto">Save Voice Settings</Button>
+                    <SlideTextButton 
+                      as="button"
+                      type="submit"
+                      text="Save Voice Settings"
+                      hoverText="Confirm"
+                      icon={<Wand2 className="h-3.5 w-3.5" />}
+                    />
                   </div>
                 </form>
               </CardContent>
@@ -301,14 +324,32 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                     <h4 className="text-sm font-medium text-foreground">Archive Mentor</h4>
                     <p className="text-xs text-muted-foreground mt-1">Hide this mentor from your dashboard but keep its data.</p>
                   </div>
-                  <Button variant="outline" className="shrink-0" disabled>Archive</Button>
+                  <div className="shrink-0">
+                    <SlideTextButton 
+                      as="button"
+                      variant="ghost"
+                      text="Archive"
+                      hoverText="Archiving..."
+                      icon={<Archive className="h-3.5 w-3.5" />}
+                      disabled={true}
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border border-destructive/20 rounded-lg bg-destructive/5">
                   <div>
                     <h4 className="text-sm font-medium text-foreground">Delete Mentor</h4>
                     <p className="text-xs text-muted-foreground mt-1">Permanently remove this mentor and all conversation history.</p>
                   </div>
-                  <Button variant="destructive" className="shrink-0" onClick={handleDelete}>Delete</Button>
+                  <div className="shrink-0">
+                    <SlideTextButton 
+                      as="button"
+                      variant="danger"
+                      onClick={handleDelete}
+                      text="Delete"
+                      hoverText="Confirm"
+                      icon={<Trash2 className="h-3.5 w-3.5" />}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -51,7 +51,7 @@ export default async function RoadmapPage({ params }: RoadmapPageProps) {
 
         <div className="mt-8">
           {roadmap ? (
-            <RoadmapSidebar roadmap={roadmap} />
+            <RoadmapSidebar roadmap={roadmap} disableScroll={true} />
           ) : (
             <Card>
               <CardContent>

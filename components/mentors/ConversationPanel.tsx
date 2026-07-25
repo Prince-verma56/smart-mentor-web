@@ -14,6 +14,8 @@ import { WelcomeDashboard } from "./WelcomeDashboard";
 import { Button } from "@/components/ui/button";
 import MaskRevealUp from "@/components/ui/smoothui/mask-reveal-up";
 import { useUser, useClerk } from "@clerk/nextjs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { cn } from "@/lib/utils";
@@ -665,13 +667,12 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-background chat-workspace-bg relative">
 
-      {/* Removed floating New Chat button from here */}
-
       {/* ── Messages ──────────────────────────────── */}
-      <div
-        className="flex-1 overflow-y-auto px-4 py-8 md:px-6"
+      <ScrollArea
+        className="flex-1 min-h-0 h-full w-full"
         data-lenis-prevent="true"
       >
+        <div className="px-4 py-8 md:px-6 min-h-full">
         {isLoadingMessages ? (
           <div className="flex flex-col max-w-[760px] mx-auto space-y-4">
             {[1, 2, 3].map((i) => (
@@ -864,7 +865,8 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
             <div ref={messagesEndRef} />
           </div>
         )}
-      </div>
+        </div>
+      </ScrollArea>
 
       {/* ── Composer ──────────────────────────────── */}
       <div className="px-4 pb-5 pt-3 bg-background border-t shrink-0">

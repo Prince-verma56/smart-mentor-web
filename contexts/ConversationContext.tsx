@@ -42,7 +42,7 @@ interface ConversationContextValue {
 
   // Actions
   setActiveSession: (id: string) => void;
-  createNewSession: () => Promise<string | null>;
+  createNewSession: (title?: string) => Promise<string | null>;
   deleteSession: (id: string) => Promise<void>;
   renameSession: (id: string, title: string) => Promise<void>;
   pinSession: (id: string, pinned: boolean) => Promise<void>;
@@ -111,6 +111,7 @@ export function ConversationProvider({
 
   // Track whether user explicitly clicked "New Chat" to avoid auto-restoring
   const isNewChatRef = useRef(false);
+  const pendingSessionIdRef = useRef<string | null>(null);
   
   // AbortController for stopping generation
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -137,7 +138,17 @@ export function ConversationProvider({
     const urlSessionId = searchParams.get("session");
 
     if (urlSessionId) {
-      setActiveSessionId(urlSessionId);
+      if (pendingSessionIdRef.current && pendingSessionIdRef.current !== urlSessionId) {
+        // We have a pending navigation, wait for the URL to catch up
+        return;
+      }
+      if (pendingSessionIdRef.current === urlSessionId) {
+        pendingSessionIdRef.current = null; // Navigation complete
+      }
+
+      if (activeSessionId !== urlSessionId) {
+        setActiveSessionId(urlSessionId);
+      }
       isNewChatRef.current = false;
       return;
     }
@@ -223,6 +234,7 @@ export function ConversationProvider({
   const handleSetActiveSession = useCallback(
     (id: string) => {
       if (id === activeSessionId) return;
+      pendingSessionIdRef.current = id;
       setActiveSessionId(id);
       isNewChatRef.current = false;
       const p = new URLSearchParams(searchParams.toString());
@@ -233,14 +245,23 @@ export function ConversationProvider({
   );
 
   // ── Create new chat ───────────────────────────────────────────────────────
-  const createNewSession = useCallback(async (): Promise<string | null> => {
+  const createNewSession = useCallback(async (title?: string): Promise<string | null> => {
     if (!user) return null;
     isNewChatRef.current = true;
     setActiveSessionId(null);
     setMessages([]);
 
     try {
-      const newId = await createChatSession(mentorId, "New Conversation");
+      const newSession = await createChatSession(mentorId, title || "New Conversation");
+      const newId = newSession.id;
+      
+      // Optimistically add to sessions list so it immediately appears in sidebar
+      setSessions(prev => {
+        if (prev.some(s => s.id === newId)) return prev;
+        return [newSession as ChatSession, ...prev];
+      });
+
+      pendingSessionIdRef.current = newId;
       setActiveSessionId(newId);
 
       const p = new URLSearchParams(searchParams.toString());
@@ -423,10 +444,18 @@ export function ConversationProvider({
       let currentSessionId = activeSessionId;
       if (!currentSessionId) {
         try {
-          currentSessionId = await createChatSession(
+          const newSession = await createChatSession(
             mentorId,
             content.slice(0, 40) || "New Conversation"
           );
+          currentSessionId = newSession.id;
+          
+          setSessions(prev => {
+            if (prev.some(s => s.id === newSession.id)) return prev;
+            return [newSession as ChatSession, ...prev];
+          });
+          
+          pendingSessionIdRef.current = currentSessionId;
           setActiveSessionId(currentSessionId);
           const p = new URLSearchParams(searchParams.toString());
           p.set("session", currentSessionId!);
