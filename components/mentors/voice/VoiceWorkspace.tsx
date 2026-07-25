@@ -30,7 +30,8 @@ export function VoiceWorkspace({ mentor, sessionId, onClose }: VoiceWorkspacePro
     endCall,
     toggleMute,
     toggleSpeaker,
-    vapiRef
+    vapiRef,
+    preferences
   } = useVoiceSession({ mentor, sessionId, onCallEnded: onClose });
 
   // Start the call automatically when the workspace mounts
@@ -45,20 +46,20 @@ export function VoiceWorkspace({ mentor, sessionId, onClose }: VoiceWorkspacePro
       // Ignore if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       
-      if (e.key === "Escape") {
-        endCall();
-        onClose();
-      } else if (e.code === "Space") {
+      // Note: Escape key is deliberately NOT ending the call here. 
+      // It is handled by VoiceSettingsCenter to close settings. 
+      
+      if (e.code === "Space") {
         e.preventDefault();
         toggleMute();
-      } else if (e.ctrlKey && e.key === "m") {
+      } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "m") {
         e.preventDefault();
-        toggleSpeaker();
+        toggleMute();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [endCall, toggleMute, toggleSpeaker, onClose]);
+  }, [toggleMute]);
 
   return (
     <AnimatePresence>
@@ -128,7 +129,7 @@ export function VoiceWorkspace({ mentor, sessionId, onClose }: VoiceWorkspacePro
                   initial={{ y: -10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.1, type: "spring" }}
-                  className="flex flex-col items-center gap-1 mb-8"
+                  className="flex flex-col items-center gap-1 mb-4"
                 >
                   <h2 className="text-4xl font-extrabold tracking-tight text-foreground">{mentor.name}</h2>
                   <div className="flex items-center gap-2 mt-1">
@@ -138,13 +139,13 @@ export function VoiceWorkspace({ mentor, sessionId, onClose }: VoiceWorkspacePro
                   </div>
                 </motion.div>
                 
-                {/* Orb with significant breathing room */}
-                <div className="my-8">
+                {/* Orb */}
+                <div className="my-4">
                   <OrbAnimator callState={callState} volume={volume} />
                 </div>
                 
                 {/* Merged Waveform & Status */}
-                <div className="mt-8">
+                <div className="mt-4">
                   <WaveformStatusPill state={callState} volume={volume} />
                 </div>
               </>
@@ -152,9 +153,9 @@ export function VoiceWorkspace({ mentor, sessionId, onClose }: VoiceWorkspacePro
           </div>
 
           {/* ZONE 3: BOTTOM - Transcript & Controls */}
-          <div className="relative z-10 w-full flex flex-col items-center justify-end pb-12 pt-6 shrink-0 h-[280px]">
-            {!isVoiceLoading && (
-              <div className="mb-6 w-full flex justify-center">
+          <div className="relative z-10 w-full flex flex-col items-center justify-end pb-8 pt-4 shrink-0 h-[220px]">
+            {!isVoiceLoading && preferences.showLiveTranscript && (
+              <div className="mb-4 w-full flex justify-center">
                 <TranscriptPanel transcript={activeTranscript} callState={callState} />
               </div>
             )}

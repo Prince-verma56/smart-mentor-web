@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { saveMessage } from "@/actions/chatActions";
 import { markTopicComplete, markTopicIncomplete } from "@/actions/progressActions";
 import type { Mentor } from "@/types/mentor";
+import { useVoiceSettingsManager } from "./useVoiceSettingsManager";
 
 export type ConversationState = "idle" | "connecting" | "listening" | "recording" | "transcribing" | "understanding" | "thinking" | "generating" | "speaking" | "waiting" | "searching knowledge base";
 
@@ -36,6 +37,10 @@ export function useVoiceSession({ mentor, sessionId, onCallEnded }: UseVoiceSess
   const [cachedPrompt, setCachedPrompt] = useState<string | null>(null);
   const [cachedGreeting, setCachedGreeting] = useState<string | null>(null);
   const [sessionDuration, setSessionDuration] = useState(0);
+
+  const { preferences } = useVoiceSettingsManager(mentor.id);
+  const lastMessageTimeRef = useRef<number>(Date.now());
+  const idleWarningSentRef = useRef<boolean>(false);
 
   // Initialize Vapi instance safely
   if (!vapiRef.current && typeof window !== "undefined") {
@@ -73,8 +78,9 @@ export function useVoiceSession({ mentor, sessionId, onCallEnded }: UseVoiceSess
   useEffect(() => {
     async function prefetchPrompt() {
       const basePrompt = `You are ${mentor.name}, a ${mentor.role} teaching ${mentor.subject}.
-TEACHING STYLE: ${mentor.conversationStyle}
+TEACHING STYLE: ${preferences.conversationStyle} (originally ${mentor.conversationStyle})
 STUDENT GOAL: ${mentor.learningGoal}
+RESPONSE LENGTH: ${preferences.responseLength}
 Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
 
       try {
@@ -95,19 +101,22 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     prefetchPrompt();
   }, [mentor, sessionId]);
 
+  const callStateRef = useRef(callState);
+  useEffect(() => { callStateRef.current = callState; }, [callState]);
+
   // Vapi Event Listeners
   useEffect(() => {
     const vapi = vapiRef.current;
     if (!vapi) return;
 
-    // DO NOT USE removeAllListeners()! It breaks internal Vapi SDK events.
-    
     const onCallStart = () => {
-      setIsVoiceActive(true);
       setIsVoiceLoading(false);
-      setCallState("listening");
+      setIsVoiceActive(true);
+      setCallState("speaking");
       setActiveTranscript({ text: "", role: null });
       transcriptRef.current = ""; 
+      lastMessageTimeRef.current = Date.now();
+      idleWarningSentRef.current = false;
     };
     
     const onCallEnd = async () => {
@@ -129,16 +138,19 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     
     const onError = (e: any) => {
       if (e?.type === "daily-error" && e?.error?.errorMsg === "Meeting has ended") return;
-      console.error("Vapi error", e);
+      
       setIsVoiceLoading(false);
       setIsVoiceActive(false);
       setCallState("idle");
       
-      // Stop the Vapi instance if it errors out to prevent ghost audio
-      vapi.stop();
+      try { vapi.stop(); } catch (err) {}
       
       if (e?.message !== "Call ended") {
-        toast.error("Voice call error: " + (e.message || "Unknown error"));
+        // Suppress daily iframe duplicate errors in toast, we handled it silently
+        if (!e?.message?.includes("Duplicate DailyIframe") && !e?.message?.includes("ejection")) {
+          console.error("Vapi error", e);
+          toast.error("Voice call error: " + (e.message || "Unknown error"));
+        }
       }
       if (onCallEnded) onCallEnded();
     };
@@ -147,6 +159,7 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
       if (msg.type === "transcript") {
         if (msg.transcriptType === "partial") {
           setActiveTranscript({ text: msg.transcript, role: msg.role });
+          lastMessageTimeRef.current = Date.now(); // keep resetting while talking
           if (msg.role === "user") {
             setCallState("recording");
           }
@@ -156,11 +169,19 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
           
           if (msg.role === "user") {
             setCallState("understanding");
-            setTimeout(() => { if (callState !== "speaking" && callState !== "searching knowledge base") setCallState("thinking"); }, 800);
+            lastMessageTimeRef.current = Date.now();
+            idleWarningSentRef.current = false;
+            setTimeout(() => { if (callStateRef.current !== "speaking" && callStateRef.current !== "searching knowledge base") setCallState("thinking"); }, 800);
             if (sessionId) await saveMessage(sessionId, "user", msg.transcript);
           } else if (msg.role === "assistant") {
             setCallState("waiting");
-            setTimeout(() => { setCallState("listening"); }, 1000);
+            lastMessageTimeRef.current = Date.now();
+            idleWarningSentRef.current = false;
+            
+            if (preferences.autoContinue) {
+              setTimeout(() => { setCallState("listening"); }, 1000);
+            }
+            
             if (sessionId) await saveMessage(sessionId, "assistant", msg.transcript);
             setTimeout(() => {
               setActiveTranscript(t => t.text === msg.transcript ? { text: "", role: null } : t);
@@ -218,14 +239,44 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     vapi.on("message", onMessage);
     vapi.on("volume-level", onVolumeLevel);
 
+    // Idle Timeout Checker
+    const idleInterval = setInterval(() => {
+      const currentCallState = callStateRef.current;
+      if (currentCallState === "listening" || currentCallState === "waiting") {
+        const silentSeconds = (Date.now() - lastMessageTimeRef.current) / 1000;
+        
+        if (silentSeconds > 30 && !idleWarningSentRef.current) {
+          idleWarningSentRef.current = true;
+          vapi.send({
+            type: "add-message",
+            message: { 
+              role: "system", 
+              content: "The user has been silent for 30 seconds. Say this exactly: 'I noticed things have been quiet for a while. I'll stay connected a little longer in case you have another question.'" 
+            }
+          } as any);
+        } else if (silentSeconds > 50 && idleWarningSentRef.current) {
+          // It's been 20s since the warning (50s total)
+          vapi.send({
+            type: "add-message",
+            message: { 
+              role: "system", 
+              content: "The user is still silent. Say this exactly: 'Looks like we're done for now. Feel free to start another conversation anytime. Have a great day.' And then trigger the end_call tool immediately." 
+            }
+          } as any);
+          clearInterval(idleInterval);
+        }
+      }
+    }, 2000);
+
     return () => {
+      clearInterval(idleInterval);
       vapi.off("call-start", onCallStart);
       vapi.off("call-end", onCallEnd);
       vapi.off("error", onError);
       vapi.off("message", onMessage);
       vapi.off("volume-level", onVolumeLevel);
     };
-  }, [sessionId, mentor.id, callState, onCallEnded]);
+  }, [sessionId, mentor.id, onCallEnded, preferences]);
 
   const endCall = useCallback(() => {
     setIsVoiceActive(false);
@@ -260,15 +311,25 @@ TEACHING STYLE: ${mentor.conversationStyle}
 STUDENT GOAL: ${mentor.learningGoal}
 Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
 
-      let prompt = cachedPrompt || basePrompt;
+      const lengthPrompt = preferences.responseLength === "Short" 
+        ? "Keep your answers very short and to the point (1-2 sentences). Do not ramble." 
+        : preferences.responseLength === "Detailed" 
+        ? "Provide detailed, comprehensive answers with examples and explanations." 
+        : "Keep your answers balanced and conversational.";
+
+      let prompt = (cachedPrompt || basePrompt) + "\n\n" + lengthPrompt;
       let greeting = cachedGreeting || "Hi! I am your AI mentor. Let's get started whenever you're ready.";
       
       await vapi.start({
         firstMessage: greeting,
+        silenceTimeoutSeconds: 300,
+        maxDurationSeconds: 1800,
+        recordingEnabled: true,
         voice: {
           provider: "11labs",
           voiceId: mentor.voiceId || "21m00Tcm4TlvDq8ikWAM",
-          model: "eleven_turbo_v2_5"
+          model: "eleven_turbo_v2_5",
+          speed: preferences.voiceSpeed
         },
         model: {
           provider: "openai",
@@ -309,11 +370,13 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
       console.error("Vapi start crash:", err);
       setIsVoiceLoading(false);
       setCallState("idle");
-      vapi.stop(); // Aggressively stop to prevent ghost connections
-      toast.error(err.message || "Failed to start voice call");
+      vapi.stop(); 
+      if (!err.message?.includes("Duplicate DailyIframe")) {
+        toast.error(err.message || "Failed to start voice call");
+      }
       if (onCallEnded) onCallEnded();
     }
-  }, [mentor, isVoiceActive, cachedPrompt, cachedGreeting, endCall, onCallEnded]);
+  }, [mentor, isVoiceActive, cachedPrompt, cachedGreeting, endCall, onCallEnded, preferences]);
 
   // Handle component unmount safely
   useEffect(() => {
@@ -349,6 +412,7 @@ Use short, concise sentences perfect for spoken audio. Do not use markdown.`;
     endCall,
     toggleMute,
     toggleSpeaker,
-    vapiRef
+    vapiRef,
+    preferences
   };
 }

@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import SiriOrb from "@/components/ui/smoothui/siri-orb";
 import { ConversationState } from "./useVoiceSession";
+import { useVoiceAnimationManager } from "./useVoiceAnimationManager";
 import { cn } from "@/lib/utils";
 
 interface OrbAnimatorProps {
@@ -9,41 +10,10 @@ interface OrbAnimatorProps {
 }
 
 export function OrbAnimator({ callState, volume }: OrbAnimatorProps) {
-  const getOrbColors = () => {
-    switch (callState) {
-      case "listening":
-      case "recording":
-        return { c1: "#10b981", c2: "#059669", c3: "#022c22" }; // Emerald
-      case "understanding":
-      case "thinking":
-      case "searching knowledge base":
-        return { c1: "#8b5cf6", c2: "#c084fc", c3: "#3b0764" }; // Purple
-      case "generating":
-      case "speaking":
-        return { c1: "#3b82f6", c2: "#60a5fa", c3: "#1e3a8a" }; // Blue
-      case "connecting":
-      default:
-        return { c1: "#10b981", c2: "#3b82f6", c3: "#8b5cf6" }; // Mixed
-    }
-  };
-
-  const getGlowColor = () => {
-    switch (callState) {
-      case "listening":
-      case "recording": return "bg-emerald-500";
-      case "understanding":
-      case "thinking":
-      case "searching knowledge base": return "bg-purple-500";
-      case "generating":
-      case "speaking": return "bg-blue-500";
-      default: return "bg-primary";
-    }
-  };
-
-  const colors = getOrbColors();
-  const isThinking = callState === "thinking" || callState === "searching knowledge base" || callState === "understanding";
-  const isSpeaking = callState === "speaking" || callState === "generating";
-  const isListening = callState === "listening" || callState === "recording";
+  const { 
+    orbColors, glowColor, isThinking, isSpeaking, isListening, 
+    scale, rotate, innerGlowOpacity, outerGlowScale, outerGlowOpacity 
+  } = useVoiceAnimationManager(callState, volume);
 
   return (
     <motion.div 
@@ -53,10 +23,7 @@ export function OrbAnimator({ callState, volume }: OrbAnimatorProps) {
       className="relative shrink-0 flex items-center justify-center mt-8 mb-4"
     >
       <motion.div 
-        animate={{ 
-          scale: 1 + (volume * 0.4),
-          rotate: isThinking ? 360 : 0
-        }}
+        animate={{ scale, rotate }}
         transition={{ 
           scale: { type: "spring", bounce: 0.2, duration: 0.1 },
           rotate: { duration: 4, ease: "linear", repeat: Infinity }
@@ -65,27 +32,24 @@ export function OrbAnimator({ callState, volume }: OrbAnimatorProps) {
       >
          {/* Inner Glow Layer */}
          <motion.div 
-           className={cn("absolute inset-0 mix-blend-overlay rounded-full blur-xl opacity-50", getGlowColor())}
-           animate={{ opacity: 0.5 + volume * 1.5 }}
+           className={cn("absolute inset-0 mix-blend-overlay rounded-full blur-xl opacity-50", glowColor)}
+           animate={{ opacity: innerGlowOpacity }}
          />
 
          {/* Outer Glow Layer */}
          <motion.div 
-           className={cn("absolute -inset-10 mix-blend-screen rounded-full blur-3xl opacity-20", getGlowColor())}
-           animate={{ 
-             scale: 1 + (volume * 0.5),
-             opacity: 0.2 + (volume * 0.8)
-           }}
+           className={cn("absolute -inset-10 mix-blend-screen rounded-full blur-3xl opacity-20", glowColor)}
+           animate={{ scale: outerGlowScale, opacity: outerGlowOpacity }}
          />
 
          <SiriOrb 
             animationDuration={isSpeaking ? 5 : isThinking ? 8 : 15}
             size="240px"
-            colors={{
+           colors={{
               bg: "#020617",
-              c1: colors.c1, 
-              c2: colors.c2,
-              c3: colors.c3
+              c1: orbColors.c1, 
+              c2: orbColors.c2,
+              c3: orbColors.c3
             }}
          />
       </motion.div>
