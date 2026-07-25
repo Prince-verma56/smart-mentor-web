@@ -4,7 +4,7 @@ import {
   CheckCircle2, Copy, HelpCircle, Code2, GraduationCap,
   Sparkles, Loader2, Plus, Send, Square, Mic, FileText,
   Image as ImageIcon, Video, Bookmark, Paperclip,
-  BookOpen, Terminal, Wand2, ChevronDown, X
+  BookOpen, Terminal, Wand2, ChevronDown, X, MessageSquarePlus
 } from "lucide-react";
 import type { Mentor, MentorStats } from "@/types/mentor";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -255,6 +255,23 @@ function Composer({ mentor }: { mentor: Mentor }) {
   useEffect(() => {
     resize();
   }, [text, resize]);
+
+  // Listen for fill-chat-input events
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      setText(e.detail);
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        // Move cursor to end
+        setTimeout(() => {
+          textareaRef.current!.selectionStart = textareaRef.current!.value.length;
+          textareaRef.current!.selectionEnd = textareaRef.current!.value.length;
+        }, 0);
+      }
+    };
+    window.addEventListener('fill-chat-input', handler as EventListener);
+    return () => window.removeEventListener('fill-chat-input', handler as EventListener);
+  }, []);
 
   // Close attach popover on outside click
   useEffect(() => {
@@ -608,6 +625,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
     sendMessage,
     currentModel,
     setCurrentModel,
+    conversationState,
   } = useConversation();
 
   const [loadingStep, setLoadingStep] = useState(0);
@@ -685,16 +703,27 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
               />
             ))}
           </div>
-        ) : messages.length === 0 ? (
+        ) : !activeSessionId && (conversationState === "IDLE" || conversationState === "READY") ? (
           /* Welcome Dashboard */
           <WelcomeDashboard 
             mentor={mentor} 
             stats={stats} 
-            onSendMessage={(msg) => sendMessage(msg, currentModel)}
+            onFillInput={(msg) => window.dispatchEvent(new CustomEvent('fill-chat-input', { detail: msg }))}
           />
         ) : (
           /* Messages */
           <div className="w-full max-w-4xl mx-auto space-y-12 pb-12">
+            {messages.length === 0 && !isThinking && !isStreaming && (
+              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4 animate-in fade-in duration-500">
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6 shadow-sm border border-primary/10">
+                  <MessageSquarePlus className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold tracking-tight mb-3">New Conversation</h3>
+                <p className="text-muted-foreground text-[15px] max-w-[400px] leading-relaxed">
+                  Start chatting with <span className="font-semibold text-foreground">{mentor.name}</span>. Messages will appear here.
+                </p>
+              </div>
+            )}
             {messages.filter(m => m.content !== "").map((m, index) => {
               const displayContent = m.content.replace(/\*?\[Analyzing context\.\.\.\]\*?\n*/g, "").trimStart();
               

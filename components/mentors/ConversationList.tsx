@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AppButton } from "@/components/ui/app-button";
 import {
   MessageSquare,
   MoreHorizontal,
@@ -150,11 +151,26 @@ function SessionRow({ session }: { session: ChatSession }) {
     <>
       <motion.div
         layout
-        initial={{ opacity: 0, x: -4 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -4 }}
-        transition={{ duration: 0.12 }}
-        className="group relative"
+        initial={{ opacity: 0, height: 0, x: -10, backgroundColor: "hsl(var(--primary) / 0.15)" }}
+        animate={{ 
+          opacity: 1, 
+          height: "auto", 
+          x: 0, 
+          backgroundColor: "hsl(var(--primary) / 0)",
+          transition: {
+            height: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+            opacity: { duration: 0.3, delay: 0.1 },
+            x: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+            backgroundColor: { duration: 1.5, delay: 0.5 } // highlight fades out slowly
+          }
+        }}
+        exit={{ 
+          opacity: 0, 
+          height: 0, 
+          x: -10, 
+          transition: { duration: 0.2, ease: "easeInOut" } 
+        }}
+        className="group relative overflow-hidden rounded-lg mb-[2px]"
       >
         {isRenaming ? (
           <div className="flex items-center gap-1 px-1 py-0.5">
@@ -307,23 +323,56 @@ function SessionRow({ session }: { session: ChatSession }) {
       </motion.div>
 
       {/* Delete dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
-            <AlertDialogDescription>
-              &quot;{session.title || "This conversation"}&quot; and all its messages will be
-              permanently deleted.
-            </AlertDialogDescription>
+      <AlertDialog open={showDeleteDialog} onOpenChange={(v) => !isPending && setShowDeleteDialog(v)}>
+        <AlertDialogContent className="sm:max-w-[420px] p-6 gap-6" size="default">
+          <AlertDialogHeader className="gap-3">
+            <div className="h-10 w-10 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mb-1">
+              <Trash2 className="h-5 w-5 text-destructive/80" />
+            </div>
+            <div className="space-y-1.5">
+              <AlertDialogTitle className="text-xl">Delete conversation?</AlertDialogTitle>
+              <AlertDialogDescription className="text-[14px]">
+                This action cannot be undone. This conversation and all its messages will be permanently deleted from your history.
+              </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          
+          <div className="bg-background/50 border border-border/40 rounded-xl p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+              <MessageSquare className="h-4 w-4 text-muted-foreground/60" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground truncate">
+                {session.title || "New Conversation"}
+              </p>
+              {preview && (
+                <p className="text-xs text-muted-foreground truncate">
+                  {preview}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <AlertDialogFooter className="mt-2 sm:justify-between items-center w-full">
+            <AlertDialogCancel 
+              disabled={isPending}
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl px-5 transition-all duration-150 border-0 bg-transparent"
             >
-              Delete
-            </AlertDialogAction>
+              Cancel
+            </AlertDialogCancel>
+            <AppButton
+              variant="destructive"
+              size="lg"
+              disabled={isPending}
+              isLoading={isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="rounded-xl px-6 bg-destructive/90 hover:bg-destructive text-destructive-foreground shadow-sm"
+            >
+              {isPending ? "Deleting..." : "Delete"}
+            </AppButton>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

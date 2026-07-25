@@ -22,6 +22,7 @@ import {
   favoriteChatSession,
   duplicateChatSession,
 } from "@/actions/chatActions";
+import { generateAIConversationTitle, generateConversationSummary } from "@/actions/conversationIntelligence";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ interface ConversationContextValue {
   messages: Message[];
   isLoadingMessages: boolean;
   isStreaming: boolean;
+  conversationState: "IDLE" | "CREATING_CONVERSATION" | "QUEUED" | "SENDING" | "STREAMING" | "READY";
 
   // Actions
   setActiveSession: (id: string) => void;
@@ -107,6 +109,17 @@ export function ConversationProvider({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const isStreamingRef = useRef(false);
+  const [conversationState, setConversationState] = useState<"IDLE" | "CREATING_CONVERSATION" | "QUEUED" | "SENDING" | "STREAMING" | "READY">("IDLE");
+  
+  interface PendingMessage {
+    content: string;
+    model: string;
+    action?: string;
+    attachments?: { type: string, url: string, fileName?: string, size?: number }[];
+  }
+  const pendingMessageQueueRef = useRef<PendingMessage[]>([]);
+
   const [currentModel, setCurrentModel] = useState("auto");
 
   // Track whether user explicitly clicked "New Chat" to avoid auto-restoring
@@ -144,24 +157,18 @@ export function ConversationProvider({
       }
       if (pendingSessionIdRef.current === urlSessionId) {
         pendingSessionIdRef.current = null; // Navigation complete
+      } else {
+        // External URL change (not from our own manual push)
+        isNewChatRef.current = false;
       }
 
-      if (activeSessionId !== urlSessionId) {
+      // Only sync if we are IDLE or READY, protecting the streaming state
+      if (activeSessionId !== urlSessionId && (conversationState === "IDLE" || conversationState === "READY")) {
         setActiveSessionId(urlSessionId);
       }
-      isNewChatRef.current = false;
       return;
     }
-
-    if (!activeSessionId && !isNewChatRef.current && sessions.length > 0) {
-      const latest = sessions[0];
-      setActiveSessionId(latest.id);
-      // Sync to URL silently
-      const p = new URLSearchParams(searchParams.toString());
-      p.set("session", latest.id);
-      router.replace(`${pathname}?${p.toString()}`);
-    }
-  }, [sessions, isLoadingSessions, searchParams]);
+  }, [sessions, isLoadingSessions, searchParams, conversationState, activeSessionId]);
 
   // ── Load messages when session changes ────────────────────────────────────
   useEffect(() => {
@@ -169,12 +176,30 @@ export function ConversationProvider({
       setMessages([]);
       return;
     }
+    
+    if (isNewChatRef.current) {
+      // Do not reset it here. Let it stay true so React StrictMode double-renders 
+      // don't bypass it. It will be reset to false when the user manually switches chats.
+      return;
+    }
+
+    // Do not load history if we are currently streaming a new message
+    if (isStreamingRef.current) {
+      return;
+    }
+
     setIsLoadingMessages(true);
     getChatHistory(activeSessionId)
-      .then((data) => setMessages(data as Message[]))
+      .then((data) => {
+        if (!isStreamingRef.current) {
+          setMessages(data as Message[]);
+        }
+      })
       .catch((err) => {
         console.error("Failed to load chat history:", err);
-        setMessages([]);
+        if (!isStreamingRef.current) {
+          setMessages([]);
+        }
       })
       .finally(() => setIsLoadingMessages(false));
   }, [activeSessionId]);
@@ -234,6 +259,7 @@ export function ConversationProvider({
   const handleSetActiveSession = useCallback(
     (id: string) => {
       if (id === activeSessionId) return;
+      isNewChatRef.current = false;
       pendingSessionIdRef.current = id;
       setActiveSessionId(id);
       isNewChatRef.current = false;
@@ -246,37 +272,41 @@ export function ConversationProvider({
 
   // ── Create new chat ───────────────────────────────────────────────────────
   const createNewSession = useCallback(async (title?: string): Promise<string | null> => {
-    if (!user) return null;
     isNewChatRef.current = true;
+    
+    if (title && user?.id) {
+      try {
+        const newSession = await createChatSession(mentorId, title);
+        
+        // Optimistic UI update for sidebar
+        setSessions((prev) => [newSession as unknown as ChatSession, ...prev]);
+        
+        setActiveSessionId(newSession.id);
+        setMessages([]);
+        
+        const p = new URLSearchParams(searchParams.toString());
+        p.set("session", newSession.id);
+        router.push(`${pathname}?${p.toString()}`);
+        
+        isNewChatRef.current = false;
+        return newSession.id;
+      } catch (err) {
+        console.error("Failed to create explicit chat session:", err);
+        toast.error("Failed to create chat");
+      }
+    }
+
+    // Default: Return to Mentor Home
     setActiveSessionId(null);
     setMessages([]);
 
-    try {
-      const newSession = await createChatSession(mentorId, title || "New Conversation");
-      const newId = newSession.id;
-      
-      // Optimistically add to sessions list so it immediately appears in sidebar
-      setSessions(prev => {
-        if (prev.some(s => s.id === newId)) return prev;
-        return [newSession as ChatSession, ...prev];
-      });
+    const p = new URLSearchParams(searchParams.toString());
+    p.delete("session");
+    router.push(`${pathname}?${p.toString()}`);
 
-      pendingSessionIdRef.current = newId;
-      setActiveSessionId(newId);
-
-      const p = new URLSearchParams(searchParams.toString());
-      p.set("session", newId);
-      router.push(`${pathname}?${p.toString()}`);
-
-      isNewChatRef.current = false;
-      return newId;
-    } catch (err) {
-      console.error("Failed to create session:", err);
-      toast.error("Failed to start new conversation.");
-      isNewChatRef.current = false;
-      return null;
-    }
-  }, [user, mentorId, searchParams, pathname, router]);
+    isNewChatRef.current = false;
+    return null;
+  }, [searchParams, pathname, router, mentorId, user]);
 
   // ── Delete session ────────────────────────────────────────────────────────
   const deleteSession = useCallback(
@@ -288,18 +318,13 @@ export function ConversationProvider({
         const success = await deleteChatSession(id, mentorId);
         if (!success) throw new Error("Failed to delete");
         
-        // If it was the active session, switch to the next available one
+        // Return to Mentor Home
         if (id === activeSessionId) {
-          const remaining = prevSessions.filter((s) => s.id !== id);
-          if (remaining.length > 0) {
-            handleSetActiveSession(remaining[0].id);
-          } else {
-            setActiveSessionId(null);
-            setMessages([]);
-            const p = new URLSearchParams(searchParams.toString());
-            p.delete("session");
-            router.push(`${pathname}?${p.toString()}`);
-          }
+          setActiveSessionId(null);
+          setMessages([]);
+          const p = new URLSearchParams(searchParams.toString());
+          p.delete("session");
+          router.push(`${pathname}?${p.toString()}`);
         }
       } catch (err) {
         setSessions(prevSessions);
@@ -410,12 +435,39 @@ export function ConversationProvider({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    isStreamingRef.current = false;
     setIsStreaming(false);
+    setConversationState("READY");
   }, []);
+
+  const bootstrapConversation = useCallback(async (content: string) => {
+    try {
+      const newSession = await createChatSession(
+        mentorId,
+        content.slice(0, 40) || "New Conversation"
+      );
+      
+      setSessions(prev => {
+        if (prev.some(s => s.id === newSession.id)) return prev;
+        return [newSession as ChatSession, ...prev];
+      });
+      
+      isNewChatRef.current = true;
+      pendingSessionIdRef.current = newSession.id;
+      setActiveSessionId(newSession.id);
+      
+      return newSession.id;
+    } catch {
+      toast.error("Failed to create session.");
+      return null;
+    }
+  }, [mentorId]);
 
   const sendMessage = useCallback(
     async (content: string, model: string, action?: string, attachments?: { type: string, url: string, fileName?: string, size?: number }[]) => {
-      if (!user || isStreaming) return;
+      if (!user || isStreamingRef.current) return;
+
+      const pendingMsg: PendingMessage = { content, model, action, attachments };
 
       let displayContent = action ? `*Requested: ${action}*` : content;
       const metadata: any = {};
@@ -431,41 +483,47 @@ export function ConversationProvider({
            metadata.imageUrl = imageAttach.url;
         }
       }
+      
       const tempUserMsg: Message = {
         id: `temp-user-${Date.now()}`,
         role: "user",
         content: displayContent,
         metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       };
+      
+      // Optimistically add user message to UI
       setMessages((prev) => [...prev, tempUserMsg]);
+      isStreamingRef.current = true;
       setIsStreaming(true);
 
-      // Ensure we have a session
       let currentSessionId = activeSessionId;
+      
       if (!currentSessionId) {
-        try {
-          const newSession = await createChatSession(
-            mentorId,
-            content.slice(0, 40) || "New Conversation"
-          );
-          currentSessionId = newSession.id;
-          
-          setSessions(prev => {
-            if (prev.some(s => s.id === newSession.id)) return prev;
-            return [newSession as ChatSession, ...prev];
-          });
-          
-          pendingSessionIdRef.current = currentSessionId;
-          setActiveSessionId(currentSessionId);
-          const p = new URLSearchParams(searchParams.toString());
-          p.set("session", currentSessionId!);
-          router.push(`${pathname}?${p.toString()}`);
-        } catch {
+        setConversationState("CREATING_CONVERSATION");
+        pendingMessageQueueRef.current.push(pendingMsg);
+        
+        const newId = await bootstrapConversation(content);
+        if (!newId) {
+          // Failed to create conversation, revert UI state
+          setMessages((prev) => prev.filter(m => m.id !== tempUserMsg.id));
+          pendingMessageQueueRef.current.pop();
+          isStreamingRef.current = false;
           setIsStreaming(false);
-          toast.error("Failed to create session.");
+          setConversationState("IDLE");
           return;
         }
+        
+        currentSessionId = newId;
+        // Pop the queue since we're processing it immediately now
+        pendingMessageQueueRef.current.shift();
+        
+        // Transparently update URL after conversation is established
+        const p = new URLSearchParams(searchParams.toString());
+        p.set("session", currentSessionId);
+        window.history.replaceState(null, '', `${pathname}?${p.toString()}`);
       }
+
+      setConversationState("SENDING");
 
       // Save user message to DB
       await saveMessage(currentSessionId!, "user", content || action || "", undefined, Object.keys(metadata).length > 0 ? metadata : undefined);
@@ -486,6 +544,8 @@ export function ConversationProvider({
         action,
         attachments,
       };
+
+      setConversationState("STREAMING");
 
       // Stream the response
       try {
@@ -541,6 +601,18 @@ export function ConversationProvider({
             { role: "assistant", content: assistantText.slice(0, 500) },
           ]);
         }
+        
+        // ── AI Summary: fire after 2nd message, then every 10 messages ────────
+        const currentMessageCount = messages.length + 2; // + user + assistant
+        if (currentMessageCount > 0 && (currentMessageCount === 2 || currentMessageCount % 10 === 0)) {
+          const summaryMessages = [
+            ...messages.map((m) => ({ role: m.role, content: m.content })),
+            { role: "user", content },
+            { role: "assistant", content: assistantText },
+          ];
+          generateConversationSummary(currentSessionId!, mentorId, summaryMessages)
+            .catch((err) => console.warn("[AI Summary] fire-and-forget failed:", err));
+        }
 
         // Replace temp IDs with final content
         setMessages((prev) => {
@@ -573,7 +645,9 @@ export function ConversationProvider({
           return next;
         });
       } finally {
+        isStreamingRef.current = false;
         setIsStreaming(false);
+        setConversationState("READY");
         abortControllerRef.current = null;
         // Refresh server components (e.g. Roadmap) to reflect DB changes
         router.refresh();
@@ -581,7 +655,6 @@ export function ConversationProvider({
     },
     [
       user,
-      isStreaming,
       activeSessionId,
       messages,
       mentorId,

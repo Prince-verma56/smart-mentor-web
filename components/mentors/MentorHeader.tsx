@@ -197,7 +197,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
           />
         </div>
       </div>
-
+      
       <NewChatDialog 
         open={isNewChatOpen} 
         onOpenChange={setIsNewChatOpen} 
