@@ -41,9 +41,12 @@ interface ConversationContextValue {
   isLoadingMessages: boolean;
   isStreaming: boolean;
   conversationState: "IDLE" | "CREATING_CONVERSATION" | "QUEUED" | "SENDING" | "STREAMING" | "READY";
+  hasMoreMessages: boolean;
+  isLoadingMore: boolean;
 
   // Actions
   setActiveSession: (id: string) => void;
+  loadMoreMessages: () => Promise<void>;
   createNewSession: (title?: string) => Promise<string | null>;
   deleteSession: (id: string) => Promise<void>;
   renameSession: (id: string, title: string) => Promise<void>;
@@ -124,6 +127,10 @@ export function ConversationProvider({
 
   // Track whether user explicitly clicked "New Chat" to avoid auto-restoring
   const isNewChatRef = useRef(false);
+  // Pagination
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   const pendingSessionIdRef = useRef<string | null>(null);
   
   // AbortController for stopping generation
@@ -189,20 +196,44 @@ export function ConversationProvider({
     }
 
     setIsLoadingMessages(true);
-    getChatHistory(activeSessionId)
+    getChatHistory(activeSessionId, 50)
       .then((data) => {
         if (!isStreamingRef.current) {
           setMessages(data as Message[]);
+          setHasMoreMessages(data.length === 50);
         }
       })
       .catch((err) => {
         console.error("Failed to load chat history:", err);
         if (!isStreamingRef.current) {
           setMessages([]);
+          setHasMoreMessages(false);
         }
       })
       .finally(() => setIsLoadingMessages(false));
   }, [activeSessionId]);
+
+  // ── Load older messages ───────────────────────────────────────────────────
+  const loadMoreMessages = useCallback(async () => {
+    if (!activeSessionId || isLoadingMore || !hasMoreMessages || messages.length === 0) return;
+    
+    setIsLoadingMore(true);
+    try {
+      const oldestMessage = messages[0];
+      const olderBatch = await getChatHistory(activeSessionId, 50, oldestMessage.created_at);
+      
+      if (olderBatch.length > 0) {
+        setMessages((prev) => [...(olderBatch as Message[]), ...prev]);
+        setHasMoreMessages(olderBatch.length === 50);
+      } else {
+        setHasMoreMessages(false);
+      }
+    } catch (err) {
+      console.error("Failed to load more messages:", err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [activeSessionId, isLoadingMore, hasMoreMessages, messages]);
 
   // ── Supabase Realtime: sessions list ─────────────────────────────────────
   useEffect(() => {
@@ -673,6 +704,10 @@ export function ConversationProvider({
     messages,
     isLoadingMessages,
     isStreaming,
+    conversationState,
+    hasMoreMessages,
+    isLoadingMore,
+    loadMoreMessages,
     setActiveSession: handleSetActiveSession,
     createNewSession,
     deleteSession,

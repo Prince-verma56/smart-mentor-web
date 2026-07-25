@@ -18,12 +18,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import { VapiVoiceButton } from "./VapiVoiceButton";
 import { VoiceToTextButton } from "./VoiceToTextButton";
 import { useConversation } from "@/contexts/ConversationContext";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { MessageBubble } from "./MessageBubble";
+import { ArrowDown } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -46,9 +49,7 @@ interface ConversationPanelProps {
   stats: MentorStats;
 }
 
-function getInitials(name: string): string {
-  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-}
+
 
 const getSuggestedQuestions = (subject: string, currentTopic?: string) => [
   currentTopic
@@ -62,58 +63,7 @@ const getSuggestedQuestions = (subject: string, currentTopic?: string) => [
 
 // ─── Message Actions ──────────────────────────────────────────────────────────
 
-function MessageActions({
-  content,
-  onAction,
-  alwaysShow = false,
-}: {
-  content: string;
-  onAction?: (action: string) => void;
-  alwaysShow?: boolean;
-}) {
-  return (
-    <div className={cn(
-      "flex flex-wrap items-center gap-2 transition-opacity duration-300 mt-2",
-      alwaysShow ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-    )}>
-      <div className="flex items-center gap-1 bg-card/50 p-0.5 rounded-lg border border-border/60">
-        <button
-          onClick={() => {
-            navigator.clipboard.writeText(content);
-            toast.success("Copied to clipboard");
-          }}
-          title="Copy"
-          className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 hover:shadow-[0_0_10px_rgba(16,185,129,0.15)] transition-all duration-300 group"
-        >
-          <Copy className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300" />
-        </button>
-        <button
-          title="Bookmark"
-          className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 hover:shadow-[0_0_10px_rgba(16,185,129,0.15)] transition-all duration-300 group"
-        >
-          <Bookmark className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300" />
-        </button>
-      </div>
 
-      <div className="flex items-center gap-2">
-        {[
-          { icon: HelpCircle, label: "Explain More", action: "explain" },
-          { icon: Code2, label: "Practice", action: "practice" },
-          { icon: GraduationCap, label: "Quiz Me", action: "quiz" },
-        ].map(({ icon: Icon, label, action }) => (
-          <button
-            key={action}
-            onClick={() => onAction?.(action)}
-            className="group inline-flex items-center gap-1.5 px-3.5 h-8 rounded-full text-[11px] font-medium text-muted-foreground bg-card/80 border border-border/60 hover:text-primary hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all duration-300 ease-out hover:-translate-y-0.5"
-          >
-            <Icon className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
-            {label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ─── Attach Popover ───────────────────────────────────────────────────────────
 
@@ -626,6 +576,9 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
     currentModel,
     setCurrentModel,
     conversationState,
+    hasMoreMessages,
+    isLoadingMore,
+    loadMoreMessages,
   } = useConversation();
 
   const [loadingStep, setLoadingStep] = useState(0);
@@ -682,13 +635,77 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
   const lastAssistantMessageId = [...messages].reverse().find(m => m.role === "assistant" && m.content !== "")?.id;
 
+  const validMessages = useMemo(() => messages.filter(m => m.content !== ""), [messages]);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: validMessages.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: useCallback(() => 120, []),
+    overscan: 5,
+  });
+
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const isUserScrollingUp = useRef(false);
+  const previousScrollTop = useRef(0);
+  const previousScrollHeight = useRef(0);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    
+    // Check if user is scrolling up
+    if (distanceToBottom > 200) {
+      setShowScrollDown(true);
+      isUserScrollingUp.current = true;
+    } else {
+      setShowScrollDown(false);
+      isUserScrollingUp.current = false;
+    }
+
+    // Trigger infinite scroll
+    if (target.scrollTop < 100 && hasMoreMessages && !isLoadingMore) {
+      previousScrollHeight.current = target.scrollHeight;
+      previousScrollTop.current = target.scrollTop;
+      loadMoreMessages();
+    }
+  }, [hasMoreMessages, isLoadingMore, loadMoreMessages]);
+
+  const scrollToBottom = useCallback(() => {
+    if (validMessages.length > 0) {
+      virtualizer.scrollToIndex(validMessages.length - 1, { align: 'end' });
+    }
+    setTimeout(() => {
+       messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    }, 50);
+  }, [validMessages.length, virtualizer]);
+
+  // Adjust scroll when new messages arrive while NOT scrolling up
+  useEffect(() => {
+    if (!isUserScrollingUp.current && validMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [validMessages.length, isStreaming, scrollToBottom]);
+
+  // Maintain scroll position when older messages are loaded
+  useEffect(() => {
+    if (scrollContainerRef.current && previousScrollHeight.current > 0) {
+      const target = scrollContainerRef.current;
+      const heightDiff = target.scrollHeight - previousScrollHeight.current;
+      if (heightDiff > 0) {
+        target.scrollTop = previousScrollTop.current + heightDiff;
+        previousScrollHeight.current = 0; // reset
+      }
+    }
+  }, [messages.length]);
+
   return (
     <div className="flex flex-col h-full bg-background chat-workspace-bg relative">
 
-      {/* ── Messages ──────────────────────────────── */}
-      <ScrollArea
-        className="flex-1 min-h-0 h-full w-full"
-        data-lenis-prevent="true"
+      <div 
+        className="flex-1 min-h-0 h-full w-full overflow-y-auto relative" 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
       >
         <div className="px-4 py-8 md:px-6 min-h-full">
         {isLoadingMessages ? (
@@ -712,8 +729,8 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
           />
         ) : (
           /* Messages */
-          <div className="w-full max-w-4xl mx-auto space-y-12 pb-12">
-            {messages.length === 0 && !isThinking && !isStreaming && (
+          <div className="w-full max-w-4xl mx-auto space-y-12 pb-12 relative">
+            {validMessages.length === 0 && !isThinking && !isStreaming && (
               <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4 animate-in fade-in duration-500">
                 <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6 shadow-sm border border-primary/10">
                   <MessageSquarePlus className="h-7 w-7 text-primary" />
@@ -724,115 +741,52 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                 </p>
               </div>
             )}
-            {messages.filter(m => m.content !== "").map((m, index) => {
-              const displayContent = m.content.replace(/\*?\[Analyzing context\.\.\.\]\*?\n*/g, "").trimStart();
-              
-              return (
-              <motion.div
-                key={m.id}
-                initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                className={cn(
-                  "group flex gap-4",
-                  m.role === "user" ? "justify-end" : "justify-start"
-                )}
-              >
-                {m.role === "assistant" && (
-                  <div className="relative mt-1 z-10 shrink-0">
-                    <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm">
-                      {mentor.avatarUrl ? (
-                        <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
-                      ) : null}
-                      <AvatarFallback
-                        style={{ background: `linear-gradient(135deg, ${mentor.avatarColor} 0%, rgba(0,0,0,0.8) 100%)` }}
-                        className="text-white text-[12px] font-bold"
-                      >
-                        {getInitials(mentor.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background"></span>
-                  </div>
-                )}
 
-                <div
-                  className={cn(
-                    "flex flex-col relative",
-                    m.role === "user" ? "items-end max-w-[85%]" : "items-start max-w-[100%]"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "leading-relaxed",
-                      m.role === "user"
-                        ? "rounded-2xl rounded-tr-sm bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 shadow-[0_2px_15px_rgba(16,185,129,0.08)] backdrop-blur-md px-5 py-4 text-foreground overflow-hidden relative"
-                        : "pt-1"
-                    )}
-                  >
-                    {m.role === "user" ? (
-                      <div className="flex flex-col gap-2">
-                        {m.metadata?.attachments && m.metadata.attachments.length > 0 && (
-                          <div className="flex flex-wrap gap-2 justify-end mb-2">
-                            {m.metadata.attachments.map((att: any, attIdx: number) => (
-                              att.type?.startsWith("image/") ? (
-                                <div key={attIdx} className="rounded-lg overflow-hidden border border-border/50 max-h-[300px]">
-                                  <img src={att.url} alt={att.fileName || "Attached"} className="object-contain max-h-[300px]" />
-                                </div>
-                              ) : (
-                                <div key={attIdx} className="bg-background/80 rounded px-3 py-2 text-sm border flex items-center gap-2">
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                  <span className="truncate max-w-[200px]">{att.fileName}</span>
-                                </div>
-                              )
-                            ))}
-                          </div>
-                        )}
-                        <span className="whitespace-pre-wrap text-[15px]">{m.content}</span>
-                      </div>
-                    ) : (
-                      <div className="bg-gradient-to-br from-card/80 to-card/40 border border-border/60 rounded-2xl p-6 shadow-md backdrop-blur-md min-h-[60px] flex items-center w-full">
-                        {displayContent === "" ? (
-                          <div className="flex items-center gap-1.5 px-2">
-                            <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
-                          </div>
-                        ) : (
-                          <div className="w-full">
-                            <MarkdownRenderer content={displayContent} />
-                            {/* Streaming cursor */}
-                            {m.id === messages[messages.length - 1].id && isStreaming && displayContent.length > 0 && (
-                              <span className="inline-block w-2 h-[1em] bg-primary ml-1 animate-[blink_1s_ease-in-out_infinite] align-middle rounded-sm" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+            {hasMoreMessages && (
+              <div className="flex justify-center py-4 absolute top-[-40px] left-0 right-0 z-10">
+                {isLoadingMore ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ) : null}
+              </div>
+            )}
 
-                  {m.role === "assistant" && displayContent.length > 0 && (
-                    <MessageActions
-                      content={displayContent}
-                      onAction={handleQuickAction}
-                      alwaysShow={m.id === lastAssistantMessageId}
-                    />
-                  )}
-                </div>
-
-                {m.role === "user" && (
-                  <Avatar className="h-8 w-8 shrink-0 mt-1 ring-2 ring-background shadow-sm z-10">
-                    <AvatarFallback className="bg-muted text-foreground font-semibold text-[11px]">
-                      {user?.firstName?.[0] || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </motion.div>
-            );
-            })}
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const m = validMessages[virtualItem.index];
+                return (
+                  <MessageBubble 
+                    key={m.id}
+                    m={m}
+                    mentor={mentor}
+                    user={user}
+                    isStreaming={isStreaming}
+                    isLastAssistantMessage={m.id === lastAssistantMessageId}
+                    onQuickAction={handleQuickAction}
+                    measureRef={virtualizer.measureElement}
+                    index={virtualItem.index}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  />
+                );
+              })}
+            </div>
 
             {/* Thinking indicator */}
             {isThinking && (
-              <div className="flex gap-4 justify-start animate-in fade-in-0 slide-in-from-bottom-2 duration-300 mt-2">
+              <div 
+                className="flex gap-4 justify-start animate-in fade-in-0 slide-in-from-bottom-2 duration-300 mt-2 px-4 md:px-6"
+              >
                 <div className="relative mt-1 z-10 shrink-0">
                   <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm">
                     {mentor.avatarUrl ? (
@@ -852,9 +806,9 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                   <div className="bg-gradient-to-br from-card/80 to-card/40 border border-border/60 rounded-2xl p-6 shadow-md backdrop-blur-md">
                     <div className="flex items-center gap-2 text-[13px] font-semibold text-primary mb-4">
                       <div className="flex gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                         <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                         <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                         <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
                       <span className="ml-1">Thinking...</span>
                     </div>
@@ -891,11 +845,26 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
               </div>
             )}
 
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} className="h-[20px] w-full" />
           </div>
         )}
         </div>
-      </ScrollArea>
+
+        <AnimatePresence>
+          {showScrollDown && (
+            <motion.button
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              onClick={scrollToBottom}
+              className="fixed bottom-32 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur border shadow-xl rounded-full px-5 py-2.5 text-sm font-semibold flex items-center gap-2 hover:bg-muted transition-colors z-50 text-primary"
+            >
+              <ArrowDown className="h-4 w-4" />
+              New messages
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* ── Composer ──────────────────────────────── */}
       <div className="px-4 pb-5 pt-3 bg-background border-t shrink-0">

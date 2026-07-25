@@ -55,7 +55,7 @@ export async function getChatSessions(mentorId: string) {
   return data;
 }
 
-export async function getChatHistory(sessionId: string) {
+export async function getChatHistory(sessionId: string, limit: number = 50, before?: string) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
@@ -65,24 +65,31 @@ export async function getChatHistory(sessionId: string) {
     .eq("id", sessionId)
     .single();
 
-  console.log(`[getChatHistory] sessionId: ${sessionId}, userId: ${userId}, session found:`, session, "error:", fetchError);
-
   if (!session || session.user_id !== userId) {
-    throw new Error("Unauthorized session access");
+    console.warn(`[getChatHistory] Unauthorized or missing session: ${sessionId}`);
+    return [];
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("messages")
     .select("id, role, content, created_at, token_count, metadata")
     .eq("session_id", sessionId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (before) {
+    query = query.lt("created_at", before);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Failed to fetch chat history:", error);
     return [];
   }
 
-  return data;
+  // Reverse so the returned array is strictly chronological (oldest to newest)
+  return data ? data.reverse() : [];
 }
 
 // ─── Update ─────────────────────────────────────────────────────────────────
