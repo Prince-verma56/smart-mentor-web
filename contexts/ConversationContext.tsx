@@ -169,11 +169,25 @@ export function ConversationProvider({
         isNewChatRef.current = false;
       }
 
+      const isValidSession = sessions.some(s => s.id === urlSessionId);
+
+      if (!isValidSession) {
+        if (activeSessionId !== null && (conversationState === "IDLE" || conversationState === "READY")) {
+          setActiveSessionId(null);
+        }
+        return;
+      }
+
       // Only sync if we are IDLE or READY, protecting the streaming state
       if (activeSessionId !== urlSessionId && (conversationState === "IDLE" || conversationState === "READY")) {
         setActiveSessionId(urlSessionId);
       }
       return;
+    }
+
+    // If there is no session in the URL, ensure activeSessionId is null
+    if (!urlSessionId && activeSessionId !== null && (conversationState === "IDLE" || conversationState === "READY")) {
+      setActiveSessionId(null);
     }
   }, [sessions, isLoadingSessions, searchParams, conversationState, activeSessionId]);
 
@@ -330,10 +344,12 @@ export function ConversationProvider({
     // Default: Return to Mentor Home
     setActiveSessionId(null);
     setMessages([]);
+    setConversationState("IDLE");
 
     const p = new URLSearchParams(searchParams.toString());
     p.delete("session");
-    router.push(`${pathname}?${p.toString()}`);
+    const newSearch = p.toString();
+    router.push(newSearch ? `${pathname}?${newSearch}` : pathname);
 
     isNewChatRef.current = false;
     return null;
@@ -353,9 +369,11 @@ export function ConversationProvider({
         if (id === activeSessionId) {
           setActiveSessionId(null);
           setMessages([]);
+          setConversationState("IDLE");
           const p = new URLSearchParams(searchParams.toString());
           p.delete("session");
-          router.push(`${pathname}?${p.toString()}`);
+          const newSearch = p.toString();
+          router.push(newSearch ? `${pathname}?${newSearch}` : pathname);
         }
       } catch (err) {
         setSessions(prevSessions);

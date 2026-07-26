@@ -48,43 +48,43 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
 
           // ── Headings ───────────────────────────────────────────────────────
           h1: ({ children }) => (
-            <h1 className="text-[1.35em] font-semibold mt-7 mb-4 tracking-tight text-foreground">
+            <h1 className="text-[1.45em] font-bold mt-8 mb-4 tracking-tight text-white/90">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-[1.15em] font-semibold mt-6 mb-3 tracking-tight text-foreground">
+            <h2 className="text-[1.25em] font-semibold mt-8 mb-4 tracking-tight text-white/90">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-[1.05em] font-medium mt-5 mb-2.5 text-foreground/90">
+            <h3 className="text-[1.1em] font-medium mt-6 mb-3 text-white/80">
               {children}
             </h3>
           ),
           h4: ({ children }) => (
-            <h4 className="text-[0.95em] font-medium mt-4 mb-2 text-foreground/80">
+            <h4 className="text-[1em] font-medium mt-5 mb-2 text-white/70">
               {children}
             </h4>
           ),
 
           // ── Paragraph ──────────────────────────────────────────────────────
           p: ({ children }) => (
-            <p className="mb-4 leading-[1.7] last:mb-0 text-foreground/90">{children}</p>
+            <p className="mb-5 leading-[1.8] last:mb-0 text-white/80">{children}</p>
           ),
 
           // ── Lists ──────────────────────────────────────────────────────────
           ul: ({ children }) => (
-            <ul className="list-disc pl-5 mb-4 space-y-1.5 text-foreground/90 leading-[1.7] marker:text-muted-foreground/70">{children}</ul>
+            <ul className="list-disc pl-6 mb-5 space-y-2 text-white/80 leading-[1.8] marker:text-emerald-500/50">{children}</ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal pl-5 mb-4 space-y-1.5 text-foreground/90 leading-[1.7] marker:text-muted-foreground/70">
+            <ol className="list-decimal pl-6 mb-5 space-y-2 text-white/80 leading-[1.8] marker:text-emerald-500/50">
               {children}
             </ol>
           ),
           li: ({ children }) => {
             return (
-              <li className="pl-1">{children}</li>
+              <li className="pl-1.5">{children}</li>
             );
           },
 
@@ -94,7 +94,7 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline-offset-4 hover:underline transition-all font-medium"
+              className="text-emerald-400 underline-offset-4 hover:underline transition-all font-medium"
             >
               {children}
             </a>
@@ -114,25 +114,25 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
             if (text.includes("Executing action:")) {
               const isComplete = text.includes("Action completed successfully.") || text.includes("Action failed:");
               return (
-                <div className="my-5 rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden flex flex-col">
-                  <div className="px-4 py-2.5 border-b border-border/50 bg-muted/40 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-[0.85em] font-semibold text-foreground/80 tracking-wide uppercase">
+                <div className="my-5 rounded-xl border border-white/5 bg-black/20 shadow-sm overflow-hidden flex flex-col">
+                  <div className="px-4 py-2.5 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[0.85em] font-semibold text-white/60 tracking-wide uppercase">
                       {isComplete ? (
-                        <Settings className="w-4 h-4 text-muted-foreground" />
+                        <Settings className="w-4 h-4 text-white/40" />
                       ) : (
-                        <Settings className="w-4 h-4 text-primary animate-[spin_3s_linear_infinite]" />
+                        <Settings className="w-4 h-4 text-emerald-400 animate-[spin_3s_linear_infinite]" />
                       )}
                       System Action
                     </div>
                     {!isComplete && (
                       <div className="flex space-x-1.5 px-2">
-                        <div className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                        <div className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                        <div className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce"></div>
+                        <div className="w-1.5 h-1.5 bg-emerald-500/70 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                        <div className="w-1.5 h-1.5 bg-emerald-500/70 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                        <div className="w-1.5 h-1.5 bg-emerald-500/70 rounded-full animate-bounce"></div>
                       </div>
                     )}
                   </div>
-                  <div className="p-4 text-[0.9em] text-muted-foreground bg-background/50 leading-relaxed font-mono">
+                  <div className="p-4 text-[0.9em] text-white/50 bg-black/20 leading-relaxed font-mono">
                     {children}
                   </div>
                 </div>
@@ -140,7 +140,7 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
             }
 
             return (
-              <blockquote className="border-l-2 border-primary/50 pl-4 my-4 py-0.5 text-foreground/70 italic text-[0.95em]">
+              <blockquote className="border-l-[3px] border-emerald-500/30 pl-5 my-5 py-1 text-white/60 italic text-[0.95em] bg-emerald-500/[0.02] rounded-r-lg">
                 {children}
               </blockquote>
             );

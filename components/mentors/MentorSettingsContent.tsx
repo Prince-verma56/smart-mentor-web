@@ -13,7 +13,7 @@ import Scrubber from "@/components/ui/smoothui/scrubber";
 import SlideTextButton from "@/components/kokonutui/slide-text-button";
 import { Switch } from "@/components/ui/switch";
 import ElasticSlider from "@/components/ElasticSlider";
-import { Settings, Brain, MessageSquare, Mic, FolderOpen, AlertTriangle, Loader2 } from "lucide-react";
+import { Settings, Brain, MessageSquare, Mic, FolderOpen, AlertTriangle, Loader2, Zap, BrainCircuit, Sliders, Globe, Code, Activity, Clock, Speech } from "lucide-react";
 import type { Mentor, MentorStats } from "@/types/mentor";
 import type { MentorRoadmap } from "@/types/roadmap";
 import { updateMentorAction, deleteMentorAction } from "@/actions/mentorActions";
@@ -21,6 +21,7 @@ import { updateMentorVoiceSettingsAction } from "@/actions/mentorActions";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useVoicePreferences } from "./voice/useVoicePreferences";
 
 interface MentorSettingsContentProps {
   mentor: Mentor;
@@ -30,6 +31,7 @@ interface MentorSettingsContentProps {
 
 export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettingsContentProps) {
   const router = useRouter();
+  const { global, mentor: voiceMentor, session, updateGlobal, updateMentor, updateSession } = useVoicePreferences(mentor.id);
   // using actions directly
 
   const [isSaving, setIsSaving] = useState(false);
@@ -108,27 +110,27 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Name</Label>
-                  <Input 
-                    value={formData.name} 
+                  <Input
+                    value={formData.name}
                     onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Role</Label>
-                  <Input 
-                    value={formData.role} 
+                  <Input
+                    value={formData.role}
                     onChange={e => setFormData(f => ({ ...f, role: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Learning Goal</Label>
-                  <Textarea 
-                    value={formData.learningGoal} 
+                  <Textarea
+                    value={formData.learningGoal}
                     onChange={e => setFormData(f => ({ ...f, learningGoal: e.target.value }))}
                   />
                 </div>
                 <div className="flex justify-start">
-                  <SlideTextButton 
+                  <SlideTextButton
                     as="button"
                     onClick={handleSaveGeneral}
                     text={isSaving ? "Saving..." : "Save Changes"}
@@ -147,9 +149,103 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                 <CardTitle>Teaching Style & Personality</CardTitle>
                 <CardDescription>Configure how this mentor explains concepts.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="p-4 border rounded-lg bg-muted/30 flex items-center justify-center text-sm text-muted-foreground h-32">
-                  Teaching style configuration coming soon
+              <CardContent className="space-y-6">
+                <div className="space-y-5">
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2"><Zap className="w-4 h-4 text-muted-foreground" /> Response Length</Label>
+                    <div className="flex bg-muted/50 p-1 rounded-xl">
+                      {["Short", "Balanced", "Detailed"].map((len) => (
+                        <button
+                          key={len}
+                          type="button"
+                          onClick={() => updateMentor("responseLength", len as any)}
+                          className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${voiceMentor.responseLength === len ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {len}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="h-px w-full bg-border/50" />
+
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2"><BrainCircuit className="w-4 h-4 text-muted-foreground" /> Teaching Style</Label>
+                    <div className="grid grid-cols-2 gap-2 bg-muted/50 p-1.5 rounded-xl">
+                      {["Explain Simply", "Interview Mode", "Senior Developer", "Pair Programmer", "Socratic Mentor"].map((style) => (
+                        <button
+                          key={style}
+                          type="button"
+                          onClick={() => updateMentor("teachingStyle", style as any)}
+                          className={`py-2 px-3 text-xs font-medium rounded-lg transition-all text-left ${voiceMentor.teachingStyle === style ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {style}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="h-px w-full bg-border/50" />
+
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2"><Sliders className="w-4 h-4 text-muted-foreground" /> Correction Level</Label>
+                    <div className="flex bg-muted/50 p-1 rounded-xl">
+                      {["Gentle", "Balanced", "Strict"].map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => updateMentor("correctionLevel", level as any)}
+                          className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${voiceMentor.correctionLevel === level ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Environment</CardTitle>
+                <CardDescription>Configure language and coding preferences.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-5">
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2"><Globe className="w-4 h-4 text-muted-foreground" /> Preferred Language</Label>
+                    <div className="flex bg-muted/50 p-1 rounded-xl">
+                      {["English", "Hindi", "Hinglish"].map((lang) => (
+                        <button
+                          key={lang}
+                          type="button"
+                          onClick={() => updateGlobal("preferredLanguage", lang as any)}
+                          className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${global.preferredLanguage === lang ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {lang}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="h-px w-full bg-border/50" />
+
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2"><Code className="w-4 h-4 text-muted-foreground" /> Code Style</Label>
+                    <div className="flex flex-wrap gap-2 bg-muted/50 p-1.5 rounded-xl">
+                      {["Beginner", "Production", "FAANG", "Startup"].map((style) => (
+                        <button
+                          key={style}
+                          type="button"
+                          onClick={() => updateMentor("codeStyle", style as any)}
+                          className={`flex-1 min-w-[70px] py-2 px-2 text-xs font-medium rounded-lg transition-all text-center ${voiceMentor.codeStyle === style ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {style}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -199,12 +295,12 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                     error: (err) => err.message || "Failed to update voice settings"
                   });
                 }} className="space-y-6">
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2 md:col-span-1">
                       <Label>Voice Identity & Tone</Label>
-                      <Select 
-                        name="voiceId" 
+                      <Select
+                        name="voiceId"
                         defaultValue={mentor.voiceId || "21m00Tcm4TlvDq8ikWAM"}
                         placeholder="Select voice identity"
                         options={[
@@ -220,8 +316,8 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
 
                     <div className="space-y-2 md:col-span-1">
                       <Label>AI Model</Label>
-                      <Select 
-                        name="voiceModel" 
+                      <Select
+                        name="voiceModel"
                         defaultValue={mentor.voiceModel || "gpt-4-turbo-preview"}
                         placeholder="Select model"
                         options={[
@@ -257,9 +353,9 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
 
                   <div className="space-y-2">
                     <Label>Custom Greeting (Optional)</Label>
-                    <Textarea 
+                    <Textarea
                       name="voiceGreeting"
-                      placeholder="e.g. Hi! I'm your mentor. Are you ready to begin?" 
+                      placeholder="e.g. Hi! I'm your mentor. Are you ready to begin?"
                       defaultValue={mentor.voiceGreeting || ""}
                       className="resize-none h-20"
                     />
@@ -285,7 +381,7 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                   </div>
 
                   <div className="flex justify-end pt-2">
-                    <SlideTextButton 
+                    <SlideTextButton
                       as="button"
                       type="submit"
                       text="Save Voice Settings"
@@ -325,7 +421,7 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                     <p className="text-xs text-muted-foreground mt-1">Hide this mentor from your dashboard but keep its data.</p>
                   </div>
                   <div className="shrink-0">
-                    <SlideTextButton 
+                    <SlideTextButton
                       as="button"
                       variant="ghost"
                       text="Archive"
@@ -341,7 +437,7 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                     <p className="text-xs text-muted-foreground mt-1">Permanently remove this mentor and all conversation history.</p>
                   </div>
                   <div className="shrink-0">
-                    <SlideTextButton 
+                    <SlideTextButton
                       as="button"
                       variant="danger"
                       onClick={handleDelete}

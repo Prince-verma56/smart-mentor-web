@@ -243,17 +243,17 @@ function Composer({ mentor }: { mentor: Mentor }) {
     const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
     const newAttachments: { file: File; uploading: boolean }[] = [];
-    
+
     for (const file of files) {
       if (file.size > MAX_SIZE) {
         toast.error(`File ${file.name} is too large (max 10MB)`);
         continue;
       }
-      
+
       // Basic type validation (or let it pass if it's text based on extension)
       const ext = file.name.split('.').pop()?.toLowerCase();
       const isTextExt = ['txt', 'md', 'js', 'ts', 'py', 'html', 'css'].includes(ext || '');
-      
+
       if (!validTypes.includes(file.type) && !isTextExt && !file.type.startsWith('image/')) {
         toast.error(`Unsupported file type: ${file.name}`);
         continue;
@@ -264,7 +264,7 @@ function Composer({ mentor }: { mentor: Mentor }) {
     if (newAttachments.length === 0) return;
 
     setAttachments((prev) => [...prev, ...newAttachments]);
-    
+
     // reset input
     if (fileInputRef.current) fileInputRef.current.value = "";
 
@@ -285,7 +285,7 @@ function Composer({ mentor }: { mentor: Mentor }) {
         if (!res.ok) throw new Error("Upload failed");
         const data = await res.json();
 
-        setAttachments((prev) => 
+        setAttachments((prev) =>
           prev.map(a => a.file === attach.file ? { ...a, url: data.previewUrl || data.publicUrl, uploading: false } : a)
         );
       } catch (err) {
@@ -373,7 +373,7 @@ function Composer({ mentor }: { mentor: Mentor }) {
     setText("");
     setAttachments([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-    
+
     const mappedAttachments = currentAttachments.map(a => ({
       type: a.file.type || "text/plain",
       url: a.url!,
@@ -392,7 +392,7 @@ function Composer({ mentor }: { mentor: Mentor }) {
   };
 
   return (
-    <div 
+    <div
       className={cn(
         "relative flex flex-col rounded-3xl bg-card/60 backdrop-blur-2xl shadow-md ring-1 ring-border/40 transition-all duration-500 ease-out group",
         isInputFocused && "bg-card/90 shadow-[0_8px_30px_rgba(16,185,129,0.2),inset_0_1px_1px_rgba(255,255,255,0.05)] ring-2 ring-primary/60 -translate-y-1",
@@ -416,12 +416,12 @@ function Composer({ mentor }: { mentor: Mentor }) {
       )}
 
       {/* Hidden file input */}
-      <input 
-        type="file" 
+      <input
+        type="file"
         ref={fileInputRef}
         onChange={handleFileSelect}
         multiple
-        className="hidden" 
+        className="hidden"
       />
 
       {/* Attachment Preview Area */}
@@ -443,15 +443,15 @@ function Composer({ mentor }: { mentor: Mentor }) {
                   <FileText className="h-5 w-5" />
                 </div>
               )}
-              
+
               <div className="flex flex-col flex-1 min-w-0">
                 <span className="text-[12px] font-medium text-foreground truncate">{a.file.name}</span>
                 <span className="text-[10px] text-muted-foreground truncate">
                   {(a.file.size / 1024).toFixed(1)} KB • {a.file.type.split('/')[1]?.toUpperCase() || 'FILE'}
                 </span>
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => removeAttachment(i)}
                 className="absolute -right-2 -top-2 h-6 w-6 bg-background hover:bg-destructive hover:text-destructive-foreground border border-border/50 shadow-sm rounded-full flex items-center justify-center opacity-0 scale-90 group-hover/att:opacity-100 group-hover/att:scale-100 transition-all z-10"
               >
@@ -486,7 +486,7 @@ function Composer({ mentor }: { mentor: Mentor }) {
 
       {/* Bottom bar: Attach, Model, Voice & Send */}
       <div className="flex items-center justify-between px-3 pb-3 pt-1">
-        
+
         {/* Left Controls */}
         <div className="flex items-center gap-2 pl-1">
           <div ref={attachRef} className="relative">
@@ -585,7 +585,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
   const lastUserMessage = [...messages].reverse().find(m => m.role === "user");
   const hasImage = lastUserMessage?.metadata?.attachments?.some((a: any) => a.type?.startsWith("image/"));
-  
+
   const currentLoadingSteps = useMemo(() => {
     const baseSteps = [
       { icon: "🤔", text: "Understanding the request" },
@@ -653,7 +653,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
-    
+
     // Check if user is scrolling up
     if (distanceToBottom > 200) {
       setShowScrollDown(true);
@@ -676,7 +676,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
       virtualizer.scrollToIndex(validMessages.length - 1, { align: 'end' });
     }
     setTimeout(() => {
-       messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
     }, 50);
   }, [validMessages.length, virtualizer]);
 
@@ -700,155 +700,131 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   }, [messages.length]);
 
   return (
-    <div className="flex flex-col h-full bg-background chat-workspace-bg relative">
+    <div className="flex flex-col h-full bg-background relative overflow-hidden">
+      {/* ── Atmospheric Living Background ── */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/5 blur-[200px] animate-[pulse_16s_ease-in-out_infinite]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-cyan-600/5 blur-[250px] animate-[pulse_18s_ease-in-out_infinite_alternate]" />
+      </div>
 
-      <ScrollArea 
-        className="flex-1 min-h-0 h-full w-full relative" 
+      <ScrollArea
+        className="flex-1 min-h-0 h-full w-full relative z-10"
         viewportRef={scrollContainerRef}
         onScroll={handleScroll}
         data-lenis-prevent="true"
       >
         <div className="px-4 py-8 md:px-6 min-h-full">
-        {isLoadingMessages ? (
-          <div className="flex flex-col max-w-[760px] mx-auto space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className={cn(
-                  "h-12 rounded-2xl bg-muted/30 animate-pulse",
-                  i % 2 === 0 ? "ml-16" : "mr-16"
-                )}
-              />
-            ))}
-          </div>
-        ) : !activeSessionId && (conversationState === "IDLE" || conversationState === "READY") ? (
-          /* Welcome Dashboard */
-          <WelcomeDashboard 
-            mentor={mentor} 
-            stats={stats} 
-            onFillInput={(msg) => window.dispatchEvent(new CustomEvent('fill-chat-input', { detail: msg }))}
-          />
-        ) : (
-          /* Messages */
-          <div className="w-full max-w-4xl mx-auto space-y-12 pb-12 relative">
-            {validMessages.length === 0 && !isThinking && !isStreaming && (
-              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4 animate-in fade-in duration-500">
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6 shadow-sm border border-primary/10">
-                  <MessageSquarePlus className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="text-2xl font-bold tracking-tight mb-3">New Conversation</h3>
-                <p className="text-muted-foreground text-[15px] max-w-[400px] leading-relaxed">
-                  Start chatting with <span className="font-semibold text-foreground">{mentor.name}</span>. Messages will appear here.
-                </p>
-              </div>
-            )}
-
-            {hasMoreMessages && (
-              <div className="flex justify-center py-4 absolute top-[-40px] left-0 right-0 z-10">
-                {isLoadingMore ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                ) : null}
-              </div>
-            )}
-
-            <div
-              style={{
-                height: `${virtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {virtualizer.getVirtualItems().map((virtualItem) => {
-                const m = validMessages[virtualItem.index];
-                return (
-                  <MessageBubble 
-                    key={m.id}
-                    m={m}
-                    mentor={mentor}
-                    user={user}
-                    isStreaming={isStreaming}
-                    isLastAssistantMessage={m.id === lastAssistantMessageId}
-                    onQuickAction={handleQuickAction}
-                    measureRef={virtualizer.measureElement}
-                    index={virtualItem.index}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                  />
-                );
-              })}
+          {isLoadingMessages ? (
+            <div className="flex flex-col max-w-[760px] mx-auto space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-12 rounded-2xl bg-muted/30 animate-pulse",
+                    i % 2 === 0 ? "ml-16" : "mr-16"
+                  )}
+                />
+              ))}
             </div>
-
-            {/* Thinking indicator */}
-            {isThinking && (
-              <div 
-                className="flex gap-4 justify-start animate-in fade-in-0 slide-in-from-bottom-2 duration-300 mt-2 px-4 md:px-6"
-              >
-                <div className="relative mt-1 z-10 shrink-0">
-                  <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm">
-                    {mentor.avatarUrl ? (
-                      <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
-                    ) : null}
-                    <AvatarFallback
-                      style={{ background: `linear-gradient(135deg, ${mentor.avatarColor} 0%, rgba(0,0,0,0.8) 100%)` }}
-                      className="text-white text-[12px] font-bold"
-                    >
-                      {getInitials(mentor.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background animate-pulse"></span>
+          ) : !activeSessionId && (conversationState === "IDLE" || conversationState === "READY") ? (
+            /* Welcome Dashboard */
+            <WelcomeDashboard
+              mentor={mentor}
+              stats={stats}
+              onFillInput={(msg) => window.dispatchEvent(new CustomEvent('fill-chat-input', { detail: msg }))}
+            />
+          ) : (
+            /* Messages */
+            <div className="w-full max-w-4xl mx-auto space-y-12 pb-12 relative">
+              {validMessages.length === 0 && !isThinking && !isStreaming && (
+                <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4 animate-in fade-in duration-500">
+                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6 shadow-sm border border-primary/10">
+                    <MessageSquarePlus className="h-7 w-7 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-bold tracking-tight mb-3">New Conversation</h3>
+                  <p className="text-muted-foreground text-[15px] max-w-[400px] leading-relaxed">
+                    Start chatting with <span className="font-semibold text-foreground">{mentor.name}</span>. Messages will appear here.
+                  </p>
                 </div>
+              )}
 
-                <div className="pt-1 min-w-[260px]">
-                  <div className="bg-gradient-to-br from-card/80 to-card/40 border border-border/60 rounded-2xl p-6 shadow-md backdrop-blur-md">
-                    <div className="flex items-center gap-2 text-[13px] font-semibold text-primary mb-4">
-                      <div className="flex gap-1">
-                         <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                         <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                         <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                      <span className="ml-1">Thinking...</span>
-                    </div>
-                    <div className="space-y-3">
-                      {currentLoadingSteps.map((step, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            "flex items-center gap-3 text-[13px] transition-all duration-500 ease-out",
-                            i < loadingStep && "text-muted-foreground/60",
-                            i === loadingStep && "text-foreground font-medium translate-x-1",
-                            i > loadingStep && "text-muted-foreground/20"
-                          )}
-                        >
-                          {i < loadingStep ? (
-                            <div className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                               <CheckCircle2 className="h-3.5 w-3.5" />
-                            </div>
-                          ) : i === loadingStep ? (
-                            <div className="h-5 w-5 flex items-center justify-center shrink-0">
-                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                            </div>
-                          ) : (
-                            <div className="h-5 w-5 flex items-center justify-center shrink-0">
-                              <span className="h-2 w-2 rounded-full bg-muted-foreground/20" />
-                            </div>
-                          )}
-                          <span>{step.icon} {step.text}</span>
-                        </div>
-                      ))}
+              {hasMoreMessages && (
+                <div className="flex justify-center py-4 absolute top-[-40px] left-0 right-0 z-10">
+                  {isLoadingMore ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  ) : null}
+                </div>
+              )}
+
+              <div
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {virtualizer.getVirtualItems().map((virtualItem) => {
+                  const m = validMessages[virtualItem.index];
+                  return (
+                    <MessageBubble
+                      key={m.id}
+                      m={m}
+                      mentor={mentor}
+                      user={user}
+                      isStreaming={isStreaming}
+                      isLastAssistantMessage={m.id === lastAssistantMessageId}
+                      onQuickAction={handleQuickAction}
+                      measureRef={virtualizer.measureElement}
+                      index={virtualItem.index}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualItem.start}px)`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Premium Thinking indicator */}
+              {isThinking && (
+                <div className="flex gap-4 justify-start animate-in fade-in duration-500 mt-2 px-4 md:px-6">
+                  <div className="relative mt-1 z-10 shrink-0">
+                    <Avatar className="h-9 w-9 ring-1 ring-white/10 shadow-sm opacity-80 grayscale">
+                      {mentor.avatarUrl ? (
+                        <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
+                      ) : null}
+                      <AvatarFallback
+                        style={{ background: `linear-gradient(135deg, ${mentor.avatarColor} 0%, rgba(0,0,0,0.8) 100%)` }}
+                        className="text-white text-[12px] font-bold"
+                      >
+                        {getInitials(mentor.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500/50 border-2 border-background animate-pulse"></span>
+                  </div>
+
+                  <div className="pt-2 min-w-[260px] pl-2 flex flex-col justify-center">
+                    <span className="text-[13px] font-medium text-emerald-500/80 mb-1 flex items-center gap-1.5 animate-pulse">
+                      Thinking
+                      <span className="flex gap-0.5">
+                        <span className="w-1 h-1 rounded-full bg-emerald-500/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1 h-1 rounded-full bg-emerald-500/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1 h-1 rounded-full bg-emerald-500/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </span>
+                    </span>
+                    <div className="text-[14px] text-muted-foreground/60 transition-all duration-300">
+                      {currentLoadingSteps[loadingStep]?.text || "Preparing response..."}
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div ref={messagesEndRef} className="h-[20px] w-full" />
-          </div>
-        )}
+              <div ref={messagesEndRef} className="h-[20px] w-full" />
+            </div>
+          )}
         </div>
         <AnimatePresence>
           {showScrollDown && (
@@ -867,13 +843,16 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
       </ScrollArea>
 
       {/* ── Composer ──────────────────────────────── */}
-      <div className="px-4 pb-5 pt-3 bg-background border-t shrink-0">
-        <div className="max-w-[760px] focus-within:max-w-4xl mx-auto transition-[max-width] duration-500 ease-out">
-          <Composer mentor={mentor} />
-          <p className="text-center text-[10px] text-muted-foreground/30 mt-2">
-            {mentor.name} can make mistakes. Verify important info.
-          </p>
+      <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 pt-4 bg-transparent shrink-0 z-20 pointer-events-none">
+        <div className="w-full max-w-3xl focus-within:max-w-4xl mx-auto transition-[max-width] duration-300 ease-out relative z-10 pointer-events-auto rounded-[24px] bg-black/40 backdrop-blur-lg border border-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
+          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
+          <div className="p-2 relative z-20">
+            <Composer mentor={mentor} />
+          </div>
         </div>
+        <p className="text-center text-[10px] text-white/30 mt-3 tracking-wide pointer-events-auto">
+          {mentor.name} can make mistakes. Verify important info.
+        </p>
       </div>
     </div>
   );
