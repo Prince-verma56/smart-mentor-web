@@ -20,7 +20,7 @@ const DEFAULT_GLOBAL: GlobalPreferences = {
 // --- Mentor Preferences ---
 export interface MentorPreferences {
   responseLength: "Short" | "Balanced" | "Detailed";
-  teachingStyle: "Explain Simply" | "Interview Mode" | "Senior Developer" | "Pair Programmer" | "Socratic Mentor";
+  teachingStyle: "Explain Simply" | "Interview Mode" | "Senior Developer" | "Socratic Mentor";
   correctionLevel: "Gentle" | "Balanced" | "Strict";
   codeStyle: "Beginner" | "Production" | "FAANG" | "Startup";
 }

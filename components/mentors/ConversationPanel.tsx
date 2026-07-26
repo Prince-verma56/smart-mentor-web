@@ -584,7 +584,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const [loadingStep, setLoadingStep] = useState(0);
 
   const lastUserMessage = [...messages].reverse().find(m => m.role === "user");
-  const hasImage = lastUserMessage?.metadata?.attachments?.some((a: any) => a.type?.startsWith("image/"));
+  const hasImage = (lastUserMessage?.metadata as any)?.attachments?.some((a: any) => a.type?.startsWith("image/"));
 
   const currentLoadingSteps = useMemo(() => {
     const baseSteps = [
@@ -638,12 +638,6 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const validMessages = useMemo(() => messages.filter(m => m.content !== ""), [messages]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const virtualizer = useVirtualizer({
-    count: validMessages.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: useCallback(() => 120, []),
-    overscan: 5,
-  });
 
   const [showScrollDown, setShowScrollDown] = useState(false);
   const isUserScrollingUp = useRef(false);
@@ -672,13 +666,10 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   }, [hasMoreMessages, isLoadingMore, loadMoreMessages]);
 
   const scrollToBottom = useCallback(() => {
-    if (validMessages.length > 0) {
-      virtualizer.scrollToIndex(validMessages.length - 1, { align: 'end' });
-    }
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-    }, 50);
-  }, [validMessages.length, virtualizer]);
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  }, []);
 
   // Adjust scroll when new messages arrive while NOT scrolling up
   useEffect(() => {
@@ -756,36 +747,19 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                 </div>
               )}
 
-              <div
-                style={{
-                  height: `${virtualizer.getTotalSize()}px`,
-                  width: '100%',
-                  position: 'relative',
-                }}
-              >
-                {virtualizer.getVirtualItems().map((virtualItem) => {
-                  const m = validMessages[virtualItem.index];
-                  return (
-                    <MessageBubble
-                      key={m.id}
-                      m={m}
-                      mentor={mentor}
-                      user={user}
-                      isStreaming={isStreaming}
-                      isLastAssistantMessage={m.id === lastAssistantMessageId}
-                      onQuickAction={handleQuickAction}
-                      measureRef={virtualizer.measureElement}
-                      index={virtualItem.index}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualItem.start}px)`,
-                      }}
-                    />
-                  );
-                })}
+              <div className="flex flex-col gap-6 w-full relative">
+                {validMessages.map((m, index) => (
+                  <MessageBubble
+                    key={m.id}
+                    m={m}
+                    mentor={mentor}
+                    user={user}
+                    isStreaming={isStreaming}
+                    isLastAssistantMessage={m.id === lastAssistantMessageId}
+                    onQuickAction={handleQuickAction}
+                    index={index}
+                  />
+                ))}
               </div>
 
               {/* Premium Thinking indicator */}

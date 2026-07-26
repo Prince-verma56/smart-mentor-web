@@ -51,16 +51,19 @@ STUDENT GOAL: ${mentor.learning_goal || "Master " + mentor.subject}.`;
       
       // 1. Long-term mentor memories
       const { data: memories } = await supabase
-        .from('mentor_memories')
-        .select('memory_text, category')
+        .from('mentor_memory')
+        .select('content, context')
         .eq('mentor_id', mentorId)
-        .order('importance', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(10);
         
       if (memories && memories.length > 0) {
         systemPrompt += "\n\nLONG-TERM MEMORY ABOUT THE STUDENT:";
         memories.forEach((m: any) => {
-          systemPrompt += `\n- [${m.category}] ${m.memory_text}`;
+          systemPrompt += `\n- Insight: ${m.content}`;
+          if (m.context) {
+            systemPrompt += `\n  Context: ${m.context}`;
+          }
         });
       }
 

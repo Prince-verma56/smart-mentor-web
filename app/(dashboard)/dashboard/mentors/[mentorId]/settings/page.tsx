@@ -4,7 +4,7 @@ import { MentorWorkspace } from "@/components/mentors/MentorWorkspace";
 import { getMentorById } from "@/actions/mentorActions";
 import { MOCK_ROADMAPS } from "@/lib/mock-data/mentor-roadmap";
 import { MOCK_PROGRESS } from "@/lib/mock-data/mentor-progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Settings, Brain, MessageSquare, Mic, FolderOpen, AlertTriangle } from "lucide-react";

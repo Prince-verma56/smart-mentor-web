@@ -568,7 +568,7 @@ export function ConversationProvider({
         
         // Transparently update URL after conversation is established
         const p = new URLSearchParams(searchParams.toString());
-        p.set("session", currentSessionId);
+        p.set("session", currentSessionId as string);
         window.history.replaceState(null, '', `${pathname}?${p.toString()}`);
       }
 

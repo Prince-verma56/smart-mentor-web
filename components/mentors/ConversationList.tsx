@@ -361,7 +361,7 @@ function SessionRow({ session }: { session: ChatSession }) {
               Cancel
             </AlertDialogCancel>
             <AppButton
-              variant="destructive"
+              variant="danger"
               size="lg"
               disabled={isPending}
               isLoading={isPending}

@@ -8,6 +8,7 @@ import {
 import { useVoicePreferences } from "./useVoicePreferences";
 import { Switch } from "@/components/ui/switch";
 import Scrubber from "@/components/ui/smoothui/scrubber/index";
+import SmoothTab from "@/components/kokonutui/smooth-tab";
 import { cn } from "@/lib/utils";
 
 function PremiumScrollArea({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -267,17 +268,20 @@ export function VoiceSettingsCenter({ mentorId, isOpen, onClose }: VoiceSettings
                         <div className="h-px w-full bg-white/5 my-2" />
                         <div className="space-y-2">
                           <span className="text-sm font-medium flex items-center gap-2"><Speech className="w-4 h-4 text-muted-foreground" /> Voice Speed</span>
-                          <div className="flex bg-black/40 p-1 rounded-xl">
-                            {[0.8, 1, 1.25, 1.5].map((speed) => (
-                              <button
-                                key={speed}
-                                onClick={() => updateGlobal("voiceSpeed", speed)}
-                                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${global.voiceSpeed === speed ? "bg-white/15 shadow-sm text-white" : "text-muted-foreground hover:text-white"}`}
-                              >
-                                {speed}x
-                              </button>
-                            ))}
-                          </div>
+                          <SmoothTab
+                            hideContent
+                            value={String(global.voiceSpeed)}
+                            onChange={(val) => updateGlobal("voiceSpeed", parseFloat(val))}
+                            activeColor="bg-white/15 shadow-sm"
+                            selectedTextColor="text-white"
+                            className="bg-black/40 p-1 rounded-xl h-9"
+                            items={[
+                              { id: "0.8", title: "0.8x", color: "" },
+                              { id: "1", title: "1x", color: "" },
+                              { id: "1.1", title: "1.1x", color: "" },
+                              { id: "1.2", title: "1.2x", color: "" },
+                            ]}
+                          />
                         </div>
                       </div>
                     </section>
@@ -327,47 +331,53 @@ export function VoiceSettingsCenter({ mentorId, isOpen, onClose }: VoiceSettings
                       <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-5">
                         <div className="space-y-3">
                           <span className="text-sm font-medium flex items-center gap-2"><Zap className="w-4 h-4 text-muted-foreground" /> Response Length</span>
-                          <div className="flex bg-black/40 p-1 rounded-xl">
-                            {["Short", "Balanced", "Detailed"].map((len) => (
-                              <button
-                                key={len}
-                                onClick={() => updateMentor("responseLength", len as any)}
-                                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${mentor.responseLength === len ? "bg-white/15 shadow-sm text-white" : "text-muted-foreground hover:text-white"}`}
-                              >
-                                {len}
-                              </button>
-                            ))}
-                          </div>
+                          <SmoothTab
+                            hideContent
+                            value={mentor.responseLength}
+                            onChange={(val) => updateMentor("responseLength", val as any)}
+                            activeColor="bg-white/15 shadow-sm"
+                            selectedTextColor="text-white"
+                            className="bg-black/40 p-1 rounded-xl h-9"
+                            items={[
+                              { id: "Short", title: "Short", color: "" },
+                              { id: "Balanced", title: "Balanced", color: "" },
+                              { id: "Detailed", title: "Detailed", color: "" },
+                            ]}
+                          />
                         </div>
                         <div className="h-px w-full bg-white/5" />
                         <div className="space-y-3">
                           <span className="text-sm font-medium flex items-center gap-2"><BrainCircuit className="w-4 h-4 text-muted-foreground" /> Teaching Style</span>
-                          <div className="grid grid-cols-2 gap-1.5 bg-black/40 p-1.5 rounded-xl">
-                            {["Explain Simply", "Interview Mode", "Senior Developer", "Pair Programmer"].map((style) => (
-                              <button
-                                key={style}
-                                onClick={() => updateMentor("teachingStyle", style as any)}
-                                className={`py-1.5 px-2 text-[11px] font-medium rounded-lg transition-all whitespace-nowrap text-left ${mentor.teachingStyle === style ? "bg-white/15 shadow-sm text-white" : "text-muted-foreground hover:text-white"}`}
-                              >
-                                {style}
-                              </button>
-                            ))}
-                          </div>
+                          <SmoothTab
+                            hideContent
+                            value={mentor.teachingStyle}
+                            onChange={(val) => updateMentor("teachingStyle", val as any)}
+                            activeColor="bg-white/15 shadow-sm"
+                            selectedTextColor="text-white"
+                            className="bg-black/40 p-1.5 rounded-xl h-10"
+                            items={[
+                              { id: "Explain Simply", title: "Simple", color: "" },
+                              { id: "Interview Mode", title: "Interview", color: "" },
+                              { id: "Senior Developer", title: "Senior Dev", color: "" },
+                            ]}
+                          />
                         </div>
                         <div className="h-px w-full bg-white/5" />
                         <div className="space-y-3">
                           <span className="text-sm font-medium flex items-center gap-2"><Sliders className="w-4 h-4 text-muted-foreground" /> Correction Level</span>
-                          <div className="flex bg-black/40 p-1 rounded-xl">
-                            {["Gentle", "Balanced", "Strict"].map((level) => (
-                              <button
-                                key={level}
-                                onClick={() => updateMentor("correctionLevel", level as any)}
-                                className={`flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all ${mentor.correctionLevel === level ? "bg-white/15 shadow-sm text-white" : "text-muted-foreground hover:text-white"}`}
-                              >
-                                {level}
-                              </button>
-                            ))}
-                          </div>
+                          <SmoothTab
+                            hideContent
+                            value={mentor.correctionLevel}
+                            onChange={(val) => updateMentor("correctionLevel", val as any)}
+                            activeColor="bg-white/15 shadow-sm"
+                            selectedTextColor="text-white"
+                            className="bg-black/40 p-1 rounded-xl h-9"
+                            items={[
+                              { id: "Gentle", title: "Gentle", color: "" },
+                              { id: "Balanced", title: "Balanced", color: "" },
+                              { id: "Strict", title: "Strict", color: "" },
+                            ]}
+                          />
                         </div>
                       </div>
                     </section>
@@ -378,32 +388,37 @@ export function VoiceSettingsCenter({ mentorId, isOpen, onClose }: VoiceSettings
                       <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-5">
                         <div className="space-y-3">
                           <span className="text-sm font-medium flex items-center gap-2"><Globe className="w-4 h-4 text-muted-foreground" /> Preferred Language</span>
-                          <div className="flex bg-black/40 p-1 rounded-xl">
-                            {["English", "Hindi", "Hinglish"].map((lang) => (
-                              <button
-                                key={lang}
-                                onClick={() => updateGlobal("preferredLanguage", lang as any)}
-                                className={`flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all ${global.preferredLanguage === lang ? "bg-white/15 shadow-sm text-white" : "text-muted-foreground hover:text-white"}`}
-                              >
-                                {lang}
-                              </button>
-                            ))}
-                          </div>
+                          <SmoothTab
+                            hideContent
+                            value={global.preferredLanguage}
+                            onChange={(val) => updateGlobal("preferredLanguage", val as any)}
+                            activeColor="bg-white/15 shadow-sm"
+                            selectedTextColor="text-white"
+                            className="bg-black/40 p-1 rounded-xl h-9"
+                            items={[
+                              { id: "English", title: "English", color: "" },
+                              { id: "Hindi", title: "Hindi", color: "" },
+                              { id: "Hinglish", title: "Hinglish", color: "" },
+                            ]}
+                          />
                         </div>
                         <div className="h-px w-full bg-white/5" />
                         <div className="space-y-3">
                           <span className="text-sm font-medium flex items-center gap-2"><Code className="w-4 h-4 text-muted-foreground" /> Code Style</span>
-                          <div className="flex flex-wrap gap-1.5 bg-black/40 p-1.5 rounded-xl">
-                            {["Beginner", "Production", "FAANG", "Startup"].map((style) => (
-                              <button
-                                key={style}
-                                onClick={() => updateMentor("codeStyle", style as any)}
-                                className={`flex-1 min-w-[70px] py-1.5 px-1 text-[11px] font-medium rounded-lg transition-all ${mentor.codeStyle === style ? "bg-white/15 shadow-sm text-white" : "text-muted-foreground hover:text-white"}`}
-                              >
-                                {style}
-                              </button>
-                            ))}
-                          </div>
+                          <SmoothTab
+                            hideContent
+                            value={mentor.codeStyle}
+                            onChange={(val) => updateMentor("codeStyle", val as any)}
+                            activeColor="bg-white/15 shadow-sm"
+                            selectedTextColor="text-white"
+                            className="bg-black/40 p-1.5 rounded-xl h-auto flex-wrap sm:flex-nowrap"
+                            items={[
+                              { id: "Beginner", title: "Beginner", color: "" },
+                              { id: "Production", title: "Production", color: "" },
+                              { id: "FAANG", title: "FAANG", color: "" },
+                              { id: "Startup", title: "Startup", color: "" },
+                            ]}
+                          />
                         </div>
                       </div>
                     </section>

@@ -8,7 +8,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SmoothTab from "@/components/kokonutui/smooth-tab";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { 
@@ -117,54 +117,74 @@ function RightPanelContent({
   const liveStats = useRealtimeStats(mentorId, liveRoadmap, stats);
 
   return (
-    <Tabs defaultValue="roadmap" className="flex flex-col h-full overflow-hidden">
-      <div className="px-3 pt-3 pb-2 border-b shrink-0 flex items-center gap-2 bg-card/40 backdrop-blur-md">
-        {onCollapse && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onCollapse}
-            className="h-8 w-8 shrink-0 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-            title="Collapse Sidebar"
-          >
-            <PanelRight className="h-4 w-4" />
-          </Button>
-        )}
-        <TabsList className="flex-1 grid grid-cols-3 h-8 bg-muted/30 p-0.5 rounded-lg border border-border/20">
-          <TabsTrigger value="progress" className="text-xs rounded-md transition-all duration-200 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary/20 text-muted-foreground hover:text-foreground hover:bg-muted/50 font-semibold cursor-pointer">
-            Stats
-          </TabsTrigger>
-          <TabsTrigger value="roadmap" className="text-xs rounded-md transition-all duration-200 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary/20 text-muted-foreground hover:text-foreground hover:bg-muted/50 font-semibold cursor-pointer">
-            Roadmap
-          </TabsTrigger>
-          <TabsTrigger value="resources" className="text-xs rounded-md transition-all duration-200 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary/20 text-muted-foreground hover:text-foreground hover:bg-muted/50 font-semibold cursor-pointer">
-            Files
-          </TabsTrigger>
-        </TabsList>
-      </div>
-      <ScrollArea className="flex-1 min-h-0" data-lenis-prevent="true">
-        <div className="p-3">
-          <TabsContent value="progress" className="mt-0">
-            {/* Phase X Visual Analytics Engine */}
-            <VisualAnalytics stats={liveStats} />
-          </TabsContent>
-          <TabsContent value="roadmap" className="mt-0">
-            {roadmapPromise ? (
-              <Suspense fallback={<RoadmapPlaceholder />}>
-                <RoadmapWrapper promise={roadmapPromise} />
-              </Suspense>
-            ) : liveRoadmap ? (
-              <RoadmapSidebar roadmap={liveRoadmap} />
-            ) : (
-              <RoadmapPlaceholder />
-            )}
-          </TabsContent>
-          <TabsContent value="resources" className="mt-0">
-            <ResourcePanel mentorId={mentorId} />
-          </TabsContent>
-        </div>
-      </ScrollArea>
-    </Tabs>
+    <div className="flex flex-col h-full overflow-hidden">
+      <SmoothTab
+        defaultTabId="roadmap"
+        wrapperClassName="h-full gap-0 overflow-hidden"
+        className="mx-3 mt-3 mb-2 shrink-0 flex bg-muted/30 border border-border/20 rounded-xl"
+        activeColor="bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30"
+        selectedTextColor="text-emerald-400"
+        beforeTabs={
+          onCollapse ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onCollapse}
+              className="h-8 w-8 shrink-0 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              title="Collapse Sidebar"
+            >
+              <PanelRight className="h-4 w-4" />
+            </Button>
+          ) : undefined
+        }
+        items={[
+          {
+            id: "progress",
+            title: "Stats",
+            color: "bg-primary/10",
+            cardContent: (
+              <ScrollArea className="h-full min-h-0" data-lenis-prevent="true">
+                <div className="p-3">
+                  <VisualAnalytics stats={liveStats} />
+                </div>
+              </ScrollArea>
+            )
+          },
+          {
+            id: "roadmap",
+            title: "Roadmap",
+            color: "bg-primary/10",
+            cardContent: (
+              <ScrollArea className="h-full min-h-0" data-lenis-prevent="true">
+                <div className="p-3">
+                  {roadmapPromise ? (
+                    <Suspense fallback={<RoadmapPlaceholder />}>
+                      <RoadmapWrapper promise={roadmapPromise} />
+                    </Suspense>
+                  ) : liveRoadmap ? (
+                    <RoadmapSidebar roadmap={liveRoadmap} />
+                  ) : (
+                    <RoadmapPlaceholder />
+                  )}
+                </div>
+              </ScrollArea>
+            )
+          },
+          {
+            id: "resources",
+            title: "Files",
+            color: "bg-primary/10",
+            cardContent: (
+              <ScrollArea className="h-full min-h-0" data-lenis-prevent="true">
+                <div className="p-3">
+                  <ResourcePanel mentorId={mentorId} />
+                </div>
+              </ScrollArea>
+            )
+          }
+        ]}
+      />
+    </div>
   );
 }
 

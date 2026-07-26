@@ -60,7 +60,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
         delayChildren: 0.1,
       },
     },
-  };
+  } as any;
 
   const itemVariants = {
     hidden: { opacity: 0, y: 15 },
@@ -69,7 +69,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
       y: 0,
       transition: { type: "spring", stiffness: 300, damping: 24 }
     },
-  };
+  } as any;
 
   const avatarVariants = {
     hidden: { opacity: 0, scale: 0.85 },
@@ -78,7 +78,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
       scale: 1,
       transition: { type: "spring", stiffness: 200, damping: 20 }
     },
-  };
+  } as any;
 
   return (
     <div className="absolute inset-0 w-full h-full overflow-y-auto flex flex-col items-center justify-center pt-6 pb-36">
@@ -166,7 +166,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
               <div className="flex flex-col items-center bg-black/30 backdrop-blur-lg border border-white/5 rounded-[24px] px-8 py-5 hover:bg-black/40 hover:border-white/10 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
                 <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">Completion</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-emerald-400">{stats.roadmap_progress || 0}</span>
+                  <span className="text-3xl font-bold text-emerald-400">{(stats as any).roadmap_progress || 0}</span>
                   <span className="text-sm font-medium text-emerald-400/50">%</span>
                 </div>
               </div>
@@ -174,7 +174,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
               <div className="flex flex-col items-center bg-black/30 backdrop-blur-lg border border-white/5 rounded-[24px] px-8 py-5 hover:bg-black/40 hover:border-white/10 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
                 <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">Current Streak</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-bold text-white/90">{stats.current_streak || 0}</span>
+                  <span className="text-3xl font-bold text-white/90">{(stats as any).current_streak || 0}</span>
                   <span className="text-sm font-medium text-white/40">Days</span>
                 </div>
               </div>

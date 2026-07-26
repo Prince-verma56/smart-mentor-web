@@ -34,13 +34,12 @@ export const MessageBubble = memo(function MessageBubble({
 
   return (
     <motion.div
-      ref={measureRef}
       data-index={index}
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       className={cn(
-        "group flex absolute w-full left-0 px-4 md:px-8 pt-4 pb-12",
+        "group flex w-full pt-4 px-4 md:px-8",
         m.role === "user" ? "justify-end" : "justify-start"
       )}
       style={style}

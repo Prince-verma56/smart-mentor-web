@@ -153,10 +153,10 @@ export function ResourcePanel({ mentorId }: ResourcePanelProps) {
             ) : (
               <div className="space-y-2">
                 {resources.map((r) => (
-                  <div key={r.id} className="flex items-center gap-2 rounded-md p-2 hover:bg-muted transition-colors cursor-pointer" onClick={() => window.open(r.previewUrl, "_blank")}>
+                  <div key={r.id} className="flex items-center gap-2 rounded-md p-2 hover:bg-muted transition-colors cursor-pointer" onClick={() => window.open((r as any).previewUrl, "_blank")}>
                     {TYPE_ICON[r.type] || <FileText className="h-4 w-4 text-gray-500" />}
-                    <span className="text-sm truncate flex-1">{r.fileName || r.title}</span>
-                    <Badge variant="outline" className="text-[10px] uppercase">{r.status}</Badge>
+                    <span className="text-sm truncate flex-1">{(r as any).fileName || r.title}</span>
+                    <Badge variant="outline" className="text-[10px] uppercase">{(r as any).status}</Badge>
                   </div>
                 ))}
               </div>

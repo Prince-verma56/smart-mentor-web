@@ -24,6 +24,7 @@ interface SlideTextButtonProps
   icon?: React.ReactNode;
   as?: "link" | "button";
   onClick?: () => void;
+  disabled?: boolean;
 }
 
 export default function SlideTextButton({

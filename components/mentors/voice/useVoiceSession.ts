@@ -386,7 +386,7 @@ CRITICAL INITIALIZATION INSTRUCTIONS:
         greeting = "Hi! Main aapka AI mentor hoon. Jab aap ready ho, hum start kar sakte hain.";
       }
       
-      await vapi.start({
+      await vapi.start(({
         firstMessage: greeting,
         silenceTimeoutSeconds: 300,
         maxDurationSeconds: 1800,
@@ -395,11 +395,11 @@ CRITICAL INITIALIZATION INSTRUCTIONS:
           provider: "11labs",
           voiceId: mentor.voiceId || "21m00Tcm4TlvDq8ikWAM",
           model: "eleven_turbo_v2_5",
-          speed: global.voiceSpeed
+          speed: Math.min(global.voiceSpeed, 1.2)
         },
         model: {
           provider: "openai",
-          model: mentor.voiceModel || "gpt-4-turbo-preview",
+          model: (mentor.voiceModel || "gpt-4-turbo-preview") as any,
           messages: [{ role: "system", content: prompt }],
           tools: [
             {
@@ -431,7 +431,7 @@ CRITICAL INITIALIZATION INSTRUCTIONS:
             }
           ]
         }
-      });
+      }) as any);
     } catch (err: any) {
       console.error("Vapi start crash:", err);
       setIsVoiceLoading(false);
