@@ -310,9 +310,9 @@ export default function SmoothTab({
 
       {/* Card Content Area */}
       {!hideContent && (
-        <div className="relative flex-1 w-full">
-        <div className="relative w-full rounded-lg">
-          <div className="relative w-full overflow-hidden">
+        <div className="relative flex-1 w-full h-full min-h-0 overflow-hidden">
+        <div className="relative w-full h-full rounded-lg min-h-0">
+          <div className="relative w-full h-full overflow-hidden min-h-0">
             <AnimatePresence
               custom={direction}
               initial={false}
@@ -320,7 +320,7 @@ export default function SmoothTab({
             >
               <motion.div
                 animate="center"
-                className="w-full will-change-transform"
+                className="w-full h-full will-change-transform flex flex-col min-h-0"
                 custom={direction}
                 exit="exit"
                 initial="enter"

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { MentorStats } from "@/types/mentor";
 import { motion } from "framer-motion";
+import { SingleGlassIcon } from "@/components/GlassIcons";
 
 interface VisualAnalyticsProps {
   stats: MentorStats;
@@ -69,8 +70,8 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }} className="grid grid-cols-2 gap-3">
         <div className="group flex flex-col rounded-xl bg-card border border-border/60 p-3 hover:border-blue-500/30 hover:shadow-sm transition-all cursor-default">
           <div className="flex items-center justify-between mb-2">
-             <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
-               <Target className="h-4 w-4" />
+             <div className="text-[6px] group-hover:scale-110 transition-transform">
+               <SingleGlassIcon item={{ icon: <Target className="h-full w-full" />, color: "blue", label: "" }} />
              </div>
              <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider">Top 5%</span>
           </div>
@@ -83,8 +84,8 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
         
         <div className="group flex flex-col rounded-xl bg-card border border-border/60 p-3 hover:border-purple-500/30 hover:shadow-sm transition-all cursor-default">
           <div className="flex items-center justify-between mb-2">
-             <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform">
-               <MessagesSquare className="h-4 w-4" />
+             <div className="text-[6px] group-hover:scale-110 transition-transform">
+               <SingleGlassIcon item={{ icon: <MessagesSquare className="h-full w-full" />, color: "purple", label: "" }} />
              </div>
           </div>
           <p className="text-xs text-muted-foreground font-medium">Questions Asked</p>
@@ -93,8 +94,8 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
         
         <div className="group flex flex-col rounded-xl bg-card border border-border/60 p-3 hover:border-green-500/30 hover:shadow-sm transition-all cursor-default">
           <div className="flex items-center justify-between mb-2">
-             <div className="p-1.5 rounded-md bg-green-500/10 text-green-500 group-hover:scale-110 transition-transform">
-               <Mic className="h-4 w-4" />
+             <div className="text-[6px] group-hover:scale-110 transition-transform">
+               <SingleGlassIcon item={{ icon: <Mic className="h-full w-full" />, color: "green", label: "" }} />
              </div>
           </div>
           <p className="text-xs text-muted-foreground font-medium">Voice Sessions</p>
@@ -103,8 +104,8 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
         
         <div className="group flex flex-col rounded-xl bg-card border border-border/60 p-3 hover:border-orange-500/30 hover:shadow-sm transition-all cursor-default">
           <div className="flex items-center justify-between mb-2">
-             <div className="p-1.5 rounded-md bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform">
-               <Flame className="h-4 w-4" />
+             <div className="text-[6px] group-hover:scale-110 transition-transform">
+               <SingleGlassIcon item={{ icon: <Flame className="h-full w-full" />, color: "orange", label: "" }} />
              </div>
              {(stats.learningStreak || 0) > 2 && (
                <span className="text-[10px] font-bold text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider animate-pulse">Hot</span>
@@ -177,10 +178,10 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
           <CardContent className="px-4 pb-4">
             <div className="grid grid-cols-4 gap-2">
               {[
-                { name: "Fast Learner", icon: Brain, color: "text-purple-500", shadow: "shadow-purple-500/20", bg: "bg-purple-500/10", border: "border-purple-500/20", unlocked: true },
-                { name: "3-Day Streak", icon: Flame, color: "text-orange-500", shadow: "shadow-orange-500/20", bg: "bg-orange-500/10", border: "border-orange-500/20", unlocked: true },
-                { name: "Voice Fluent", icon: Mic, color: "text-green-500", shadow: "shadow-green-500/20", bg: "bg-green-500/10", border: "border-green-500/20", unlocked: true },
-                { name: "Code Master", icon: Code2, color: "text-blue-500", shadow: "shadow-blue-500/20", bg: "bg-blue-500/10", border: "border-blue-500/20", unlocked: false },
+                { name: "Fast Learner", icon: Brain, color: "purple", shadow: "shadow-purple-500/20", bg: "bg-purple-500/10", border: "border-purple-500/20", unlocked: true },
+                { name: "3-Day Streak", icon: Flame, color: "orange", shadow: "shadow-orange-500/20", bg: "bg-orange-500/10", border: "border-orange-500/20", unlocked: true },
+                { name: "Voice Fluent", icon: Mic, color: "green", shadow: "shadow-green-500/20", bg: "bg-green-500/10", border: "border-green-500/20", unlocked: true },
+                { name: "Code Master", icon: Code2, color: "blue", shadow: "shadow-blue-500/20", bg: "bg-blue-500/10", border: "border-blue-500/20", unlocked: false },
               ].map((badge, i) => (
                 <div 
                   key={i} 
@@ -189,9 +190,11 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
                   }`}
                   title={badge.name}
                 >
-                  <badge.icon className={`h-6 w-6 transition-transform duration-300 group-hover:scale-110 ${badge.unlocked ? badge.color : 'text-muted-foreground'}`} />
+                  <div className={`text-[9px] transition-transform duration-300 group-hover:scale-110 ${!badge.unlocked && 'opacity-50'}`}>
+                    <SingleGlassIcon item={{ icon: <badge.icon className="w-full h-full" />, color: badge.color, label: "" }} />
+                  </div>
                   {badge.unlocked && (
-                    <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
+                    <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl pointer-events-none" />
                   )}
                 </div>
               ))}
