@@ -13,12 +13,12 @@ export interface GlassIconsProps {
 }
 
 const gradientMapping: Record<string, string> = {
-  blue: 'linear-gradient(hsl(223, 90%, 50%), hsl(208, 90%, 50%))',
-  purple: 'linear-gradient(hsl(283, 90%, 50%), hsl(268, 90%, 50%))',
-  red: 'linear-gradient(hsl(3, 90%, 50%), hsl(348, 90%, 50%))',
-  indigo: 'linear-gradient(hsl(253, 90%, 50%), hsl(238, 90%, 50%))',
-  orange: 'linear-gradient(hsl(43, 90%, 50%), hsl(28, 90%, 50%))',
-  green: 'linear-gradient(hsl(123, 90%, 40%), hsl(108, 90%, 40%))'
+  blue: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',   // blue-500 to blue-700
+  purple: 'linear-gradient(135deg, #a855f7, #7e22ce)', // purple-500 to purple-700
+  red: 'linear-gradient(135deg, #ef4444, #b91c1c)',    // red-500 to red-700
+  indigo: 'linear-gradient(135deg, #6366f1, #4338ca)', // indigo-500 to indigo-700
+  orange: 'linear-gradient(135deg, #f59e0b, #b45309)', // amber-500 to amber-700
+  green: 'linear-gradient(135deg, #10b981, #047857)'   // emerald-500 to emerald-700
 };
 
 export const SingleGlassIcon: React.FC<{ item: GlassIconsItem, className?: string }> = ({ item, className }) => {
@@ -45,9 +45,9 @@ export const SingleGlassIcon: React.FC<{ item: GlassIconsItem, className?: strin
       ></span>
 
       <span
-        className="absolute top-0 left-0 w-full h-full rounded-[1.25em] bg-[hsla(0,0%,100%,0.15)] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.83,0,0.17,1)] origin-[80%_50%] flex backdrop-blur-[0.75em] [-webkit-backdrop-filter:blur(0.75em)] [-moz-backdrop-filter:blur(0.75em)] [will-change:transform] transform group-hover:[transform:translate3d(0,0,2em)]"
+        className="absolute top-0 left-0 w-full h-full rounded-[1.25em] bg-[hsla(0,0%,100%,0.08)] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.83,0,0.17,1)] origin-[80%_50%] flex backdrop-blur-[0.75em] [-webkit-backdrop-filter:blur(0.75em)] [-moz-backdrop-filter:blur(0.75em)] [will-change:transform] transform group-hover:[transform:translate3d(0,0,2em)]"
         style={{
-          boxShadow: '0 0 0 0.1em hsla(0, 0%, 100%, 0.3) inset'
+          boxShadow: '0 0 0 0.05em hsla(0, 0%, 100%, 0.2) inset'
         }}
       >
         <span className="m-auto w-[1.5em] h-[1.5em] flex items-center justify-center text-white drop-shadow-md" aria-hidden="true">

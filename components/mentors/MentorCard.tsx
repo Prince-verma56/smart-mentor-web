@@ -98,7 +98,7 @@ export function MentorCard({ mentor }: MentorCardProps) {
       <ContextMenuTrigger render={
         <motion.div
           className={cn(
-            "group relative flex w-full h-full flex-col overflow-hidden rounded-[32px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] p-6 cursor-pointer",
+            "group relative flex w-full h-full flex-col overflow-hidden rounded-[32px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] p-6 cursor-default",
             "transition-all duration-500 ease-out hover:bg-white/[0.03] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_10px_10px_40px_rgba(0,0,0,0.4),_20px_20px_80px_rgba(16,185,129,0.08)] hover:border-white/[0.08]"
           )}
           initial={
@@ -236,7 +236,7 @@ export function MentorCard({ mentor }: MentorCardProps) {
             <Link href={`/dashboard/mentors/${mentor.id}`} className="relative z-10">
               <CommandButton
                 size="sm"
-                className="gap-2 !rounded-full !bg-emerald-500/15 !bg-none text-emerald-200 hover:text-white border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:bg-emerald-500/25 font-medium shadow-[0_0_20px_-5px_rgba(16,185,129,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-5 h-9"
+                className="gap-2 !rounded-full !bg-emerald-500/15 !bg-none text-emerald-200 hover:text-white border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:bg-emerald-500/25 font-medium shadow-[0_0_20px_-5px_rgba(16,185,129,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-5 h-9 cursor-pointer"
                 rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
                 sweepClassName="bg-gradient-to-r from-emerald-400/0 via-emerald-400/30 to-emerald-400/0"
               >

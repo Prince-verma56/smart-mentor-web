@@ -10,10 +10,11 @@ import { ContinueLearning } from "@/components/dashboard/ContinueLearning";
 import { AIRecommendation } from "@/components/dashboard/AIRecommendation";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { LearningJourney } from "@/components/dashboard/LearningJourney";
-import { Sparkles, BrainCircuit } from "lucide-react";
+import { Sparkles, BrainCircuit, LayoutDashboard, Users, Play, Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import CommandButton from "@/components/kokonutui/command-button";
+import { SingleGlassIcon } from "@/components/GlassIcons";
 
 export const metadata: Metadata = {
   title: "AI Workspace | Dashboard",
@@ -67,8 +68,8 @@ export default async function DashboardPage() {
               {getGreeting()}, {user?.firstName ?? "Explorer"}
               
               {/* Premium Glass Icon for Header */}
-              <div className="relative w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-xl">
-                <Sparkles className="w-6 h-6 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" strokeWidth={2} />
+              <div className="text-[12px] -mt-2">
+                <SingleGlassIcon item={{ icon: <LayoutDashboard className="w-full h-full" />, color: "green", label: "" }} />
               </div>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
@@ -80,8 +81,8 @@ export default async function DashboardPage() {
               <Link href={`/dashboard/mentors/${recentMentor?.id}`}>
                 <CommandButton
                   size="lg"
-                  className="h-12 px-6 gap-2 !rounded-full !bg-white/[0.05] !bg-none text-zinc-300 hover:text-white border-white/10 hover:border-white/20 transition-all hover:bg-white/[0.08] font-medium shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-md"
-                  rightIcon={<BrainCircuit className="h-5 w-5 fill-current" />}
+                  className="h-12 px-6 gap-2 !rounded-full !bg-white/[0.05] !bg-none text-zinc-300 hover:text-white border-white/10 hover:border-white/20 transition-all hover:bg-white/[0.08] font-medium shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-md cursor-pointer"
+                  rightIcon={<Play className="h-4 w-4 fill-current" />}
                   sweepClassName="bg-gradient-to-r from-white/0 via-white/20 to-white/0"
                 >
                   Resume Session
@@ -91,9 +92,9 @@ export default async function DashboardPage() {
             <Link href="/dashboard/mentors/create">
               <CommandButton
                 size="lg"
-                className="h-12 px-6 gap-2 !rounded-full !bg-emerald-500/15 !bg-none text-emerald-200 hover:text-white border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:bg-emerald-500/25 font-medium shadow-[0_0_20px_-5px_rgba(16,185,129,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md"
-                rightIcon={<Sparkles className="h-5 w-5 fill-current" />}
-                sweepClassName="bg-gradient-to-r from-emerald-400/0 via-emerald-400/30 to-emerald-400/0"
+                  className="h-12 px-6 gap-2 !rounded-full !bg-emerald-500/15 !bg-none text-emerald-200 hover:text-white border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:bg-emerald-500/25 font-medium shadow-[0_0_20px_-5px_rgba(16,185,129,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md cursor-pointer"
+                  rightIcon={<Plus className="h-5 w-5 fill-current stroke-[3]" />}
+                  sweepClassName="bg-gradient-to-r from-emerald-400/0 via-emerald-400/30 to-emerald-400/0"
               >
                 Create Mentor
               </CommandButton>
@@ -107,8 +108,8 @@ export default async function DashboardPage() {
             <section className="space-y-6">
               <div className="flex items-center gap-4 group cursor-default">
                 {/* Premium Glass Icon for Mentors */}
-                <div className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-xl">
-                  <BrainCircuit className="w-5 h-5 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" strokeWidth={2} />
+                <div className="text-[10px] mr-1">
+                  <SingleGlassIcon item={{ icon: <Users className="w-full h-full" />, color: "blue", label: "" }} />
                 </div>
                 <h2 className="text-2xl font-bold tracking-tight text-white/90">Your Mentors</h2>
               </div>

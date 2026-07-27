@@ -103,7 +103,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
         
         {/* ── Main Workspace Content ── */}
         <motion.div 
-          className="w-full max-w-3xl flex flex-col items-center relative z-10 my-auto shrink-0 select-none pt-12"
+          className="w-full max-w-3xl flex flex-col items-center relative z-10 shrink-0 select-none pt-4 pb-8"
           initial="hidden"
           animate="visible"
           variants={containerVariants}
@@ -163,7 +163,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
           {/* ── Independent Glass Metrics Panel ── */}
           <motion.div variants={itemVariants} className="w-full flex justify-center mb-10">
             <div className="flex items-center gap-4">
-              <div className="flex flex-col items-center bg-black/30 backdrop-blur-lg border border-white/5 rounded-[24px] px-8 py-5 hover:bg-black/40 hover:border-white/10 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+              <div className="flex flex-col items-center bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[24px] px-8 py-5 hover:bg-white/[0.04] hover:border-white/[0.1] transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_24px_-4px_rgba(0,0,0,0.2)]">
                 <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">Completion</span>
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-bold text-emerald-400">{(stats as any).roadmap_progress || 0}</span>
@@ -171,7 +171,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
                 </div>
               </div>
               
-              <div className="flex flex-col items-center bg-black/30 backdrop-blur-lg border border-white/5 rounded-[24px] px-8 py-5 hover:bg-black/40 hover:border-white/10 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+              <div className="flex flex-col items-center bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[24px] px-8 py-5 hover:bg-white/[0.04] hover:border-white/[0.1] transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_24px_-4px_rgba(0,0,0,0.2)]">
                 <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">Current Streak</span>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-bold text-white/90">{(stats as any).current_streak || 0}</span>
@@ -189,8 +189,8 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
                   key={i}
                   onClick={() => onFillInput(prompt.query)}
                   className={cn(
-                    "relative flex items-center p-4 rounded-[24px] border border-white/5 bg-black/30 backdrop-blur-lg hover:bg-black/40 hover:border-emerald-500/30 transition-all duration-300 group text-left overflow-hidden",
-                    "hover:-translate-y-[2px] shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_32px_rgba(16,185,129,0.15)]",
+                    "relative flex items-center p-4 rounded-[24px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl hover:bg-white/[0.04] hover:border-emerald-500/30 transition-all duration-300 group text-left overflow-hidden",
+                    "hover:-translate-y-[2px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_24px_-4px_rgba(0,0,0,0.2)] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_32px_rgba(16,185,129,0.15)]",
                     i === 0 && suggestedPrompts.length % 2 !== 0 ? "sm:col-span-2" : ""
                   )}
                 >

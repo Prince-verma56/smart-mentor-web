@@ -121,9 +121,9 @@ function RightPanelContent({
       <SmoothTab
         defaultTabId="roadmap"
         wrapperClassName="h-full gap-0 overflow-hidden"
-        className="mx-3 mt-3 mb-2 shrink-0 flex bg-muted/30 border border-border/20 rounded-xl"
-        activeColor="bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30"
-        selectedTextColor="text-emerald-400"
+        className="mx-3 mt-3 mb-2 shrink-0 flex bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[20px] p-1.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
+        activeColor="bg-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] ring-1 ring-white/10 rounded-2xl"
+        selectedTextColor="text-emerald-300 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]"
         beforeTabs={
           onCollapse ? (
             <Button

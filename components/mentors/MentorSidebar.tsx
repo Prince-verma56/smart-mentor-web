@@ -85,14 +85,14 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
   ];
 
   return (
-    <div className="flex h-full flex-col bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 overflow-hidden relative border-r">
+    <div className="flex h-full flex-col bg-white/[0.01] backdrop-blur-2xl overflow-hidden relative border-r border-white/[0.05]">
       {/* ── Premium Workspace Header ─────────────────────── */}
       <div className="flex flex-col shrink-0 p-3 pb-2 relative z-10">
         <div 
           onClick={collapsed && !mobile ? onToggleCollapse : undefined}
           className={cn(
-          "flex items-center gap-3 p-2.5 rounded-xl border border-border/50 bg-card/40 backdrop-blur-md shadow-sm transition-all duration-300",
-          collapsed && !mobile ? "justify-center px-1 flex-col py-3 gap-3 cursor-pointer hover:bg-muted/50" : "hover:shadow-md hover:bg-card/60 cursor-default group/header"
+          "flex items-center gap-3 p-2.5 rounded-2xl border border-white/[0.05] bg-white/[0.02] backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transition-all duration-300",
+          collapsed && !mobile ? "justify-center px-1 flex-col py-3 gap-3 cursor-pointer hover:bg-white/[0.04]" : "hover:border-white/[0.1] hover:bg-white/[0.04] hover:shadow-md cursor-default group/header"
         )}>
           {/* Avatar */}
           <div className="relative shrink-0">
@@ -176,9 +176,9 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
                             ? "h-11 w-11 justify-center rounded-xl mx-auto"
                             : "h-[36px] px-3 gap-3 rounded-lg mx-2",
                           isActive
-                            ? "bg-card/80 text-foreground font-medium shadow-[0_2px_10px_-2px_rgba(0,0,0,0.05)] border border-border/50 shadow-primary/10 relative overflow-hidden ring-1 ring-primary/5"
+                            ? "bg-emerald-500/10 text-emerald-400 font-medium shadow-[0_0_15px_-3px_rgba(16,185,129,0.15)] border border-emerald-500/20 relative overflow-hidden ring-1 ring-emerald-500/30"
                             : item.implemented
-                            ? "text-muted-foreground hover:bg-muted/60 hover:text-foreground border border-transparent hover:shadow-sm"
+                            ? "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground border border-transparent hover:shadow-sm"
                             : "text-muted-foreground/30 cursor-not-allowed pointer-events-none border border-transparent"
                         )}
                       >
@@ -271,9 +271,9 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
                 });
               }}
               className={cn(
-                "w-full justify-start",
-                collapsed && !mobile ? "h-11 w-11 justify-center rounded-xl mx-auto p-0" : "h-[40px] px-4 gap-3 rounded-xl mx-1",
-                pathname === `/dashboard/mentors/${mentor.id}/settings` && "border-primary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(16,185,129,0.1)] ring-1 ring-primary/10"
+                "w-full justify-start transition-all duration-300 border border-transparent",
+                collapsed && !mobile ? "h-11 w-11 justify-center rounded-2xl mx-auto p-0" : "h-[40px] px-4 gap-3 rounded-2xl mx-1 hover:bg-white/[0.03] hover:border-white/[0.05]",
+                pathname === `/dashboard/mentors/${mentor.id}/settings` && "bg-white/[0.04] border-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_12px_-2px_rgba(0,0,0,0.15)] ring-1 ring-white/[0.05]"
               )}
             >
               {!isNavigatingSettings && (

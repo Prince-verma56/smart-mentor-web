@@ -207,11 +207,11 @@ function SessionRow({
     <ContextMenu items={menuItems}>
       <div
         className={cn(
-          "group relative flex items-start gap-2.5 rounded-xl mx-2 my-1 transition-all duration-150 cursor-pointer border overflow-hidden",
-          "min-h-[44px] p-2",
+          "group relative flex items-start gap-2.5 rounded-2xl mx-2 my-1 transition-all duration-300 cursor-pointer border overflow-hidden",
+          "min-h-[44px] p-2 backdrop-blur-md",
           isActive
-            ? "bg-card/90 text-foreground border-border/50 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] scale-[1.01]"
-            : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:shadow-sm"
+            ? "bg-white/[0.04] text-foreground border-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_12px_-2px_rgba(0,0,0,0.15)] scale-[1.01]"
+            : "border-transparent text-muted-foreground bg-transparent hover:bg-white/[0.02] hover:border-white/[0.05] hover:text-foreground hover:shadow-sm"
         )}
         onClick={() => !isEditing && onSelect()}
       >
@@ -479,7 +479,7 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
       <div className="px-4 mb-4 mt-2">
         <div className="relative group/search cursor-pointer">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-xl opacity-0 group-hover/search:opacity-100 transition-opacity blur-md" />
-          <div className="relative flex items-center h-10 bg-card/60 border border-border/60 hover:border-primary/40 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 rounded-xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] overflow-hidden transition-all duration-300">
+          <div className="relative flex items-center h-10 bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] hover:border-emerald-500/40 hover:bg-white/[0.04] focus-within:border-emerald-500/50 focus-within:bg-white/[0.05] focus-within:ring-1 focus-within:ring-emerald-500/20 rounded-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden transition-all duration-300">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 group-hover/search:text-primary transition-colors" />
             <input
               value={search}
@@ -488,7 +488,7 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
               className="w-full h-full pl-9 pr-12 text-[13px] bg-transparent text-foreground placeholder:text-muted-foreground/40 outline-none"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-              <span className="flex items-center justify-center h-[22px] px-2 rounded-md bg-muted/80 text-[10px] font-semibold text-muted-foreground/70 border border-border/50 shadow-sm pointer-events-none select-none">
+              <span className="flex items-center justify-center h-[22px] px-2 rounded-md bg-white/[0.05] text-[10px] font-semibold text-white/50 border border-white/[0.05] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] pointer-events-none select-none">
                 ⌘K
               </span>
             </div>
@@ -518,7 +518,7 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
       {/* View Toggle */}
       {!isLoadingSessions && sessions.length > 0 && !search && (
         <div className="px-5 mb-3">
-          <div className="flex items-center border-b border-border/40 relative h-9">
+          <div className="flex items-center border-b border-white/[0.05] relative h-9">
             <button
               onClick={() => setViewArchived(false)}
               className={cn(
@@ -539,7 +539,7 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
             </button>
             <motion.div
               layout
-              className="absolute bottom-0 h-[2px] bg-primary w-1/2 rounded-t-full shadow-[0_-1px_6px_rgba(var(--primary),0.5)]"
+              className="absolute bottom-0 h-[2px] bg-emerald-500 w-1/2 rounded-t-full shadow-[0_-1px_8px_rgba(16,185,129,0.6)]"
               animate={{ x: viewArchived ? "100%" : "0%" }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
             />

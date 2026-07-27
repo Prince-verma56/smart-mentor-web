@@ -128,13 +128,13 @@ export function RoadmapSidebar({ roadmap, disableScroll = false }: RoadmapSideba
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-card flex flex-col",
+        "rounded-[32px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] flex flex-col",
         disableScroll ? "" : "h-full overflow-hidden",
         isPending && "opacity-70 pointer-events-none"
       )}
     >
       {/* ── Fixed Header ──────────────────────────── */}
-      <div className="px-4 pt-4 pb-3 border-b border-border/50 shrink-0 bg-card z-10">
+      <div className="px-4 pt-4 pb-3 border-b border-white/[0.05] shrink-0 bg-transparent z-10">
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-bold leading-snug text-foreground truncate tracking-tight">

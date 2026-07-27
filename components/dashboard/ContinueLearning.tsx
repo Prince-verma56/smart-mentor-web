@@ -4,7 +4,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import CommandButton from "@/components/kokonutui/command-button";
-import { Play, Sparkles, BookOpen, Clock, Target } from "lucide-react";
+import { Play, Sparkles, BookOpen, Clock, Target, Rocket } from "lucide-react";
+import { SingleGlassIcon } from "@/components/GlassIcons";
 import type { MentorWithStats } from "@/types/mentor";
 import { Progress } from "@/components/ui/progress";
 
@@ -18,22 +19,9 @@ export function ContinueLearning({ recentMentor }: ContinueLearningProps) {
   return (
     <div className="w-full">
       <div className="flex items-center gap-4 group cursor-default mb-6">
-        {/* Inline Glass Icon */}
-        <div className="relative bg-transparent outline-none border-none w-[1.5em] h-[1.5em] [perspective:24em] [transform-style:preserve-3d]">
-          <span
-            className="absolute top-0 left-0 w-full h-full rounded-[0.3em] block transition-[opacity,transform] duration-300 origin-[100%_100%] rotate-[15deg] group-hover:[transform:rotate(25deg)_translate3d(-0.1em,-0.1em,0.1em)]"
-            style={{
-              background: 'linear-gradient(to bottom right, #10b981, #047857)',
-              boxShadow: '0.1em -0.1em 0.2em rgba(0,0,0,0.5)'
-            }}
-          ></span>
-          <span
-            className="absolute top-0 left-0 w-full h-full rounded-[0.3em] bg-[hsla(0,0%,100%,0.05)] transition-[opacity,transform] duration-300 origin-[80%_50%] flex backdrop-blur-[0.2em] transform group-hover:[transform:translate3d(0,0,0.5em)] ring-1 ring-white/20"
-          >
-            <span className="m-auto w-[0.8em] h-[0.8em] flex items-center justify-center text-white" aria-hidden="true">
-              <Sparkles className="w-full h-full" />
-            </span>
-          </span>
+        {/* Premium Glass Icon */}
+        <div className="text-[10px] mr-1">
+          <SingleGlassIcon item={{ icon: <Rocket className="w-full h-full" />, color: "green", label: "" }} />
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-white/90">Continue Learning</h2>
       </div>
@@ -94,7 +82,7 @@ export function ContinueLearning({ recentMentor }: ContinueLearningProps) {
             <Link href={`/dashboard/mentors/${recentMentor.id}`} className="w-full md:w-auto shrink-0 mt-4 md:mt-0">
               <CommandButton
                 size="lg"
-                className="w-full md:w-auto !rounded-full !bg-emerald-500/15 !bg-none text-emerald-200 hover:text-white border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:bg-emerald-500/25 font-medium shadow-[0_0_20px_-5px_rgba(16,185,129,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-8 h-14 text-base"
+                className="w-full md:w-auto !rounded-full !bg-emerald-500/15 !bg-none text-emerald-200 hover:text-white border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:bg-emerald-500/25 font-medium shadow-[0_0_20px_-5px_rgba(16,185,129,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-8 h-14 text-base cursor-pointer"
                 rightIcon={<Play className="h-5 w-5 fill-current" />}
                 sweepClassName="bg-gradient-to-r from-emerald-400/0 via-emerald-400/30 to-emerald-400/0"
               >

@@ -146,17 +146,17 @@ export const RoadmapTopicCard = React.memo(function RoadmapTopicCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "rounded-2xl border overflow-hidden transition-all duration-300 w-full group/card",
+        "rounded-[24px] border overflow-hidden transition-all duration-300 w-full group/card backdrop-blur-md",
         // Active (Hero) State
-        isCurrent && "border-primary/50 bg-card shadow-[0_4px_24px_-4px_rgba(var(--primary),0.15)] ring-1 ring-primary/20 scale-[1.01] z-20 my-2",
+        isCurrent && "border-emerald-500/30 bg-emerald-500/5 shadow-[0_0_20px_-5px_rgba(16,185,129,0.2),_inset_0_1px_1px_rgba(255,255,255,0.1)] ring-1 ring-emerald-500/20 scale-[1.02] z-20 my-2",
         // Completed State
-        isCompleted && "border-border/40 bg-card/40 hover:bg-card/80 hover:border-border/80",
+        isCompleted && "border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.08]",
         // Locked State
-        isLocked && "border-border/10 opacity-40 bg-muted/10",
+        isLocked && "border-white/[0.02] opacity-40 bg-transparent",
         // Other States
-        topic.status === "revision-required" && "border-yellow-200/50 bg-yellow-50/10",
-        topic.status === "skipped" && "border-orange-200/50 bg-orange-50/10",
-        !isLocked && !isCurrent && !isCompleted && "border-border/40 hover:border-border/80 hover:bg-muted/30 hover:shadow-sm",
+        topic.status === "revision-required" && "border-yellow-500/20 bg-yellow-500/5",
+        topic.status === "skipped" && "border-orange-500/20 bg-orange-500/5",
+        !isLocked && !isCurrent && !isCompleted && "border-white/[0.05] bg-white/[0.01] hover:border-white/[0.1] hover:bg-white/[0.03] hover:shadow-[0_4px_24px_-4px_rgba(255,255,255,0.05)]",
         !isLocked && !isCurrent && "cursor-pointer"
       )}
       onClick={() => {

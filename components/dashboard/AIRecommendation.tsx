@@ -2,16 +2,19 @@
 
 import { motion } from "framer-motion";
 import CommandButton from "@/components/kokonutui/command-button";
-import { Sparkles, Play, Flame, Clock, Target, Brain, Search, BookOpen, Cog, Lightbulb, CheckCircle2 } from "lucide-react";
+import { Sparkles, Play, Flame, Clock, Target, Brain, Search, BookOpen, Cog, Lightbulb, CheckCircle2, Wand2, FileQuestion } from "lucide-react";
+import { SingleGlassIcon } from "@/components/GlassIcons";
 
 export function AIRecommendation() {
   return (
-    <div className="w-full relative">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-2 bg-emerald-500/10 rounded-xl ring-1 ring-emerald-500/20">
-          <Sparkles className="h-5 w-5 text-emerald-500" />
+    <div className="flex flex-col gap-6 w-full">
+      <div className="flex items-center gap-3 group cursor-default mb-6 mt-4">
+        <div className="text-[10px] mr-1">
+          <SingleGlassIcon item={{ icon: <Wand2 className="w-full h-full" />, color: "green", label: "" }} />
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-white">AI Recommendations</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-white/90 group-hover:text-white transition-colors">
+          AI Recommendations
+        </h2>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 relative z-10">
@@ -32,16 +35,16 @@ export function AIRecommendation() {
 
             {/* Single Premium Icon */}
             <div className="absolute top-8 right-8 pointer-events-none">
-              <div className="relative w-16 h-16 flex items-center justify-center rounded-2xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-xl">
-                <Brain className="w-8 h-8 text-amber-500/80 drop-shadow-[0_0_12px_rgba(245,158,11,0.5)]" strokeWidth={1.5} />
+              <div className="text-[10px] drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                <SingleGlassIcon item={{ icon: <Brain className="w-full h-full" />, color: "orange", label: "" }} />
               </div>
             </div>
 
             <div className="relative z-10 flex-1">
               {/* Pill Badge */}
-              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-amber-500/10 border border-amber-500/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] mb-6">
-                <Flame className="h-3.5 w-3.5 text-amber-500" />
-                <span className="text-[11px] font-bold uppercase tracking-widest text-amber-500">AI Review</span>
+              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-bold tracking-wider uppercase shadow-[0_0_15px_rgba(245,158,11,0.1)] mb-6">
+                <Flame className="h-3.5 w-3.5" />
+                AI Review
               </div>
 
               <div className="max-w-[85%]">
@@ -69,7 +72,7 @@ export function AIRecommendation() {
                 {/* Translucent Amber Glass CTA */}
                 <CommandButton
                   size="lg"
-                  className="w-full sm:w-auto !rounded-full !bg-amber-500/15 !bg-none text-amber-200 hover:text-white border-amber-500/30 hover:border-amber-500/50 transition-all hover:bg-amber-500/25 font-medium shadow-[0_0_20px_-5px_rgba(245,158,11,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-7"
+                  className="w-full sm:w-auto !rounded-full !bg-amber-500/15 !bg-none text-amber-200 hover:text-white border-amber-500/30 hover:border-amber-500/50 transition-all hover:bg-amber-500/25 font-medium shadow-[0_0_20px_-5px_rgba(245,158,11,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-7 cursor-pointer"
                   rightIcon={<Play className="h-4 w-4 fill-current" />}
                   sweepClassName="bg-gradient-to-r from-amber-400/0 via-amber-400/30 to-amber-400/0"
                 >
@@ -94,16 +97,16 @@ export function AIRecommendation() {
 
             {/* Single Premium Icon */}
             <div className="absolute top-8 right-8 pointer-events-none">
-              <div className="relative w-16 h-16 flex items-center justify-center rounded-2xl bg-gradient-to-br from-white/[0.03] to-transparent border border-white/[0.05] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] backdrop-blur-xl">
-                <BookOpen className="w-8 h-8 text-blue-500/80 drop-shadow-[0_0_12px_rgba(59,130,246,0.5)]" strokeWidth={1.5} />
+              <div className="text-[10px] drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                <SingleGlassIcon item={{ icon: <BookOpen className="w-full h-full" />, color: "blue", label: "" }} />
               </div>
             </div>
 
             <div className="relative z-10 flex-1">
               {/* Pill Badge */}
-              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-blue-500/10 border border-blue-500/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] mb-6">
-                <Lightbulb className="h-3.5 w-3.5 text-blue-500" />
-                <span className="text-[11px] font-bold uppercase tracking-widest text-blue-500">Knowledge Base</span>
+              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold tracking-wider uppercase shadow-[0_0_15px_rgba(59,130,246,0.1)] mb-6">
+                <Lightbulb className="h-3.5 w-3.5" />
+                Knowledge Base
               </div>
 
               <div className="max-w-[85%]">
@@ -131,8 +134,8 @@ export function AIRecommendation() {
                 {/* Translucent Blue Glass CTA */}
                 <CommandButton
                   size="lg"
-                  className="w-full sm:w-auto !rounded-full !bg-blue-500/15 !bg-none text-blue-200 hover:text-white border-blue-500/30 hover:border-blue-500/50 transition-all hover:bg-blue-500/25 font-medium shadow-[0_0_20px_-5px_rgba(59,130,246,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-7"
-                  rightIcon={<Sparkles className="h-4 w-4" />}
+                  className="w-full sm:w-auto !rounded-full !bg-blue-500/15 !bg-none text-blue-200 hover:text-white border-blue-500/30 hover:border-blue-500/50 transition-all hover:bg-blue-500/25 font-medium shadow-[0_0_20px_-5px_rgba(59,130,246,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-7 cursor-pointer"
+                  rightIcon={<FileQuestion className="h-4 w-4" />}
                   sweepClassName="bg-gradient-to-r from-blue-400/0 via-blue-400/30 to-blue-400/0"
                 >
                   Generate Quiz
