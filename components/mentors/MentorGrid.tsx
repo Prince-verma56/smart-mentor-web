@@ -53,13 +53,13 @@ export function MentorGrid({ mentors }: MentorGridProps) {
   }
 
   const filteredMentors = mentors.filter((mentor) => {
-    const matchesSearch = 
+    const matchesSearch =
       mentor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       mentor.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
       mentor.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCategory = activeCategory === "All" || getCategory(mentor.subject) === activeCategory;
-    
+
     return matchesSearch && matchesCategory;
   });
 
@@ -69,10 +69,10 @@ export function MentorGrid({ mentors }: MentorGridProps) {
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         {/* Search */}
         <div className="relative w-full md:max-w-sm z-50">
-          <CommandTrigger 
-            onClick={() => setCommandOpen(true)} 
-            placeholder="Search mentors..." 
-            // We omit the cmd+k indicator here to avoid conflict with the global sidebar search
+          <CommandTrigger
+            onClick={() => setCommandOpen(true)}
+            placeholder="Search mentors..."
+          // We omit the cmd+k indicator here to avoid conflict with the global sidebar search
           />
         </div>
 

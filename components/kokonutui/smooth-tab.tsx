@@ -139,6 +139,7 @@ interface SmoothTabProps {
   hideContent?: boolean;
   selectedTextColor?: string;
   wrapperClassName?: string;
+  rounded?: "full" | "lg" | "xl";
 }
 
 const slideVariants = {
@@ -181,11 +182,12 @@ export default function SmoothTab({
   value,
   hideContent,
   selectedTextColor = "text-white",
+  rounded = "full",
 }: SmoothTabProps) {
   const [internalSelected, setInternalSelected] = React.useState<string>(defaultTabId);
   const selected = value !== undefined ? value : internalSelected;
   const [direction, setDirection] = React.useState(0);
-  const [dimensions, setDimensions] = React.useState({ width: 0, left: 0 });
+  const [dimensions, setDimensions] = React.useState({ width: 0, height: 0, left: 0, top: 0 });
 
   // Reference for the selected button
   const buttonRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -198,12 +200,11 @@ export default function SmoothTab({
       const container = containerRef.current;
 
       if (selectedButton && container) {
-        const rect = selectedButton.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
         setDimensions({
-          width: rect.width,
-          left: rect.left - containerRect.left,
+          width: selectedButton.offsetWidth,
+          height: selectedButton.offsetHeight,
+          left: selectedButton.offsetLeft,
+          top: selectedButton.offsetTop,
         });
       }
     };
@@ -245,7 +246,7 @@ export default function SmoothTab({
         aria-label="Smooth tabs"
         className={cn(
           "relative flex items-center justify-start gap-1 p-1",
-          "w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-muted/50 rounded-lg",
+          "w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-muted/50 rounded-xl",
           "transition-all duration-200",
           className
         )}
@@ -257,15 +258,18 @@ export default function SmoothTab({
         <motion.div
           animate={{
             width: dimensions.width,
+            height: dimensions.height,
             x: dimensions.left,
+            y: dimensions.top,
             opacity: 1,
           }}
           className={cn(
-            "absolute z-[1] rounded-full",
+            "absolute z-[1]",
+            rounded === "full" ? "rounded-full" : rounded === "lg" ? "rounded-lg" : "rounded-xl",
             selectedItem?.color || activeColor
           )}
           initial={false}
-          style={{ height: "100%", top: "0px" }}
+          style={{ top: 0, left: 0 }}
           transition={{
             type: "spring",
             stiffness: 400,
@@ -273,19 +277,19 @@ export default function SmoothTab({
           }}
         />
 
-        <div className="relative z-[2] flex w-full flex-wrap sm:flex-nowrap gap-2 min-w-max sm:min-w-0">
-          {items.map((item) => {
+        {items.map((item) => {
             const isSelected = selected === item.id;
             return (
               <motion.button
                 aria-controls={`panel-${item.id}`}
                 aria-selected={isSelected}
                 className={cn(
-                  "relative flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-1.5 h-9",
-                  "font-medium text-sm transition-all duration-300",
+                  "relative flex flex-1 items-center justify-center gap-2 px-5 py-1.5 h-9",
+                  rounded === "full" ? "rounded-full" : rounded === "lg" ? "rounded-lg" : "rounded-xl",
+                  "font-medium text-[13px] transition-all duration-300 whitespace-nowrap shrink-0",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   isSelected
-                    ? selectedTextColor
+                    ? cn(selectedTextColor, "border border-transparent")
                     : "text-zinc-400 hover:text-zinc-300 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] hover:border-white/10"
                 )}
                 id={`tab-${item.id}`}
@@ -305,7 +309,6 @@ export default function SmoothTab({
               </motion.button>
             );
           })}
-        </div>
       </div>
 
       {/* Card Content Area */}

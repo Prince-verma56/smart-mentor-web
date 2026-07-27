@@ -83,6 +83,7 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
           defaultTabId="general"
           className="w-full"
           activeColor="bg-emerald-500/20 ring-1 ring-emerald-500/30"
+          rounded="lg"
           items={[
             {
               id: "general",
@@ -153,7 +154,8 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                             onChange={(val) => updateMentor("responseLength", val as any)}
                             activeColor="bg-emerald-500/15 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30"
                             selectedTextColor="text-emerald-400"
-                            className="bg-muted/50 p-1 rounded-xl h-10"
+                            rounded="lg"
+                            className="bg-muted/50 p-1 rounded-xl"
                             items={[
                               { id: "Short", title: "Short", color: "" },
                               { id: "Balanced", title: "Balanced", color: "" },
@@ -161,9 +163,9 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                             ]}
                           />
                         </div>
-                        
+
                         <div className="h-px w-full bg-border/50" />
-                        
+
                         <div className="space-y-3">
                           <Label className="flex items-center gap-2"><BrainCircuit className="w-4 h-4 text-muted-foreground" /> Teaching Style</Label>
                           <SmoothTab
@@ -172,7 +174,8 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                             onChange={(val) => updateMentor("teachingStyle", val as any)}
                             activeColor="bg-emerald-500/15 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30"
                             selectedTextColor="text-emerald-400"
-                            className="bg-muted/50 p-1.5 rounded-xl h-10"
+                            rounded="lg"
+                            className="bg-muted/50 p-1 rounded-xl"
                             items={[
                               { id: "Explain Simply", title: "Simple", color: "" },
                               { id: "Interview Mode", title: "Interview", color: "" },
@@ -180,9 +183,9 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                             ]}
                           />
                         </div>
-                        
+
                         <div className="h-px w-full bg-border/50" />
-                        
+
                         <div className="space-y-3">
                           <Label className="flex items-center gap-2"><Sliders className="w-4 h-4 text-muted-foreground" /> Correction Level</Label>
                           <SmoothTab
@@ -191,7 +194,8 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                             onChange={(val) => updateMentor("correctionLevel", val as any)}
                             activeColor="bg-emerald-500/15 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30"
                             selectedTextColor="text-emerald-400"
-                            className="bg-muted/50 p-1 rounded-xl h-10"
+                            rounded="lg"
+                            className="bg-muted/50 p-1 rounded-xl"
                             items={[
                               { id: "Gentle", title: "Gentle", color: "" },
                               { id: "Balanced", title: "Balanced", color: "" },
@@ -218,7 +222,8 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                             onChange={(val) => updateGlobal("preferredLanguage", val as any)}
                             activeColor="bg-emerald-500/15 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30"
                             selectedTextColor="text-emerald-400"
-                            className="bg-muted/50 p-1 rounded-xl h-10"
+                            rounded="lg"
+                            className="bg-muted/50 p-1 rounded-xl"
                             items={[
                               { id: "English", title: "English", color: "" },
                               { id: "Hindi", title: "Hindi", color: "" },
@@ -226,9 +231,9 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                             ]}
                           />
                         </div>
-                        
+
                         <div className="h-px w-full bg-border/50" />
-                        
+
                         <div className="space-y-3">
                           <Label className="flex items-center gap-2"><Code className="w-4 h-4 text-muted-foreground" /> Code Style</Label>
                           <SmoothTab
@@ -237,7 +242,8 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                             onChange={(val) => updateMentor("codeStyle", val as any)}
                             activeColor="bg-emerald-500/15 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30"
                             selectedTextColor="text-emerald-400"
-                            className="bg-muted/50 p-1.5 rounded-xl h-auto flex-wrap sm:flex-nowrap"
+                            rounded="lg"
+                            className="bg-muted/50 p-1.5 rounded-xl h-auto"
                             items={[
                               { id: "Beginner", title: "Beginner", color: "" },
                               { id: "Production", title: "Production", color: "" },
@@ -305,11 +311,11 @@ export function MentorSettingsContent({ mentor, stats, roadmap }: MentorSettings
                           <span className="text-sm text-muted-foreground font-mono">{global.aiVolume}%</span>
                         </div>
                         <div className="pt-2">
-                          <Scrubber 
-                            value={global.aiVolume} 
-                            onValueChange={(v) => updateGlobal("aiVolume", v)} 
-                            max={100} 
-                            step={1} 
+                          <Scrubber
+                            value={global.aiVolume}
+                            onValueChange={(v) => updateGlobal("aiVolume", v)}
+                            max={100}
+                            step={1}
                             decimals={0}
                             ticks={0}
                             label=""
