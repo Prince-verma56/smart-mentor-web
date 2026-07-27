@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import CommandButton from "@/components/kokonutui/command-button";
 import { Play, Sparkles, BookOpen, Clock, Target } from "lucide-react";
 import type { MentorWithStats } from "@/types/mentor";
 import { Progress } from "@/components/ui/progress";
@@ -39,15 +39,23 @@ export function ContinueLearning({ recentMentor }: ContinueLearningProps) {
       </div>
       
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="relative group cursor-default"
       >
-        <Card className="w-full border-primary/20 bg-primary/5 backdrop-blur-md overflow-hidden relative group shadow-sm hover:shadow-lg transition-all duration-300">
-          {/* Background Glow */}
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 rounded-full blur-[80px] group-hover:bg-primary/30 transition-all duration-700 pointer-events-none" />
+        {/* Subtle light-bleed edge highlight & gradient shadow */}
+        <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-emerald-500/10 to-transparent blur-2xl opacity-60 pointer-events-none transform translate-y-4 translate-x-4" />
+
+        <div className="relative w-full border-muted/40 overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_10px_10px_40px_rgba(0,0,0,0.5),_20px_20px_80px_rgba(16,185,129,0.08)] transition-all duration-500 hover:bg-white/[0.03] rounded-[32px] bg-white/[0.02] backdrop-blur-2xl border border-white/[0.06]">
           
-          <CardContent className="p-8 md:p-10 flex flex-col md:flex-row gap-8 items-start md:items-center justify-between relative z-10">
+          {/* Fine frosted texture overlay */}
+          <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+
+          {/* Background Glow */}
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px] group-hover:bg-emerald-500/20 group-hover:scale-110 transition-all duration-700 pointer-events-none" />
+          
+          <div className="p-8 md:p-10 flex flex-col md:flex-row gap-8 items-start md:items-center justify-between relative z-10">
             <div className="space-y-4 max-w-2xl">
               <div className="flex items-center gap-2 text-sm text-primary font-semibold tracking-wide uppercase">
                 <BookOpen className="h-4 w-4" />
@@ -84,13 +92,17 @@ export function ContinueLearning({ recentMentor }: ContinueLearningProps) {
             </div>
 
             <Link href={`/dashboard/mentors/${recentMentor.id}`} className="w-full md:w-auto shrink-0 mt-4 md:mt-0">
-              <Button size="lg" className="w-full md:w-auto h-14 px-8 gap-3 shadow-lg hover:shadow-primary/25 transition-all text-base rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
-                <Play className="h-5 w-5 fill-current" />
+              <CommandButton
+                size="lg"
+                className="w-full md:w-auto !rounded-full !bg-emerald-500/15 !bg-none text-emerald-200 hover:text-white border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:bg-emerald-500/25 font-medium shadow-[0_0_20px_-5px_rgba(16,185,129,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-8 h-14 text-base"
+                rightIcon={<Play className="h-5 w-5 fill-current" />}
+                sweepClassName="bg-gradient-to-r from-emerald-400/0 via-emerald-400/30 to-emerald-400/0"
+              >
                 Resume Session
-              </Button>
+              </CommandButton>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </motion.div>
     </div>
   );

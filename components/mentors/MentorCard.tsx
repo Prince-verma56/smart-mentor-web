@@ -26,7 +26,7 @@ import type { MentorWithStats } from "@/types/mentor";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import SmoothButton from "@/components/ui/smoothui/smooth-button";
+import CommandButton from "@/components/kokonutui/command-button";
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -98,8 +98,8 @@ export function MentorCard({ mentor }: MentorCardProps) {
       <ContextMenuTrigger render={
         <motion.div
           className={cn(
-            "group relative flex w-full h-full flex-col overflow-hidden rounded-2xl border border-white/[0.05] bg-white/[0.02] backdrop-blur-xl shadow-[inset_0_1px_0px_rgba(255,255,255,0.05)] p-6",
-            "transition-all duration-500 ease-out hover:border-emerald-500/30 hover:shadow-[0_8px_32px_-10px_rgba(16,185,129,0.2)]"
+            "group relative flex w-full h-full flex-col overflow-hidden rounded-[32px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] p-6 cursor-pointer",
+            "transition-all duration-500 ease-out hover:bg-white/[0.03] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_10px_10px_40px_rgba(0,0,0,0.4),_20px_20px_80px_rgba(16,185,129,0.08)] hover:border-white/[0.08]"
           )}
           initial={
             shouldReduceMotion
@@ -116,19 +116,22 @@ export function MentorCard({ mentor }: MentorCardProps) {
         />
       }>
         <div className="flex flex-col h-full relative z-10">
+            {/* Fine frosted texture overlay */}
+            <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay pointer-events-none -m-6" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+
             {/* Subtle hover glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none -m-6" />
 
             {/* Header */}
-            <div className="flex justify-between items-start w-full gap-4 pb-6">
+            <div className="flex justify-between items-start w-full gap-4 pb-6 relative z-10">
               <div className="flex gap-3 flex-1 min-w-0">
-                <Avatar className="h-12 w-12 shrink-0 border border-white/10 shadow-sm">
+                <Avatar className="h-14 w-14 shrink-0 border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] rounded-2xl bg-gradient-to-br from-white/[0.05] to-transparent backdrop-blur-md">
                   {mentor.avatarUrl ? (
-                    <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover" />
+                    <img src={mentor.avatarUrl} alt={mentor.name} className="object-cover rounded-2xl" />
                   ) : null}
                   <AvatarFallback
                     style={{ backgroundColor: mentor.avatarColor }}
-                    className="text-white font-semibold text-sm"
+                    className="text-white font-semibold text-base rounded-2xl"
                   >
                     {getInitials(mentor.name)}
                   </AvatarFallback>
@@ -230,15 +233,15 @@ export function MentorCard({ mentor }: MentorCardProps) {
         <div className="pt-5 border-t border-white/[0.05] mt-auto">
           <div className="flex items-center justify-between w-full">
             <p className="text-xs text-zinc-500">Active: {lastSession}</p>
-            <Link href={`/dashboard/mentors/${mentor.id}`}>
-              <SmoothButton 
-                size="sm" 
-                variant="ghost" 
-                className="gap-2 transition-all duration-300 group/btn rounded-full px-5 border border-emerald-500/50 text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500 hover:text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+            <Link href={`/dashboard/mentors/${mentor.id}`} className="relative z-10">
+              <CommandButton
+                size="sm"
+                className="gap-2 !rounded-full !bg-emerald-500/15 !bg-none text-emerald-200 hover:text-white border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:bg-emerald-500/25 font-medium shadow-[0_0_20px_-5px_rgba(16,185,129,0.3),_inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md px-5 h-9"
+                rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
+                sweepClassName="bg-gradient-to-r from-emerald-400/0 via-emerald-400/30 to-emerald-400/0"
               >
                 Continue
-                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-1" />
-              </SmoothButton>
+              </CommandButton>
             </Link>
           </div>
         </div>

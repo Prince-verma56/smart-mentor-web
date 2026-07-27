@@ -72,7 +72,7 @@ export function MentorGrid({ mentors }: MentorGridProps) {
             placeholder="Search mentors, roles, tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-background/50 backdrop-blur-sm border-muted/40 focus-visible:ring-primary/20 shadow-sm"
+            className="pl-9 h-10 rounded-xl bg-white/[0.02] backdrop-blur-xl border-white/[0.06] text-white placeholder:text-zinc-500 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transition-all"
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <kbd className="hidden md:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
@@ -87,13 +87,13 @@ export function MentorGrid({ mentors }: MentorGridProps) {
             {CATEGORIES.map((category) => (
               <Button
                 key={category}
-                variant={activeCategory === category ? "default" : "secondary"}
+                variant="ghost"
                 size="sm"
                 onClick={() => setActiveCategory(category)}
-                className={`rounded-full px-4 h-8 text-xs transition-all ${
+                className={`rounded-full px-5 h-9 text-sm transition-all duration-300 font-medium ${
                   activeCategory === category 
-                    ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90" 
-                    : "bg-background/50 hover:bg-muted text-muted-foreground border border-muted/40"
+                    ? "bg-white/[0.08] text-white border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]" 
+                    : "bg-white/[0.02] hover:bg-white/[0.05] text-zinc-400 hover:text-zinc-300 border border-white/[0.05] hover:border-white/10"
                 }`}
               >
                 {category}
