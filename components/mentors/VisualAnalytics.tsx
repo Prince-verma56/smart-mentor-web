@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { 
   Flame, BookOpen, Clock, Target, PlayCircle, Trophy, 
-  TrendingUp, Sparkles, AlertCircle, Brain, Rocket,
+  TrendingUp, Sparkles, AlertCircle, Brain, Rocket, HelpCircle,
   CheckCircle2, Mic, Code2, MessagesSquare
 } from "lucide-react";
 import type { MentorStats } from "@/types/mentor";
@@ -30,7 +30,7 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
     <div className="space-y-4 pb-4">
       {/* 🧠 AI Mentor Insight */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <Card className="border-primary/20 bg-gradient-to-br from-[#022c22]/80 to-background overflow-hidden relative shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+        <Card className="rounded-[24px] border-emerald-500/20 bg-emerald-500/5 backdrop-blur-2xl overflow-hidden relative shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_0_20px_rgba(16,185,129,0.1)]">
           <div className="absolute -right-10 -top-10 w-48 h-48 bg-primary/10 blur-[50px] rounded-full pointer-events-none" />
           <CardContent className="p-5 space-y-4 relative z-10">
             <div className="flex items-center gap-2 mb-1">
@@ -68,7 +68,7 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
 
       {/* AI Performance Grid */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }} className="grid grid-cols-2 gap-3">
-        <div className="group flex flex-col rounded-xl bg-card border border-border/60 p-3 hover:border-blue-500/30 hover:shadow-sm transition-all cursor-default">
+        <div className="group flex flex-col rounded-[20px] bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] p-3 hover:bg-white/[0.04] hover:border-white/[0.1] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transition-all cursor-default">
           <div className="flex items-center justify-between mb-2">
              <div className="text-[6px] group-hover:scale-110 transition-transform">
                <SingleGlassIcon item={{ icon: <Target className="h-full w-full" />, color: "blue", label: "" }} />
@@ -82,17 +82,17 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
           </div>
         </div>
         
-        <div className="group flex flex-col rounded-xl bg-card border border-border/60 p-3 hover:border-purple-500/30 hover:shadow-sm transition-all cursor-default">
+        <div className="group flex flex-col rounded-[20px] bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] p-3 hover:bg-white/[0.04] hover:border-white/[0.1] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transition-all cursor-default">
           <div className="flex items-center justify-between mb-2">
              <div className="text-[6px] group-hover:scale-110 transition-transform">
-               <SingleGlassIcon item={{ icon: <MessagesSquare className="h-full w-full" />, color: "purple", label: "" }} />
+               <SingleGlassIcon item={{ icon: <HelpCircle className="h-full w-full" />, color: "purple", label: "" }} />
              </div>
           </div>
           <p className="text-xs text-muted-foreground font-medium">Questions Asked</p>
           <p className="text-2xl font-bold tracking-tight">{stats.questionsAsked || 0}</p>
         </div>
         
-        <div className="group flex flex-col rounded-xl bg-card border border-border/60 p-3 hover:border-green-500/30 hover:shadow-sm transition-all cursor-default">
+        <div className="group flex flex-col rounded-[20px] bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] p-3 hover:bg-white/[0.04] hover:border-white/[0.1] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transition-all cursor-default">
           <div className="flex items-center justify-between mb-2">
              <div className="text-[6px] group-hover:scale-110 transition-transform">
                <SingleGlassIcon item={{ icon: <Mic className="h-full w-full" />, color: "green", label: "" }} />
@@ -102,7 +102,7 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
           <p className="text-2xl font-bold tracking-tight">{Math.floor((stats.totalSessions || 0) * 0.4)}</p>
         </div>
         
-        <div className="group flex flex-col rounded-xl bg-card border border-border/60 p-3 hover:border-orange-500/30 hover:shadow-sm transition-all cursor-default">
+        <div className="group flex flex-col rounded-[20px] bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] p-3 hover:bg-white/[0.04] hover:border-white/[0.1] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transition-all cursor-default">
           <div className="flex items-center justify-between mb-2">
              <div className="text-[6px] group-hover:scale-110 transition-transform">
                <SingleGlassIcon item={{ icon: <Flame className="h-full w-full" />, color: "orange", label: "" }} />
@@ -118,7 +118,7 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
 
       {/* Learning Timeline */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }}>
-        <Card className="border-border/60 shadow-sm">
+        <Card className="rounded-[24px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2 uppercase tracking-wide">
               <Clock className="h-4 w-4 text-muted-foreground" />
@@ -178,7 +178,7 @@ export function VisualAnalytics({ stats }: VisualAnalyticsProps) {
           <CardContent className="px-4 pb-4">
             <div className="grid grid-cols-4 gap-2">
               {[
-                { name: "Fast Learner", icon: Brain, color: "purple", shadow: "shadow-purple-500/20", bg: "bg-purple-500/10", border: "border-purple-500/20", unlocked: true },
+                { name: "Fast Learner", icon: Rocket, color: "purple", shadow: "shadow-purple-500/20", bg: "bg-purple-500/10", border: "border-purple-500/20", unlocked: true },
                 { name: "3-Day Streak", icon: Flame, color: "orange", shadow: "shadow-orange-500/20", bg: "bg-orange-500/10", border: "border-orange-500/20", unlocked: true },
                 { name: "Voice Fluent", icon: Mic, color: "green", shadow: "shadow-green-500/20", bg: "bg-green-500/10", border: "border-green-500/20", unlocked: true },
                 { name: "Code Master", icon: Code2, color: "blue", shadow: "shadow-blue-500/20", bg: "bg-blue-500/10", border: "border-blue-500/20", unlocked: false },

@@ -173,7 +173,7 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
                         className={cn(
                           "relative flex items-center transition-all duration-150 group shrink-0 cursor-pointer",
                           collapsed && !mobile
-                            ? "h-11 w-11 justify-center rounded-xl mx-auto"
+                            ? "h-11 w-11 justify-center rounded-2xl mx-auto hover:bg-white/[0.04] hover:border-white/[0.05] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] border border-transparent transition-all"
                             : "h-[36px] px-3 gap-3 rounded-lg mx-2",
                           isActive
                             ? "bg-emerald-500/10 text-emerald-400 font-medium shadow-[0_0_15px_-3px_rgba(16,185,129,0.15)] border border-emerald-500/20 relative overflow-hidden ring-1 ring-emerald-500/30"

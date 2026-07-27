@@ -91,7 +91,7 @@ export function ResourcePanel({ mentorId }: ResourcePanelProps) {
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4">
         {/* Upcoming topics */}
-        <Card>
+        <Card className="rounded-[24px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-sm font-medium">Upcoming Topics</CardTitle>
           </CardHeader>
@@ -112,7 +112,7 @@ export function ResourcePanel({ mentorId }: ResourcePanelProps) {
         </Card>
 
         {/* Resources */}
-        <Card>
+        <Card className="rounded-[24px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
           <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium">Resources</CardTitle>
@@ -165,7 +165,7 @@ export function ResourcePanel({ mentorId }: ResourcePanelProps) {
         </Card>
 
         {/* Notes placeholder */}
-        <Card>
+        <Card className="rounded-[24px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <StickyNote className="h-4 w-4 text-yellow-500" />
@@ -180,7 +180,7 @@ export function ResourcePanel({ mentorId }: ResourcePanelProps) {
         </Card>
 
         {/* Bookmarks placeholder */}
-        <Card>
+        <Card className="rounded-[24px] border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Bookmark className="h-4 w-4 text-primary" />

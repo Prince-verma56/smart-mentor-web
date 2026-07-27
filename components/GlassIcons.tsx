@@ -13,12 +13,12 @@ export interface GlassIconsProps {
 }
 
 const gradientMapping: Record<string, string> = {
-  blue: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',   // blue-500 to blue-700
-  purple: 'linear-gradient(135deg, #a855f7, #7e22ce)', // purple-500 to purple-700
-  red: 'linear-gradient(135deg, #ef4444, #b91c1c)',    // red-500 to red-700
-  indigo: 'linear-gradient(135deg, #6366f1, #4338ca)', // indigo-500 to indigo-700
-  orange: 'linear-gradient(135deg, #f59e0b, #b45309)', // amber-500 to amber-700
-  green: 'linear-gradient(135deg, #10b981, #047857)'   // emerald-500 to emerald-700
+  blue: 'linear-gradient(135deg, #60a5fa, #2563eb)',
+  purple: 'linear-gradient(135deg, #c084fc, #9333ea)',
+  red: 'linear-gradient(135deg, #f87171, #dc2626)',
+  indigo: 'linear-gradient(135deg, #818cf8, #4f46e5)',
+  orange: 'linear-gradient(135deg, #fbbf24, #d97706)',
+  green: 'linear-gradient(135deg, #34d399, #059669)'
 };
 
 export const SingleGlassIcon: React.FC<{ item: GlassIconsItem, className?: string }> = ({ item, className }) => {
@@ -50,7 +50,7 @@ export const SingleGlassIcon: React.FC<{ item: GlassIconsItem, className?: strin
           boxShadow: '0 0 0 0.05em hsla(0, 0%, 100%, 0.2) inset'
         }}
       >
-        <span className="m-auto w-[1.5em] h-[1.5em] flex items-center justify-center text-white drop-shadow-md" aria-hidden="true">
+        <span className="m-auto w-[2.4em] h-[2.4em] flex items-center justify-center text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" aria-hidden="true">
           {item.icon}
         </span>
       </span>

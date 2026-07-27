@@ -286,7 +286,7 @@ export function MentorWorkspace({
                   variant="ghost"
                   size="icon"
                   onClick={() => setRightCollapsed(false)}
-                  className="h-8 w-8 rounded-sm shadow-sm bg-background text-muted-foreground hover:text-foreground border mb-2"
+                  className="h-10 w-10 rounded-2xl shadow-sm bg-white/[0.02] text-muted-foreground hover:text-foreground border border-white/[0.05] hover:bg-white/[0.05] hover:border-white/[0.1] backdrop-blur-md mb-2 transition-all cursor-pointer"
                   title="Expand Sidebar"
                 >
                   <PanelLeft className="h-4 w-4" />
@@ -296,7 +296,7 @@ export function MentorWorkspace({
                   <Tooltip>
                     <TooltipTrigger 
                       render={
-                        <button className="p-2 rounded-md hover:bg-muted text-muted-foreground transition-colors" onClick={() => setRightCollapsed(false)}>
+                        <button className="p-2.5 rounded-2xl hover:bg-white/[0.04] hover:border-white/[0.05] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] text-muted-foreground hover:text-emerald-400 transition-all border border-transparent cursor-pointer" onClick={() => setRightCollapsed(false)}>
                           <Target className="h-5 w-5" />
                         </button>
                       } 
@@ -307,7 +307,7 @@ export function MentorWorkspace({
                   <Tooltip>
                     <TooltipTrigger 
                       render={
-                        <button className="p-2 rounded-md hover:bg-muted text-primary bg-primary/10 transition-colors" onClick={() => setRightCollapsed(false)}>
+                        <button className="p-2.5 rounded-2xl hover:bg-white/[0.04] hover:border-white/[0.05] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] text-emerald-400 bg-emerald-500/10 border border-transparent transition-all cursor-pointer" onClick={() => setRightCollapsed(false)}>
                           <BookOpen className="h-5 w-5" />
                         </button>
                       }
@@ -318,7 +318,7 @@ export function MentorWorkspace({
                   <Tooltip>
                     <TooltipTrigger 
                       render={
-                        <button className="p-2 rounded-md hover:bg-muted text-muted-foreground transition-colors" onClick={() => setRightCollapsed(false)}>
+                        <button className="p-2.5 rounded-2xl hover:bg-white/[0.04] hover:border-white/[0.05] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] text-muted-foreground hover:text-emerald-400 transition-all border border-transparent cursor-pointer" onClick={() => setRightCollapsed(false)}>
                           <Folder className="h-5 w-5" />
                         </button>
                       } 
