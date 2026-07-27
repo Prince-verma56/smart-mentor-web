@@ -261,11 +261,11 @@ export default function SmoothTab({
             opacity: 1,
           }}
           className={cn(
-            "absolute z-[1] rounded-md",
+            "absolute z-[1] rounded-full",
             selectedItem?.color || activeColor
           )}
           initial={false}
-          style={{ height: "calc(100% - 8px)", top: "4px" }}
+          style={{ height: "100%", top: "0px" }}
           transition={{
             type: "spring",
             stiffness: 400,
@@ -273,7 +273,7 @@ export default function SmoothTab({
           }}
         />
 
-        <div className="relative z-[2] flex w-full flex-wrap sm:flex-nowrap gap-1 min-w-max sm:min-w-0">
+        <div className="relative z-[2] flex w-full flex-wrap sm:flex-nowrap gap-2 min-w-max sm:min-w-0">
           {items.map((item) => {
             const isSelected = selected === item.id;
             return (
@@ -281,12 +281,12 @@ export default function SmoothTab({
                 aria-controls={`panel-${item.id}`}
                 aria-selected={isSelected}
                 className={cn(
-                  "relative flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2",
+                  "relative flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-1.5 h-9",
                   "font-medium text-sm transition-all duration-300",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   isSelected
                     ? selectedTextColor
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    : "text-zinc-400 hover:text-zinc-300 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] hover:border-white/10"
                 )}
                 id={`tab-${item.id}`}
                 key={item.id}

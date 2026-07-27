@@ -74,7 +74,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
   };
 
   return (
-    <header className="border-b border-border/40 bg-background/95 backdrop-blur-md shrink-0 flex items-center justify-between px-5 py-2 min-h-[52px]">
+    <header className="border-b border-white/[0.05] bg-background/80 backdrop-blur-2xl shrink-0 flex items-center justify-between px-5 py-2 min-h-[52px]">
       {/* ── Left: Breadcrumbs & Status ──────────────────── */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <Breadcrumb
@@ -83,8 +83,8 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
             { label: mentor.name },
           ]}
         />
-        <Separator orientation="vertical" className="h-3.5 bg-border/50 hidden md:block" />
-        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/5 shadow-[0_0_10px_rgba(16,185,129,0.03)] text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
+        <Separator orientation="vertical" className="h-3.5 bg-white/[0.05] hidden md:block" />
+        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_0_10px_rgba(16,185,129,0.2)] text-emerald-400 text-[10px] font-semibold tracking-widest uppercase">
            <span className="relative flex h-1.5 w-1.5">
              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/40 opacity-75" style={{ animationDuration: '3s' }}></span>
              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary/70"></span>
@@ -94,18 +94,18 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
       </div>
 
       {/* ── Center: Learning Status ──────────────────────── */}
-      <div className="hidden lg:flex items-center justify-center flex-1 min-w-0">
+      <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 px-4">
         {stats?.currentTopic && (
-          <div className="flex items-center gap-3.5 px-4 py-1.5 rounded-full bg-gradient-to-b from-card/80 to-muted/20 border border-border/40 shadow-[0_1px_2px_rgba(0,0,0,0.05)] max-w-[420px]">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[13px] font-bold uppercase tracking-[0.05em] text-muted-foreground/70">Topic:</span>
-              <span className="text-[13px] font-semibold text-foreground truncate max-w-[200px]">{stats.currentTopic}</span>
+          <div className="flex items-center gap-3.5 px-4 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.05] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] backdrop-blur-md max-w-full hover:bg-white/[0.04] transition-colors cursor-default shrink min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0 shrink">
+              <span className="text-[13px] font-bold uppercase tracking-[0.05em] text-muted-foreground/70 shrink-0">Topic:</span>
+              <span className="text-[13px] font-semibold text-foreground truncate block">{stats.currentTopic}</span>
             </div>
             {stats.progressPercent > 0 && (
               <>
-                <Separator orientation="vertical" className="h-3.5 opacity-50" />
-                <div className="flex items-center gap-2.5">
-                  <div className="w-16 h-[5px] bg-muted/60 rounded-full overflow-hidden relative">
+                <Separator orientation="vertical" className="h-3.5 bg-white/[0.05] shrink-0" />
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <div className="w-16 h-[5px] bg-white/[0.05] shadow-[inset_0_1px_1px_rgba(0,0,0,0.2)] rounded-full overflow-hidden relative">
                     <motion.div 
                       className="absolute left-0 top-0 bottom-0 bg-primary rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]"
                       initial={{ width: 0 }}
@@ -126,14 +126,14 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
         <div className="hidden md:flex items-center gap-2 mr-2">
            <motion.button 
              whileTap={{ scale: 0.96 }}
-             className="flex h-7 items-center gap-1.5 px-3 rounded-full bg-muted/30 hover:bg-muted/70 text-muted-foreground hover:text-foreground text-[11px] font-medium transition-colors duration-150 border border-transparent hover:border-border/50"
+             className="flex h-7 items-center gap-1.5 px-3 rounded-full bg-white/[0.02] hover:bg-white/[0.05] text-muted-foreground hover:text-emerald-400 text-[11px] font-medium transition-all duration-150 border border-white/[0.02] hover:border-emerald-500/30 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
            >
              <Brain className="h-3.5 w-3.5" />
              <span className="hidden xl:inline">Memory</span>
            </motion.button>
            <motion.button 
              whileTap={{ scale: 0.96 }}
-             className="flex h-7 items-center gap-1.5 px-3 rounded-full bg-muted/30 hover:bg-muted/70 text-muted-foreground hover:text-foreground text-[11px] font-medium transition-colors duration-150 border border-transparent hover:border-border/50"
+             className="flex h-7 items-center gap-1.5 px-3 rounded-full bg-white/[0.02] hover:bg-white/[0.05] text-muted-foreground hover:text-emerald-400 text-[11px] font-medium transition-all duration-150 border border-white/[0.02] hover:border-emerald-500/30 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
            >
              <BookOpen className="h-3.5 w-3.5" />
              <span className="hidden xl:inline">Sources</span>
@@ -147,7 +147,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
              </motion.div>
            </motion.button>
 
-           <div className="w-px h-3.5 bg-border/50 mx-1.5" />
+           <div className="w-px h-3.5 bg-white/[0.05] mx-1.5" />
 
            {!isSettingsView && (
              <SlideTextButton 
@@ -160,7 +160,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
            )}
            {isSettingsView ? (
              <button 
-               className="h-7 gap-1.5 text-[11px] px-3 shadow-sm inline-flex items-center justify-center rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-medium transition-colors" 
+               className="h-7 gap-1.5 text-[11px] px-3 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] inline-flex items-center justify-center rounded-full bg-white/[0.05] border border-white/[0.1] text-foreground hover:bg-white/[0.08] font-medium transition-all" 
                title="Back to Chat"
                onClick={() => {
                  startNavigating(() => {
@@ -173,7 +173,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
              </button>
            ) : (
              <button 
-               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent hover:border-border/40 hover:shadow-sm transition-all duration-300 flex items-center justify-center rounded-full group hover:rotate-90" 
+               className="h-8 w-8 text-muted-foreground hover:text-emerald-400 hover:bg-white/[0.05] border border-transparent hover:border-white/[0.1] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transition-all duration-300 flex items-center justify-center rounded-full group hover:rotate-90" 
                title="Settings"
                onClick={() => {
                  startNavigating(() => {
@@ -185,7 +185,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
              </button>
            )}
         </div>
-        <Separator orientation="vertical" className="h-4 mx-1 bg-border/40 hidden md:block" />
+        <Separator orientation="vertical" className="h-4 mx-1 bg-white/[0.05] hidden md:block" />
         <div className="relative group rounded-full ml-1">
           <div className="absolute inset-[-3px] rounded-full bg-gradient-to-tr from-primary/0 via-primary/0 to-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm" />
           <UserButton 

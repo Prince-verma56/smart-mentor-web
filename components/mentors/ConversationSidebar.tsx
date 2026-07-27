@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PremiumCommandPalette, CommandTrigger } from "@/components/ui/premium-command-palette";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ContextMenu, { type ContextMenuItemConfig } from "@/components/ui/smoothui/context-menu";
 import {
@@ -372,8 +372,21 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
   } = useConversation();
 
   const [search, setSearch] = useState("");
+  const [commandOpen, setCommandOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [viewArchived, setViewArchived] = useState(false);
+
+  // Toggle command palette via keyboard
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCommandOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
 
   // ── Filter sessions ────────────────────────────────────────────────────────
   const filtered = sessions.filter((s) => {
@@ -453,6 +466,13 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
         >
           <Plus className="h-4 w-4" />
         </button>
+        <button
+          onClick={() => setCommandOpen(true)}
+          className="h-9 w-9 flex items-center justify-center rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all"
+          title="Search Conversations (⌘K)"
+        >
+          <Search className="h-4 w-4" />
+        </button>
         {sessions.slice(0, 8).map((session) => (
           <button
             key={session.id}
@@ -477,23 +497,7 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
     <>
       {/* Universal Search (Command Palette Style) */}
       <div className="px-4 mb-4 mt-2">
-        <div className="relative group/search cursor-pointer">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-xl opacity-0 group-hover/search:opacity-100 transition-opacity blur-md" />
-          <div className="relative flex items-center h-10 bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] hover:border-emerald-500/40 hover:bg-white/[0.04] focus-within:border-emerald-500/50 focus-within:bg-white/[0.05] focus-within:ring-1 focus-within:ring-emerald-500/20 rounded-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden transition-all duration-300">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 group-hover/search:text-primary transition-colors" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search conversations..."
-              className="w-full h-full pl-9 pr-12 text-[13px] bg-transparent text-foreground placeholder:text-muted-foreground/40 outline-none"
-            />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-              <span className="flex items-center justify-center h-[22px] px-2 rounded-md bg-white/[0.05] text-[10px] font-semibold text-white/50 border border-white/[0.05] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] pointer-events-none select-none">
-                ⌘K
-              </span>
-            </div>
-          </div>
-        </div>
+        <CommandTrigger onClick={() => setCommandOpen(true)} placeholder="Search conversations..." />
       </div>
 
       {/* Loading skeleton */}
@@ -705,16 +709,32 @@ export function ConversationSidebar({ collapsed = false }: ConversationSidebarPr
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+          <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <PremiumCommandPalette
+      open={commandOpen}
+      onOpenChange={setCommandOpen}
+      title="Search Conversations"
+      placeholder="Type a command or search..."
+      emptyMessage="No conversations found."
+      items={sessions.map(s => ({
+        id: s.id,
+        label: s.title || "Untitled Conversation",
+        description: s.ai_summary 
+          ? s.ai_summary.replace(/\[Voice Session\]\n?/, "").split("\n")[0]?.replace(/^SUMMARY:\s*/i, "").slice(0, 50) 
+          : s.summary?.slice(0, 50) || "",
+        icon: <MessageSquare className="h-4 w-4" />
+      }))}
+      onSelect={(item) => {
+        handleSelect(item.id);
+      }}
+    />
+  </>
   );
 }

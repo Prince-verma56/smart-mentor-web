@@ -5,10 +5,12 @@ import type { MentorWithStats } from "@/types/mentor";
 import { MentorCard } from "./MentorCard";
 import { EmptyState } from "./EmptyState";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, BrainCircuit, SlidersHorizontal } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Search, BrainCircuit } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { PremiumCommandPalette, CommandTrigger } from "@/components/ui/premium-command-palette";
+import SmoothTab from "@/components/kokonutui/smooth-tab";
 
 interface MentorGridProps {
   mentors: MentorWithStats[];
@@ -36,6 +38,8 @@ function getCategory(subject: string) {
 export function MentorGrid({ mentors }: MentorGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [commandOpen, setCommandOpen] = useState(false);
+  const router = useRouter();
 
   if (mentors.length === 0) {
     return (
@@ -64,44 +68,29 @@ export function MentorGrid({ mentors }: MentorGridProps) {
       {/* Workspace Controls */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         {/* Search */}
-        <div className="relative w-full md:max-w-sm">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-            <Search className="h-4 w-4" />
-          </div>
-          <Input
-            placeholder="Search mentors, roles, tags..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-10 rounded-xl bg-white/[0.02] backdrop-blur-xl border-white/[0.06] text-white placeholder:text-zinc-500 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transition-all"
+        <div className="relative w-full md:max-w-sm z-50">
+          <CommandTrigger 
+            onClick={() => setCommandOpen(true)} 
+            placeholder="Search mentors..." 
+            // We omit the cmd+k indicator here to avoid conflict with the global sidebar search
           />
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <kbd className="hidden md:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </div>
         </div>
 
         {/* Filter Chips */}
-        <ScrollArea className="w-full md:max-w-[50%] whitespace-nowrap">
-          <div className="flex w-max space-x-2 p-1">
-            {CATEGORIES.map((category) => (
-              <Button
-                key={category}
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveCategory(category)}
-                className={`rounded-full px-5 h-9 text-sm transition-all duration-300 font-medium ${
-                  activeCategory === category 
-                    ? "bg-white/[0.08] text-white border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]" 
-                    : "bg-white/[0.02] hover:bg-white/[0.05] text-zinc-400 hover:text-zinc-300 border border-white/[0.05] hover:border-white/10"
-                }`}
-              >
-                {category}
-              </Button>
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" className="invisible" />
-        </ScrollArea>
+        <div className="w-full md:max-w-[60%] overflow-x-auto scrollbar-hide">
+          <SmoothTab
+            items={CATEGORIES.map(category => ({
+              id: category,
+              title: category,
+            }))}
+            activeColor="bg-white/[0.08] border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]"
+            selectedTextColor="text-white"
+            value={activeCategory}
+            onChange={(tabId) => setActiveCategory(tabId)}
+            hideContent={true}
+            className="w-max bg-transparent p-0 gap-2"
+          />
+        </div>
       </div>
 
       {/* Grid */}
@@ -131,6 +120,25 @@ export function MentorGrid({ mentors }: MentorGridProps) {
           </Button>
         </div>
       )}
+
+      <PremiumCommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        title="Search Mentors"
+        placeholder="Type a mentor name or role..."
+        emptyMessage="No mentors found."
+        items={mentors.map(m => ({
+          id: m.id,
+          label: m.name,
+          description: `${m.role} • ${m.subject}`,
+          icon: <BrainCircuit className="h-4 w-4" />
+        }))}
+        onSelect={(item) => {
+          setSearchQuery("");
+          setActiveCategory("All");
+          router.push(`/dashboard/mentors/${item.id}`);
+        }}
+      />
     </div>
   );
 }
