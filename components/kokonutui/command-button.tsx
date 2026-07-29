@@ -18,18 +18,21 @@ export default function CommandButton({
   icon,
   rightIcon,
   sweepClassName,
+  size = "p-2 px-4",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children?: React.ReactNode;
   icon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   sweepClassName?: string;
+  size?: string;
 }) {
   return (
     <Button
       {...props}
       className={cn(
-        "relative p-2 px-4",
+        "relative",
+        size,
         "overflow-hidden rounded-lg",
         "bg-gradient-to-b from-zinc-50 to-zinc-100",
         "dark:from-zinc-800 dark:to-zinc-900",

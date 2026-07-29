@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
 import {
   MessageSquare,
   Plus,
@@ -238,7 +239,7 @@ function SessionRow({
             <Input
               ref={inputRef}
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditTitle(e.target.value)}
               onKeyDown={handleKeyDown}
               className="h-6 text-[12px] px-1.5 py-0 bg-background border-primary/50 focus-visible:ring-1 focus-visible:ring-primary/50 shadow-sm"
             />

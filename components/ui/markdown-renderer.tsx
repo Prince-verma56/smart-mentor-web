@@ -3,8 +3,12 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { CodeBlock } from "./code-block";
+import { MermaidDiagram } from "./mermaid-diagram";
 import { Loader2, Settings } from "lucide-react";
+import "katex/dist/katex.min.css";
 
 interface MarkdownRendererProps {
   content: string;
@@ -23,17 +27,25 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
   return (
     <div className={baseText}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
         components={{
           // ── Code ───────────────────────────────────────────────────────────
           code({ className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || "");
+            const language = match ? match[1] : "";
             const isInline = !match && !String(children).includes("\n");
+            const codeString = String(children).replace(/\n$/, "");
+
+            if (language === "mermaid") {
+              return <MermaidDiagram chart={codeString} />;
+            }
+
             return !isInline && match ? (
               <div className="my-5 shadow-sm rounded-xl overflow-hidden border border-border/50">
                 <CodeBlock
-                  language={match[1]}
-                  value={String(children).replace(/\n$/, "")}
+                  language={language}
+                  value={codeString}
                 />
               </div>
             ) : (

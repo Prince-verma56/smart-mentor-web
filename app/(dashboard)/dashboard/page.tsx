@@ -133,7 +133,7 @@ export default async function DashboardPage() {
 
             {/* Section 6: Learning Journey (Vertical path using real grouped data) */}
             <section className="space-y-6 pt-12">
-              <LearningJourney data={journeyData} />
+              <LearningJourney data={journeyData as any} />
             </section>
             
             {/* Section 7: Statistics (Moved to the bottom, real data) */}

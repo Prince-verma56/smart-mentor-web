@@ -14,6 +14,9 @@ interface MessageBubbleProps {
   isStreaming: boolean;
   isLastAssistantMessage: boolean;
   onQuickAction: (action: string) => void;
+  onEdit?: () => void;
+  onRegenerate?: () => void;
+  onStop?: () => void;
   style?: React.CSSProperties;
   measureRef?: (node: HTMLElement | null) => void;
   index: number;
@@ -26,6 +29,9 @@ export const MessageBubble = memo(function MessageBubble({
   isStreaming,
   isLastAssistantMessage,
   onQuickAction,
+  onEdit,
+  onRegenerate,
+  onStop,
   style,
   measureRef,
   index,
@@ -34,6 +40,7 @@ export const MessageBubble = memo(function MessageBubble({
 
   return (
     <motion.div
+      ref={measureRef}
       data-index={index}
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -122,12 +129,17 @@ export const MessageBubble = memo(function MessageBubble({
           </div>
 
           {/* ── Contextual Floating Actions ── */}
-          {m.role === "assistant" && displayContent.length > 0 && (
-            <div className="transition-all duration-300 opacity-100 ml-2 mt-1">
+          {displayContent.length > 0 && (
+            <div className={cn("transition-all duration-300 opacity-0 group-hover:opacity-100 mt-1", m.role === "assistant" ? "ml-2" : "mr-2")}>
               <MessageActions
                 content={displayContent}
                 onAction={onQuickAction}
-                alwaysShow={true}
+                onEdit={onEdit}
+                onRegenerate={onRegenerate}
+                onStop={onStop}
+                isUser={m.role === "user"}
+                isStreaming={isStreaming && isLastAssistantMessage}
+                alwaysShow={false}
               />
             </div>
           )}

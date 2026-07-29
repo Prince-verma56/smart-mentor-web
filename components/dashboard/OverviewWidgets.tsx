@@ -109,7 +109,7 @@ export function OverviewWidgets({ stats }: OverviewWidgetsProps) {
         const bgGradient = gradientMapping[widget.color] || gradientMapping.emerald;
         
         return (
-          <motion.div key={i} variants={item}>
+          <motion.div key={i} variants={item as any}>
             {/* Make the entire card a group to trigger the icon animation on card hover */}
             <Card className="group border-muted/40 bg-[#030712]/50 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] hover:shadow-lg hover:border-white/20 transition-all duration-300 h-full overflow-visible">
               <CardContent className="p-6 flex flex-col items-center text-center justify-center h-full overflow-visible pt-10">

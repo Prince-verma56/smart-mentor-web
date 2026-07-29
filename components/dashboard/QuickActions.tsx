@@ -98,7 +98,7 @@ export function QuickActions({ recentMentor }: QuickActionsProps) {
           const bgGradient = gradientMapping[action.color] || gradientMapping["text-primary"];
 
           return (
-            <motion.div key={i} variants={item}>
+            <motion.div key={i} variants={item as any}>
               <Link href={action.href}>
                 <Card className="group h-full border-muted/40 bg-[#030712]/50 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] hover:shadow-lg hover:border-white/20 transition-all duration-300 overflow-visible">
                   <CardContent className="p-5 flex items-center gap-5 h-full overflow-visible">

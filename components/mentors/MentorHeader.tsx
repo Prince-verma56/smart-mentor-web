@@ -17,6 +17,7 @@ import { useConversation } from "@/contexts/ConversationContext";
 import { Plus } from "lucide-react";
 import SlideTextButton from "@/components/kokonutui/slide-text-button";
 import { NewChatDialog } from "./NewChatDialog";
+import { MemoryDrawer } from "./MemoryDrawer";
 
 interface MentorHeaderProps {
   mentor: Mentor;
@@ -40,6 +41,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isNavigating, startNavigating] = useTransition();
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [isMemoryOpen, setIsMemoryOpen] = useState(false);
   const { createNewSession } = useConversation();
 
   // Knowledge sources count from real stats
@@ -125,6 +127,7 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
       <div className="flex items-center justify-end gap-3 flex-1 min-w-0">
         <div className="hidden md:flex items-center gap-2 mr-2">
            <motion.button 
+             onClick={() => setIsMemoryOpen(true)}
              whileTap={{ scale: 0.96 }}
              className="flex h-7 items-center gap-1.5 px-3 rounded-full bg-white/[0.02] hover:bg-white/[0.05] text-muted-foreground hover:text-emerald-400 text-[11px] font-medium transition-all duration-150 border border-white/[0.02] hover:border-emerald-500/30 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
            >
@@ -202,6 +205,12 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
         open={isNewChatOpen} 
         onOpenChange={setIsNewChatOpen} 
         stats={stats} 
+      />
+
+      <MemoryDrawer
+        open={isMemoryOpen}
+        onOpenChange={setIsMemoryOpen}
+        stats={stats}
       />
     </header>
   );

@@ -82,6 +82,7 @@ export function MentorGrid({ mentors }: MentorGridProps) {
             items={CATEGORIES.map(category => ({
               id: category,
               title: category,
+              color: "emerald" as const
             }))}
             activeColor="bg-white/[0.08] border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]"
             selectedTextColor="text-white"

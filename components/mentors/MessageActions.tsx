@@ -1,14 +1,24 @@
 import { cn } from "@/lib/utils";
-import { Copy, Bookmark, HelpCircle, Code2, GraduationCap } from "lucide-react";
+import { Copy, Bookmark, HelpCircle, Code2, GraduationCap, Edit2, RotateCw, Square } from "lucide-react";
 import { toast } from "sonner";
 
 export function MessageActions({
   content,
   onAction,
+  onEdit,
+  onRegenerate,
+  onStop,
+  isUser = false,
+  isStreaming = false,
   alwaysShow = false,
 }: {
   content: string;
   onAction?: (action: string) => void;
+  onEdit?: () => void;
+  onRegenerate?: () => void;
+  onStop?: () => void;
+  isUser?: boolean;
+  isStreaming?: boolean;
   alwaysShow?: boolean;
 }) {
   return (
@@ -27,15 +37,44 @@ export function MessageActions({
         >
           <Copy className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300" />
         </button>
-        <button
-          title="Bookmark"
-          className="h-7 w-7 flex items-center justify-center rounded-md text-white/40 hover:text-emerald-400 hover:bg-white/5 hover:shadow-[0_0_12px_rgba(16,185,129,0.2)] transition-all duration-300 group"
-        >
-          <Bookmark className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300" />
-        </button>
+        {!isUser && (
+          <button
+            title="Bookmark"
+            className="h-7 w-7 flex items-center justify-center rounded-md text-white/40 hover:text-emerald-400 hover:bg-white/5 hover:shadow-[0_0_12px_rgba(16,185,129,0.2)] transition-all duration-300 group"
+          >
+            <Bookmark className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300" />
+          </button>
+        )}
+        {isUser && onEdit && (
+          <button
+            title="Edit Message"
+            onClick={onEdit}
+            className="h-7 w-7 flex items-center justify-center rounded-md text-white/40 hover:text-emerald-400 hover:bg-white/5 transition-all duration-300 group"
+          >
+            <Edit2 className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300" />
+          </button>
+        )}
+        {!isUser && onRegenerate && !isStreaming && (
+          <button
+            title="Regenerate Response"
+            onClick={onRegenerate}
+            className="h-7 w-7 flex items-center justify-center rounded-md text-white/40 hover:text-emerald-400 hover:bg-white/5 transition-all duration-300 group"
+          >
+            <RotateCw className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300" />
+          </button>
+        )}
+        {isStreaming && onStop && (
+          <button
+            title="Stop Generation"
+            onClick={onStop}
+            className="h-7 w-7 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all duration-300 group"
+          >
+            <Square className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300 fill-current" />
+          </button>
+        )}
       </div>
 
-      <div className="flex items-center gap-2">
+      {!isUser && <div className="flex items-center gap-2">
         {[
           { icon: HelpCircle, label: "Explain More", action: "explain" },
           { icon: Code2, label: "Practice", action: "practice" },
@@ -50,7 +89,7 @@ export function MessageActions({
             {label}
           </button>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }

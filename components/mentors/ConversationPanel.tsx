@@ -24,7 +24,6 @@ import { VoiceToTextButton } from "./VoiceToTextButton";
 import { useConversation } from "@/contexts/ConversationContext";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { MessageBubble } from "./MessageBubble";
 import { ArrowDown } from "lucide-react";
 
@@ -566,19 +565,18 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
-    messages,
-    isStreaming,
-    isLoadingMessages,
     activeSessionId,
-    createNewSession,
-    deleteSession,
-    sendMessage,
-    currentModel,
-    setCurrentModel,
+    messages,
+    isLoadingMessages,
+    isStreaming,
     conversationState,
     hasMoreMessages,
     isLoadingMore,
     loadMoreMessages,
+    sendMessage,
+    stopMessage,
+    currentModel,
+    deleteSession
   } = useConversation();
 
   const [loadingStep, setLoadingStep] = useState(0);
@@ -671,7 +669,6 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
     const target = e.currentTarget;
     const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
 
-    // Check if user is scrolling up
     if (distanceToBottom > 200) {
       setShowScrollDown(true);
       isUserScrollingUp.current = true;
@@ -680,7 +677,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
       isUserScrollingUp.current = false;
     }
 
-    // Trigger infinite scroll
+    // Trigger infinite scroll if needed (assuming scrolling UP loads older messages)
     if (target.scrollTop < 100 && hasMoreMessages && !isLoadingMore) {
       previousScrollHeight.current = target.scrollHeight;
       previousScrollTop.current = target.scrollTop;
@@ -699,7 +696,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
     if (!isUserScrollingUp.current && validMessages.length > 0) {
       scrollToBottom();
     }
-  }, [validMessages.length, isStreaming, scrollToBottom]);
+  }, [validMessages.length, isStreaming, scrollToBottom, conversationState]);
 
   // Maintain scroll position when older messages are loaded
   useEffect(() => {
@@ -770,7 +767,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                 </div>
               )}
 
-              <div className="flex flex-col gap-6 w-full relative">
+              <div className="w-full flex flex-col gap-6">
                 {validMessages.map((m, index) => (
                   <MessageBubble
                     key={m.id}
@@ -781,13 +778,16 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                     isLastAssistantMessage={m.id === lastAssistantMessageId}
                     onQuickAction={handleQuickAction}
                     index={index}
+                    onEdit={() => toast.info("Editing messages will be supported in the next backend update")}
+                    onRegenerate={() => toast.info("Regeneration will be supported in the next backend update")}
+                    onStop={stopMessage}
                   />
                 ))}
               </div>
 
               {/* Premium Thinking indicator */}
               {isThinking && (
-                <div className="flex gap-4 justify-start animate-in fade-in duration-500 mt-2 px-4 md:px-6">
+                <div className="flex gap-4 justify-start animate-in fade-in duration-500 mt-6 px-4 md:px-6 relative">
                   <div className="relative mt-1 z-10 shrink-0">
                     <Avatar className="h-9 w-9 ring-1 ring-white/10 shadow-sm opacity-80 grayscale">
                       {mentor.avatarUrl ? (
