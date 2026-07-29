@@ -3,58 +3,10 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Mic, FileUp, BarChart, Settings, BookOpen } from "lucide-react";
+import { Plus, Mic, FileUp, BarChart, Settings, BookOpen, MessageSquare, Code2, Map } from "lucide-react";
+import type { MentorWithStats } from "@/types/mentor";
 
-const ACTIONS = [
-  {
-    title: "Create Mentor",
-    description: "Design a new specialized AI guide.",
-    icon: Plus,
-    href: "/dashboard/mentors/create",
-    color: "text-emerald-500",
-    bg: "bg-emerald-500/10",
-  },
-  {
-    title: "Upload Resources",
-    description: "Add PDFs or text to your knowledge base.",
-    icon: FileUp,
-    href: "/dashboard/resources",
-    color: "text-blue-500",
-    bg: "bg-blue-500/10",
-  },
-  {
-    title: "Start Voice Session",
-    description: "Practice speaking with your mentor.",
-    icon: Mic,
-    href: "/dashboard/voice",
-    color: "text-violet-500",
-    bg: "bg-violet-500/10",
-  },
-  {
-    title: "View Analytics",
-    description: "Check your learning progress.",
-    icon: BarChart,
-    href: "/dashboard/analytics",
-    color: "text-orange-500",
-    bg: "bg-orange-500/10",
-  },
-  {
-    title: "Review Topics",
-    description: "Go over previously completed topics.",
-    icon: BookOpen,
-    href: "/dashboard/mentors",
-    color: "text-primary",
-    bg: "bg-primary/10",
-  },
-  {
-    title: "Workspace Settings",
-    description: "Manage your account and preferences.",
-    icon: Settings,
-    href: "/dashboard/settings",
-    color: "text-muted-foreground",
-    bg: "bg-muted",
-  }
-];
+// Actions are now derived inside the component
 
 const gradientMapping: Record<string, string> = {
   "text-emerald-500": 'linear-gradient(to bottom right, #10b981, #047857)',
@@ -80,7 +32,56 @@ const item = {
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
 };
 
-export function QuickActions() {
+interface QuickActionsProps {
+  recentMentor?: MentorWithStats;
+}
+
+export function QuickActions({ recentMentor }: QuickActionsProps) {
+  const ACTIONS = [
+    {
+      title: "Continue Roadmap",
+      description: "Pick up where you left off.",
+      icon: Map,
+      href: recentMentor ? `/dashboard/mentors/${recentMentor.id}?action=roadmap` : "/dashboard/mentors",
+      color: "text-emerald-500",
+    },
+    {
+      title: "Practice Topic",
+      description: "Solidify your understanding.",
+      icon: Code2,
+      href: recentMentor ? `/dashboard/mentors/${recentMentor.id}?action=practice` : "/dashboard/mentors",
+      color: "text-blue-500",
+    },
+    {
+      title: "Ask a Question",
+      description: "Clear up any confusion.",
+      icon: MessageSquare,
+      href: recentMentor ? `/dashboard/mentors/${recentMentor.id}` : "/dashboard/mentors",
+      color: "text-violet-500",
+    },
+    {
+      title: "Upload Resources",
+      description: "Add PDFs or text to your knowledge base.",
+      icon: FileUp,
+      href: recentMentor ? `/dashboard/mentors/${recentMentor.id}/resources` : "/dashboard/mentors",
+      color: "text-orange-500",
+    },
+    {
+      title: "Start Voice Session",
+      description: "Practice speaking with your mentor.",
+      icon: Mic,
+      href: recentMentor ? `/dashboard/mentors/${recentMentor.id}?action=voice` : "/dashboard/mentors",
+      color: "text-primary",
+    },
+    {
+      title: "Workspace Settings",
+      description: "Manage your mentor preferences.",
+      icon: Settings,
+      href: recentMentor ? `/dashboard/mentors/${recentMentor.id}/settings` : "/dashboard/mentors",
+      color: "text-muted-foreground",
+    }
+  ];
+
   return (
     <div className="w-full">
       <div className="flex items-center gap-3 mb-6">

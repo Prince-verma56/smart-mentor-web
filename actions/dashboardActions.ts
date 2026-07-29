@@ -79,6 +79,38 @@ export async function getDashboardStats() {
         .in("mentor_id", mentorIds);
       knowledgeSourcesCount = count || 0;
     }
+    // 6. Compute real streak from chat session activity
+    let currentStreak = 0;
+    if (mentorIds.length > 0) {
+      const { data: activitySessions } = await supabase
+        .from("chat_sessions")
+        .select("last_message_at")
+        .in("mentor_id", mentorIds)
+        .not("last_message_at", "is", null)
+        .order("last_message_at", { ascending: false });
+
+      if (activitySessions && activitySessions.length > 0) {
+        // Collect unique active dates (YYYY-MM-DD)
+        const activeDays = new Set(
+          activitySessions
+            .map((s) => s.last_message_at)
+            .filter(Boolean)
+            .map((ts: string) => new Date(ts).toISOString().slice(0, 10))
+        );
+
+        // Walk backwards from today counting consecutive days with activity
+        const checkDate = new Date();
+        while (true) {
+          const key = checkDate.toISOString().slice(0, 10);
+          if (activeDays.has(key)) {
+            currentStreak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+      }
+    }
 
     return {
       activeMentors,
@@ -86,8 +118,9 @@ export async function getDashboardStats() {
       totalStudyHours: Math.round(totalMinutes / 60),
       voiceSessions: voiceSessionsCount,
       knowledgeSources: knowledgeSourcesCount,
-      currentStreak: activeMentors > 0 ? 1 : 0, // Mock streak for now
+      currentStreak,
     };
+
   } catch (error) {
     console.error("Failed to fetch dashboard stats:", error);
     return null;

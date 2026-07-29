@@ -150,14 +150,18 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
               <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
               <span className="text-[12px] font-medium text-white/80">Online</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/5 hover:bg-black/50 hover:border-white/10 transition-all duration-300 shadow-sm cursor-default">
-              <BrainCircuit className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[12px] font-medium text-white/80">Memory Synced</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/5 hover:bg-black/50 hover:border-white/10 transition-all duration-300 shadow-sm cursor-default">
-              <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-[12px] font-medium text-white/80">Knowledge Base Ready</span>
-            </div>
+            {(stats.memoryCount ?? 0) > 0 && (
+              <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/5 hover:bg-black/50 hover:border-white/10 transition-all duration-300 shadow-sm cursor-default">
+                <BrainCircuit className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[12px] font-medium text-white/80">Memory Synced</span>
+              </div>
+            )}
+            {(stats.filesUploaded ?? 0) > 0 && (
+              <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/5 hover:bg-black/50 hover:border-white/10 transition-all duration-300 shadow-sm cursor-default">
+                <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="text-[12px] font-medium text-white/80">Knowledge Base Ready</span>
+              </div>
+            )}
           </motion.div>
 
           {/* ── Independent Glass Metrics Panel ── */}
@@ -166,7 +170,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
               <div className="flex flex-col items-center bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[24px] px-8 py-5 hover:bg-white/[0.04] hover:border-white/[0.1] transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_24px_-4px_rgba(0,0,0,0.2)]">
                 <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">Completion</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-emerald-400">{(stats as any).roadmap_progress || 0}</span>
+                  <span className="text-3xl font-bold text-emerald-400">{stats.progressPercent || 0}</span>
                   <span className="text-sm font-medium text-emerald-400/50">%</span>
                 </div>
               </div>
@@ -174,7 +178,7 @@ export function WelcomeDashboard({ mentor, stats, onFillInput }: WelcomeDashboar
               <div className="flex flex-col items-center bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[24px] px-8 py-5 hover:bg-white/[0.04] hover:border-white/[0.1] transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_24px_-4px_rgba(0,0,0,0.2)]">
                 <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">Current Streak</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-bold text-white/90">{(stats as any).current_streak || 0}</span>
+                  <span className="text-3xl font-bold text-white/90">{stats.learningStreak || 0}</span>
                   <span className="text-sm font-medium text-white/40">Days</span>
                 </div>
               </div>

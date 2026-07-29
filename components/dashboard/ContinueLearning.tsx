@@ -16,6 +16,18 @@ interface ContinueLearningProps {
 export function ContinueLearning({ recentMentor }: ContinueLearningProps) {
   if (!recentMentor) return null;
 
+  const XP_BY_DIFFICULTY: Record<string, number> = {
+    beginner: 50,
+    intermediate: 100,
+    advanced: 150,
+    expert: 200,
+  };
+
+  const xpReward = recentMentor.stats.currentTopicDifficulty 
+    ? XP_BY_DIFFICULTY[recentMentor.stats.currentTopicDifficulty] || 100 
+    : 100;
+  const estMins = recentMentor.stats.currentTopicEstMinutes || 15;
+
   return (
     <div className="w-full">
       <div className="flex items-center gap-4 group cursor-default mb-6">
@@ -62,11 +74,11 @@ export function ContinueLearning({ recentMentor }: ContinueLearningProps) {
               <div className="flex flex-wrap items-center gap-6 pt-2 text-sm font-medium">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Clock className="h-4 w-4" />
-                  Est. 15 mins remaining
+                  Est. {estMins} mins remaining
                 </div>
                 <div className="flex items-center gap-2 text-emerald-500">
                   <Sparkles className="h-4 w-4" />
-                  +50 XP reward
+                  +{xpReward} XP reward
                 </div>
                 <div className="flex items-center gap-2 text-blue-500">
                   <Target className="h-4 w-4" />

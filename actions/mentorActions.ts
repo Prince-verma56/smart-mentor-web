@@ -88,35 +88,144 @@ export async function getMentorsForUser() {
     return [];
   }
 
-  // Map to the existing UI format
-  return data.map((m: any) => ({
-    ...m,
-    id: m.id,
-    difficultyLevel: m.difficulty_level,
-    learningStyle: m.learning_style,
-    conversationStyle: m.conversation_style,
-    teachingSpeed: m.teaching_speed,
-    responseLength: m.response_length,
-    preferredLanguage: m.preferred_language,
-    learningGoal: m.learning_goal,
-    sessionDuration: m.session_duration,
-    knowledgeFocus: m.knowledge_focus,
-    // Add dummy stats for now (or fetch from a stats table later)
-    stats: {
-      mentorId: m.id,
-      totalSessions: 0,
-      totalMinutes: 0,
-      learningStreak: 0,
-      progressPercent: 0,
-      currentTopic: "Introduction",
-      completedTopics: 0,
-      totalTopics: 10,
-      messagesCount: 0,
-      questionsAsked: 0,
-      filesUploaded: 0,
-      projectsCompleted: 0,
-    }
-  }));
+  if (!data || data.length === 0) return [];
+
+  const mentorIds = data.map((m: any) => m.id);
+
+  // ── Batch queries: fetch all related data in parallel ────────────────────
+  const [roadmapsResult, sessionsResult, resourcesResult, memoryResult] = await Promise.all([
+    supabase
+      .from("roadmaps")
+      .select("id, mentor_id, progress_percent")
+      .in("mentor_id", mentorIds),
+    supabase
+      .from("chat_sessions")
+      .select("id, mentor_id, message_count, last_message_at")
+      .in("mentor_id", mentorIds)
+      .eq("user_id", userId),
+    supabase
+      .from("resources")
+      .select("id, mentor_id")
+      .in("mentor_id", mentorIds),
+    supabase
+      .from("mentor_memories")
+      .select("id, mentor_id")
+      .in("mentor_id", mentorIds),
+  ]);
+
+  const roadmaps = roadmapsResult.data || [];
+  const roadmapIds = roadmaps.map((r: any) => r.id);
+
+  // Fetch all topics for all roadmaps in one query
+  let allTopics: any[] = [];
+  if (roadmapIds.length > 0) {
+    const { data: topicsData } = await supabase
+      .from("roadmap_topics")
+      .select("id, roadmap_id, title, status, estimated_minutes, difficulty")
+      .in("roadmap_id", roadmapIds);
+    allTopics = topicsData || [];
+  }
+
+  // Build lookup maps for O(1) access
+  const roadmapByMentorId = new Map<string, any>();
+  for (const r of roadmaps) roadmapByMentorId.set(r.mentor_id, r);
+
+  const topicsByRoadmapId = new Map<string, any[]>();
+  for (const t of allTopics) {
+    const existing = topicsByRoadmapId.get(t.roadmap_id) || [];
+    existing.push(t);
+    topicsByRoadmapId.set(t.roadmap_id, existing);
+  }
+
+  // Session counts & last session date per mentor
+  const sessions = sessionsResult.data || [];
+  const sessionsByMentorId = new Map<string, any[]>();
+  for (const s of sessions) {
+    const existing = sessionsByMentorId.get(s.mentor_id) || [];
+    existing.push(s);
+    sessionsByMentorId.set(s.mentor_id, existing);
+  }
+
+  // Resource counts per mentor
+  const resources = resourcesResult.data || [];
+  const resourceCountByMentorId = new Map<string, number>();
+  for (const r of resources) {
+    resourceCountByMentorId.set(r.mentor_id, (resourceCountByMentorId.get(r.mentor_id) || 0) + 1);
+  }
+
+  // Memory counts per mentor
+  const memories = memoryResult.data || [];
+  const memoryCountByMentorId = new Map<string, number>();
+  for (const m of memories) {
+    memoryCountByMentorId.set(m.mentor_id, (memoryCountByMentorId.get(m.mentor_id) || 0) + 1);
+  }
+
+  // ── Map mentors with enriched stats ──────────────────────────────────────
+  return data.map((m: any) => {
+    const roadmap = roadmapByMentorId.get(m.id);
+    const topics = roadmap ? (topicsByRoadmapId.get(roadmap.id) || []) : [];
+    const mentorSessions = sessionsByMentorId.get(m.id) || [];
+    const filesUploaded = resourceCountByMentorId.get(m.id) || 0;
+    const memoryCount = memoryCountByMentorId.get(m.id) || 0;
+
+    const totalTopics = topics.length;
+    const completedTopics = topics.filter((t: any) => t.status === "completed").length;
+    const progressPercent = roadmap?.progress_percent ||
+      (totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0);
+
+    const activeTopic = topics.find((t: any) => t.status === "in-progress");
+    const availableTopic = topics.find((t: any) => t.status === "available");
+    const currentTopic = activeTopic?.title || availableTopic?.title || "Introduction";
+    const currentTopicEstMinutes = activeTopic?.estimated_minutes || availableTopic?.estimated_minutes;
+    const currentTopicDifficulty = activeTopic?.difficulty || availableTopic?.difficulty;
+
+    // Next topic suggestion — first topic after the current one
+    const activeIdx = activeTopic ? topics.findIndex((t: any) => t.id === activeTopic.id) : -1;
+    const nextTopicSuggestion = activeIdx >= 0 ? topics[activeIdx + 1]?.title : undefined;
+
+    const totalSessions = mentorSessions.length;
+    const totalMinutes = totalSessions * 30;
+
+    // Last session date — latest last_message_at across sessions
+    const lastSessionDate = mentorSessions
+      .map((s: any) => s.last_message_at)
+      .filter(Boolean)
+      .sort()
+      .reverse()[0] ?? undefined;
+
+    return {
+      ...m,
+      id: m.id,
+      difficultyLevel: m.difficulty_level,
+      learningStyle: m.learning_style,
+      conversationStyle: m.conversation_style,
+      teachingSpeed: m.teaching_speed,
+      responseLength: m.response_length,
+      preferredLanguage: m.preferred_language,
+      learningGoal: m.learning_goal,
+      sessionDuration: m.session_duration,
+      knowledgeFocus: m.knowledge_focus,
+      stats: {
+        mentorId: m.id,
+        totalSessions,
+        totalMinutes,
+        learningStreak: 0,
+        progressPercent,
+        currentTopic,
+        currentTopicEstMinutes,
+        currentTopicDifficulty,
+        nextTopicSuggestion,
+        lastSessionDate,
+        completedTopics,
+        totalTopics,
+        filesUploaded,
+        memoryCount,
+        messagesCount: 0,
+        questionsAsked: 0,
+        projectsCompleted: 0,
+      },
+    };
+  });
 }
 
 export async function getMentorById(mentorId: string) {
@@ -135,7 +244,7 @@ export async function getMentorById(mentorId: string) {
     return null;
   }
 
-  // Get real stats from database (async, non-blocking)
+  // ── Fetch all stats in parallel ────────────────────────────────────────
   let stats = {
     mentorId: data.id,
     totalSessions: 0,
@@ -143,46 +252,80 @@ export async function getMentorById(mentorId: string) {
     learningStreak: 0,
     progressPercent: 0,
     currentTopic: "Introduction",
+    currentTopicEstMinutes: undefined as number | undefined,
+    currentTopicDifficulty: undefined as string | undefined,
+    nextTopicSuggestion: undefined as string | undefined,
+    lastSessionDate: undefined as string | undefined,
     completedTopics: 0,
     totalTopics: 0,
+    filesUploaded: 0,
+    memoryCount: 0,
     messagesCount: 0,
     questionsAsked: 0,
-    filesUploaded: 0,
     projectsCompleted: 0,
   };
 
   try {
-    // Fetch roadmap stats
-    const { data: roadmap } = await supabase
-      .from("roadmaps")
-      .select("id, progress_percent")
-      .eq("mentor_id", data.id)
-      .single();
+    const [roadmapResult, sessionsResult, resourcesResult, memoriesResult] = await Promise.all([
+      supabase
+        .from("roadmaps")
+        .select("id, progress_percent")
+        .eq("mentor_id", data.id)
+        .single(),
+      supabase
+        .from("chat_sessions")
+        .select("id, last_message_at")
+        .eq("mentor_id", data.id)
+        .eq("user_id", userId)
+        .order("last_message_at", { ascending: false }),
+      supabase
+        .from("resources")
+        .select("id", { count: "exact", head: true })
+        .eq("mentor_id", data.id),
+      supabase
+        .from("mentor_memories")
+        .select("id", { count: "exact", head: true })
+        .eq("mentor_id", data.id),
+    ]);
 
+    const roadmap = roadmapResult.data;
     if (roadmap) {
       const { data: topics } = await supabase
         .from("roadmap_topics")
-        .select("id, title, status")
-        .eq("roadmap_id", roadmap.id);
+        .select("id, title, status, estimated_minutes, difficulty")
+        .eq("roadmap_id", roadmap.id)
+        .order("order_index", { ascending: true });
 
-      if (topics) {
+      if (topics && topics.length > 0) {
         stats.totalTopics = topics.length;
         stats.completedTopics = topics.filter((t: any) => t.status === "completed").length;
-        stats.progressPercent = roadmap.progress_percent || 
+        stats.progressPercent = roadmap.progress_percent ||
           (topics.length > 0 ? Math.round((stats.completedTopics / topics.length) * 100) : 0);
+
         const activeTopic = topics.find((t: any) => t.status === "in-progress");
-        if (activeTopic) stats.currentTopic = (activeTopic as any).title;
+        const availableTopic = topics.find((t: any) => t.status === "available");
+        const currentT = activeTopic || availableTopic;
+        if (currentT) {
+          stats.currentTopic = currentT.title;
+          stats.currentTopicEstMinutes = currentT.estimated_minutes;
+          stats.currentTopicDifficulty = currentT.difficulty;
+        }
+
+        // Next topic after the current one
+        if (activeTopic) {
+          const activeIdx = topics.findIndex((t: any) => t.id === activeTopic.id);
+          stats.nextTopicSuggestion = topics[activeIdx + 1]?.title;
+        }
       }
     }
 
-    // Fetch session count
-    const { count: sessCount } = await supabase
-      .from("chat_sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("mentor_id", data.id)
-      .eq("user_id", userId);
-    stats.totalSessions = sessCount || 0;
-    stats.totalMinutes = (sessCount || 0) * 30;
+    const mentorSessions = sessionsResult.data || [];
+    stats.totalSessions = mentorSessions.length;
+    stats.totalMinutes = mentorSessions.length * 30;
+    stats.lastSessionDate = mentorSessions[0]?.last_message_at ?? undefined;
+
+    stats.filesUploaded = resourcesResult.count || 0;
+    stats.memoryCount = memoriesResult.count || 0;
   } catch {
     // Silently use defaults if stats fail
   }

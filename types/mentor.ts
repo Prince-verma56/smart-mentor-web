@@ -110,6 +110,10 @@ export interface MentorStats {
   questionsAsked?: number;
   filesUploaded?: number;
   projectsCompleted?: number;
+  // ─── Enriched fields (populated by getMentorById / getMentorsForUser) ──────
+  currentTopicEstMinutes?: number;    // estimated_minutes for the in-progress topic
+  currentTopicDifficulty?: string;    // difficulty of the in-progress topic (beginner/intermediate/etc.)
+  memoryCount?: number;               // number of mentor_memories records
 }
 
 // ─── Mentor with Stats (for card display) ────────────────────────────────────

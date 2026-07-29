@@ -599,6 +599,29 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   }, [hasImage]);
   const suggestedQuestions = getSuggestedQuestions(mentor.subject, stats.currentTopic);
 
+  // Sentinel for infinite scroll
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreMessages && !isLoadingMore) {
+          // Record current scroll state before loading more
+          if (scrollContainerRef.current) {
+            previousScrollHeight.current = scrollContainerRef.current.scrollHeight;
+            previousScrollTop.current = scrollContainerRef.current.scrollTop;
+          }
+          loadMoreMessages();
+        }
+      },
+      { root: scrollContainerRef.current, threshold: 0.1, rootMargin: '100px' }
+    );
+    
+    if (sentinelRef.current) {
+      observer.observe(sentinelRef.current);
+    }
+    return () => observer.disconnect();
+  }, [hasMoreMessages, isLoadingMore, loadMoreMessages]);
+
   // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -740,7 +763,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
               )}
 
               {hasMoreMessages && (
-                <div className="flex justify-center py-4 absolute top-[-40px] left-0 right-0 z-10">
+                <div ref={sentinelRef} className="flex justify-center py-4 absolute top-[-40px] left-0 right-0 z-10">
                   {isLoadingMore ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   ) : null}

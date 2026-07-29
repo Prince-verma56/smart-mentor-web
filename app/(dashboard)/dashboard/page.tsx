@@ -123,12 +123,12 @@ export default async function DashboardPage() {
 
             {/* Section 4: AI Recommendation (Dedicated large section) */}
             <section className="space-y-6">
-              <AIRecommendation />
+              <AIRecommendation mentors={mentors} knowledgeSources={stats?.knowledgeSources} />
             </section>
 
             {/* Section 5: Quick Actions (Horizontal cards) */}
             <section className="space-y-6">
-              <QuickActions />
+              <QuickActions recentMentor={recentMentor} />
             </section>
 
             {/* Section 6: Learning Journey (Vertical path using real grouped data) */}

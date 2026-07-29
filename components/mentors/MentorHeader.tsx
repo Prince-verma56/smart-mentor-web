@@ -42,8 +42,8 @@ export function MentorHeader({ mentor, stats }: MentorHeaderProps) {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const { createNewSession } = useConversation();
 
-  // Mock knowledge sources count based on subject or random for now
-  const knowledgeCount = mentor.knowledgeFocus ? mentor.knowledgeFocus.split(',').length : 3;
+  // Knowledge sources count from real stats
+  const knowledgeCount = stats?.filesUploaded || 0;
 
   useEffect(() => {
     if (isEditingName && inputRef.current) {
