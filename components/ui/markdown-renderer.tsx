@@ -58,24 +58,23 @@ export function MarkdownRenderer({ content, compact = false }: MarkdownRendererP
             );
           },
 
-          // ── Headings ───────────────────────────────────────────────────────
           h1: ({ children }) => (
-            <h1 className="text-[1.45em] font-bold mt-8 mb-4 tracking-tight text-white/90">
+            <h1 className="text-[1.45em] font-bold mt-6 first:mt-0 mb-3 tracking-tight text-white/90">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-[1.25em] font-semibold mt-8 mb-4 tracking-tight text-white/90">
+            <h2 className="text-[1.25em] font-semibold mt-5 first:mt-0 mb-3 tracking-tight text-white/90">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-[1.1em] font-medium mt-6 mb-3 text-white/80">
+            <h3 className="text-[1.1em] font-medium mt-4 first:mt-0 mb-2 text-white/80">
               {children}
             </h3>
           ),
           h4: ({ children }) => (
-            <h4 className="text-[1em] font-medium mt-5 mb-2 text-white/70">
+            <h4 className="text-[1em] font-medium mt-3 first:mt-0 mb-2 text-white/70">
               {children}
             </h4>
           ),

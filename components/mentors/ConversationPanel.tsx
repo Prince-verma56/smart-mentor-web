@@ -70,22 +70,6 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
     deleteSession
   } = useConversation();
 
-  const [loadingStep, setLoadingStep] = useState(0);
-
-  const lastUserMessage = [...messages].reverse().find(m => m.role === "user");
-  const hasImage = (lastUserMessage?.metadata as any)?.attachments?.some((a: any) => a.type?.startsWith("image/"));
-
-  const currentLoadingSteps = useMemo(() => {
-    const baseSteps = [
-      { icon: "🤔", text: "Understanding the request" },
-      { icon: "🔍", text: "Searching relevant knowledge" },
-      { icon: "✨", text: "Preparing response" },
-    ];
-    if (hasImage) {
-      return [{ icon: "👀", text: "Analyzing your image" }, ...baseSteps];
-    }
-    return baseSteps;
-  }, [hasImage]);
   const suggestedQuestions = getSuggestedQuestions(mentor.subject, stats.currentTopic);
 
   // Sentinel for infinite scroll
@@ -113,21 +97,10 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
   // Scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, isStreaming]);
 
-  // Animate loading steps
-  useEffect(() => {
-    if (isStreaming) {
-      setLoadingStep(0);
-      const interval = setInterval(() => {
-        setLoadingStep((p) => (p < currentLoadingSteps.length - 1 ? p + 1 : p));
-      }, 650);
-      return () => clearInterval(interval);
-    } else {
-      setLoadingStep(0);
-    }
-  }, [isStreaming]);
+  // Scroll to bottom (handled in previous hooks)
 
   const handleQuickAction = async (action: string) => {
     await sendMessage("", currentModel, action);
@@ -178,7 +151,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }, 100);
   }, []);
 
@@ -304,13 +277,20 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                       </span>
                     </span>
                     <div className="text-[14px] text-muted-foreground/60 transition-all duration-300">
-                      {currentLoadingSteps[loadingStep]?.text || "Preparing response..."}
+                      {(() => {
+                        const lastMsg = messages[messages.length - 1];
+                        const statuses = lastMsg?.metadata?.statuses || [];
+                        if (statuses.length > 0) {
+                          return statuses[statuses.length - 1].message;
+                        }
+                        return "Initializing...";
+                      })()}
                     </div>
                   </div>
                 </div>
               )}
 
-              <div ref={messagesEndRef} className="h-[20px] w-full" />
+              <div ref={messagesEndRef} className="h-[250px] w-full shrink-0" />
             </div>
           )}
         </div>
@@ -332,7 +312,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
       {/* ── Composer ──────────────────────────────── */}
       <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 pt-4 bg-transparent shrink-0 z-20 pointer-events-none">
-        <div className="w-full max-w-3xl focus-within:max-w-4xl mx-auto transition-[max-width] duration-300 ease-out relative z-10 pointer-events-auto">
+        <div className="w-full max-w-4xl mx-auto relative z-10 pointer-events-auto">
             <EnhancedComposer mentor={mentor} />
         </div>
         <p className="text-center text-[10px] text-white/30 mt-3 tracking-wide pointer-events-auto">

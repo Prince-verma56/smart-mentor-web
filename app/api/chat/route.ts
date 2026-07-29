@@ -1,5 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 
+export const runtime = "edge";
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     const { userId, getToken } = await auth();
@@ -31,6 +34,7 @@ export async function POST(req: Request) {
       system_prompt: "", // Assembled dynamically in LangGraph
       action,
       attachments: body.attachments || (body.data && body.data.attachments) || [],
+      flags: body.flags || (body.data && body.data.flags) || {},
     };
 
     const response = await fetch("http://127.0.0.1:8000/api/v1/chat", {
@@ -40,6 +44,7 @@ export async function POST(req: Request) {
         "Authorization": `Bearer ${token}` 
       },
       body: JSON.stringify(payload),
+      signal: req.signal,
     });
 
     if (!response.ok) {
@@ -48,12 +53,13 @@ export async function POST(req: Request) {
       return new Response("Backend Error", { status: response.status });
     }
 
+    // We cannot easily log a stream in Next.js without consuming it.
+    // Instead of logging, let's just make sure it's returning correctly.
     return new Response(response.body, {
       headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
+        "Content-Type": "text/event-stream; charset=utf-8",
         "X-Accel-Buffering": "no",
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-cache, no-transform",
       },
     });
   } catch (error) {

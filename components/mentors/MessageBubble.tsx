@@ -122,6 +122,33 @@ export const MessageBubble = memo(function MessageBubble({
                     {isLastAssistantMessage && isStreaming && displayContent.length > 0 && (
                       <span className="inline-block w-2 h-[1em] bg-emerald-500 ml-1 animate-[blink_1s_ease-in-out_infinite] align-middle rounded-sm shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                     )}
+                    
+                    {/* Source References */}
+                    {m.metadata?.sources && m.metadata.sources.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-white/5 flex flex-col gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-400 uppercase tracking-wider">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>Knowledge Retrieved</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {m.metadata.sources.map((src: any, idx: number) => (
+                            <div key={idx} className="group/src relative flex items-center gap-2 bg-black/20 hover:bg-black/40 border border-white/5 hover:border-white/10 rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-all cursor-default">
+                              <FileText className="h-3.5 w-3.5 text-white/40 group-hover/src:text-emerald-400/80 transition-colors" />
+                              <span className="truncate max-w-[150px]">{src.metadata?.title || src.metadata?.source || `Source ${idx + 1}`}</span>
+                              
+                              {/* Tooltip content */}
+                              {src.content && (
+                                <div className="absolute bottom-full left-0 mb-2 w-[300px] p-3 bg-[#1e1e1e] border border-white/10 rounded-lg shadow-xl opacity-0 invisible group-hover/src:opacity-100 group-hover/src:visible transition-all z-50">
+                                  <p className="text-white/80 text-[11px] leading-relaxed line-clamp-6 whitespace-pre-wrap">
+                                    {src.content}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -130,16 +157,17 @@ export const MessageBubble = memo(function MessageBubble({
 
           {/* ── Contextual Floating Actions ── */}
           {displayContent.length > 0 && (
-            <div className={cn("transition-all duration-300 opacity-0 group-hover:opacity-100 mt-1", m.role === "assistant" ? "ml-2" : "mr-2")}>
+            <div className={cn("transition-all duration-300 mt-1", 
+              m.role === "assistant" ? "ml-2 opacity-100" : "mr-2 opacity-0 group-hover:opacity-100"
+            )}>
               <MessageActions
                 content={displayContent}
                 onAction={onQuickAction}
                 onEdit={onEdit}
                 onRegenerate={onRegenerate}
-                onStop={onStop}
                 isUser={m.role === "user"}
                 isStreaming={isStreaming && isLastAssistantMessage}
-                alwaysShow={false}
+                alwaysShow={m.role === "assistant"}
               />
             </div>
           )}

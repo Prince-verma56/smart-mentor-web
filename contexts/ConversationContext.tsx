@@ -60,7 +60,8 @@ interface ConversationContextValue {
     content: string,
     model: string,
     action?: string,
-    attachments?: { type: string, url: string }[]
+    attachments?: { type: string, url: string, fileName?: string, size?: number }[],
+    flags?: Record<string, boolean>
   ) => Promise<void>;
   stopMessage: () => void;
   currentModel: string;
@@ -513,7 +514,7 @@ export function ConversationProvider({
   }, [mentorId]);
 
   const sendMessage = useCallback(
-    async (content: string, model: string, action?: string, attachments?: { type: string, url: string, fileName?: string, size?: number }[]) => {
+    async (content: string, model: string, action?: string, attachments?: { type: string, url: string, fileName?: string, size?: number }[], flags?: Record<string, boolean>) => {
       if (!user || isStreamingRef.current) return;
 
       const pendingMsg: PendingMessage = { content, model, action, attachments };
@@ -592,6 +593,7 @@ export function ConversationProvider({
         model: model || currentModel,
         action,
         attachments,
+        flags,
       };
 
       setConversationState("STREAMING");
@@ -620,20 +622,67 @@ export function ConversationProvider({
         const decoder = new TextDecoder();
         let assistantText = "";
 
+        let buffer = "";
+        let currentStatuses: any[] = [];
+        let currentSources: any[] = [];
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          assistantText += chunk;
-
-          setMessages((prev) => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            if (last && last.role === "assistant") {
-              return [...next.slice(0, -1), { ...last, content: assistantText }];
+          
+          buffer += decoder.decode(value, { stream: true });
+          console.log("Raw chunk:", buffer); // Debug
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
+          
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const dataStr = line.substring(6);
+              console.log("SSE Received:", dataStr); // Debug
+              try {
+                const data = JSON.parse(dataStr);
+                
+                if (data.type === "token") {
+                  assistantText += data.content;
+                } else if (data.type === "status") {
+                  currentStatuses.push(data);
+                } else if (data.type === "sources") {
+                  currentSources = data.data;
+                } else if (data.type === "error") {
+                  console.error("Backend Error:", data.message);
+                  assistantText += `\n\n[Backend Error: ${data.message}]`;
+                }
+                
+                setMessages((prev) => {
+                  const next = [...prev];
+                  const last = next[next.length - 1];
+                  if (last && last.role === "assistant") {
+                    return [...next.slice(0, -1), { 
+                      ...last, 
+                      content: assistantText,
+                      metadata: {
+                        ...last.metadata,
+                        statuses: [...currentStatuses],
+                        sources: currentSources.length > 0 ? currentSources : undefined
+                      }
+                    }];
+                  }
+                  return next;
+                });
+              } catch (e: any) {
+                console.warn("Failed to parse SSE chunk", dataStr);
+                assistantText += `\n[Parse Error: ${e.message}] Raw chunk: ${dataStr}`;
+                setMessages((prev) => {
+                  const next = [...prev];
+                  const last = next[next.length - 1];
+                  if (last && last.role === "assistant") {
+                    return [...next.slice(0, -1), { ...last, content: assistantText }];
+                  }
+                  return next;
+                });
+              }
             }
-            return next;
-          });
+          }
         }
 
         assistantText += decoder.decode();

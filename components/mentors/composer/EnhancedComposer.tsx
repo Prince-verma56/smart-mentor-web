@@ -8,13 +8,10 @@ import { useConversation } from "@/contexts/ConversationContext";
 import { VapiVoiceButton } from "../VapiVoiceButton";
 import { VoiceToTextButton } from "../VoiceToTextButton";
 
-import { CapabilitySelector } from "./CapabilitySelector";
-import { ContextControls, ContextState } from "./ContextControls";
+import { ModelSelector, ModelType } from "./ModelSelector";
+import { PlusMenu, ContextState } from "./PlusMenu";
 import { ContextChips } from "./ContextChips";
-import { PromptTemplates } from "./PromptTemplates";
-import { ToolsMenu } from "./ToolsMenu";
 import { AttachmentPreview, Attachment } from "./AttachmentPreview";
-import { Capability } from "@/lib/capabilities/CapabilityRegistry";
 
 export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
   const { sendMessage, stopMessage, isStreaming, activeSessionId, currentModel, setCurrentModel } = useConversation();
@@ -29,10 +26,10 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New State for Capabilities and Context
-  const [activeCapability, setActiveCapability] = useState<Capability>("chat");
+  // Context State
   const [contextState, setContextState] = useState<ContextState>({
     webSearch: false,
-    knowledgeBase: true,
+    knowledge: true,
     memory: true,
     roadmap: false,
     files: true,
@@ -40,20 +37,7 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
 
   const hasText = text.trim().length > 0 || attachments.some(a => !a.uploading);
 
-  // Smart Attachments Logic
-  useEffect(() => {
-    if (attachments.length > 0) {
-      const hasImage = attachments.some(a => a.file.type.startsWith("image/"));
-      const hasPDF = attachments.some(a => a.file.type === "application/pdf");
-      const hasCode = attachments.some(a => a.file.name.endsWith(".ts") || a.file.name.endsWith(".js") || a.file.name.endsWith(".md"));
-
-      if (hasImage) setActiveCapability("vision");
-      else if (hasPDF) setActiveCapability("long_document");
-      else if (hasCode) setActiveCapability("code");
-    } else {
-      setActiveCapability("chat"); // fallback
-    }
-  }, [attachments]);
+  // Backend handles smart capabilities (Vision, Code) automatically.
 
   const resize = useCallback(() => {
     const el = textareaRef.current;
@@ -190,11 +174,7 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
       size: a.file.size
     }));
 
-    // Passing capability as currentModel string, but in reality we'd want a capability abstraction
-    // Or we can just use setCurrentModel if we want to hook it to backend mapping easily
-    setCurrentModel(activeCapability);
-    
-    await sendMessage(val, activeCapability, undefined, mappedAttachments.length > 0 ? mappedAttachments : undefined);
+    await sendMessage(val, currentModel, undefined, mappedAttachments.length > 0 ? mappedAttachments : undefined, contextState as unknown as Record<string, boolean>);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -204,9 +184,13 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
     }
   };
 
+  const isExpanded = isInputFocused || hasText;
+
   return (
-    <div className="flex flex-col gap-2 relative">
-      <PromptTemplates onSelect={setText} disabled={isStreaming} />
+    <div className={cn(
+      "flex flex-col gap-2 relative mx-auto transition-[max-width] duration-300 ease-out",
+      isExpanded ? "max-w-4xl" : "max-w-3xl"
+    )}>
       
       <div
         className={cn(
@@ -233,7 +217,10 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
         <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple className="hidden" />
 
         <div className="px-4 pt-3 pb-1">
-          <ContextChips contextState={contextState} activeCapability={activeCapability} />
+          <ContextChips 
+            contextState={contextState} 
+            onRemove={(key) => setContextState(prev => ({ ...prev, [key]: false }))} 
+          />
         </div>
 
         <AttachmentPreview attachments={attachments} onRemove={removeAttachment} />
@@ -261,13 +248,17 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
 
         <div className="flex flex-col gap-2 px-3 pb-3 pt-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 pl-1">
-              <ToolsMenu onAttachClick={triggerFileInput} />
-              <CapabilitySelector currentCapability={activeCapability} onCapabilityChange={setActiveCapability} />
+            <div className="flex items-center gap-1 pl-1">
+              <PlusMenu 
+                contextState={contextState} 
+                setContextState={setContextState} 
+                onAttachClick={() => triggerFileInput("image/*,application/pdf,text/*")}
+                disabled={isStreaming} 
+              />
+              <ModelSelector currentModel={currentModel as ModelType} onModelChange={setCurrentModel} disabled={isStreaming} />
             </div>
 
-            <div className="flex items-center gap-2 pr-1">
-              <ContextControls state={contextState} onChange={setContextState} disabled={isStreaming} />
+            <div className="flex items-center gap-1 pr-1">
               
               <div className="h-4 w-px bg-border/40 mx-1" />
               

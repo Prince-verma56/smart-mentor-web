@@ -7,7 +7,6 @@ export function MessageActions({
   onAction,
   onEdit,
   onRegenerate,
-  onStop,
   isUser = false,
   isStreaming = false,
   alwaysShow = false,
@@ -16,11 +15,14 @@ export function MessageActions({
   onAction?: (action: string) => void;
   onEdit?: () => void;
   onRegenerate?: () => void;
-  onStop?: () => void;
   isUser?: boolean;
   isStreaming?: boolean;
   alwaysShow?: boolean;
 }) {
+  if (!isUser && isStreaming) {
+    return null;
+  }
+
   return (
     <div className={cn(
       "flex flex-wrap items-center gap-2 transition-opacity duration-300 mt-2",
@@ -61,15 +63,6 @@ export function MessageActions({
             className="h-7 w-7 flex items-center justify-center rounded-md text-white/40 hover:text-emerald-400 hover:bg-white/5 transition-all duration-300 group"
           >
             <RotateCw className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300" />
-          </button>
-        )}
-        {isStreaming && onStop && (
-          <button
-            title="Stop Generation"
-            onClick={onStop}
-            className="h-7 w-7 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all duration-300 group"
-          >
-            <Square className="h-3.5 w-3.5 group-hover:scale-110 transition-transform duration-300 fill-current" />
           </button>
         )}
       </div>
