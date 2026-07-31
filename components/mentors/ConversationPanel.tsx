@@ -25,6 +25,7 @@ import { useConversation } from "@/contexts/ConversationContext";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageBubble } from "./MessageBubble";
+import { ResourcePreviewModal } from "./ResourcePreviewModal";
 import { ArrowDown } from "lucide-react";
 import { EnhancedComposer } from "./composer/EnhancedComposer";
 
@@ -95,22 +96,17 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
     return () => observer.disconnect();
   }, [hasMoreMessages, isLoadingMore, loadMoreMessages]);
 
-  // Scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, isStreaming]);
 
-  // Scroll to bottom (handled in previous hooks)
 
-  const handleQuickAction = async (action: string) => {
+  const handleQuickAction = useCallback(async (action: string) => {
     await sendMessage("", currentModel, action);
-  };
+  }, [sendMessage, currentModel]);
 
-  const handleDeleteSession = async () => {
+  const handleDeleteSession = useCallback(async () => {
     if (!activeSessionId) return;
     if (!window.confirm("Delete this conversation?")) return;
     await deleteSession(activeSessionId);
-  };
+  }, [activeSessionId, deleteSession]);
 
   const isThinking =
     isStreaming &&
@@ -125,6 +121,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
 
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
   const isUserScrollingUp = useRef(false);
   const previousScrollTop = useRef(0);
   const previousScrollHeight = useRef(0);
@@ -152,6 +149,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      setShowScrollDown(false);
     }, 100);
   }, []);
 
@@ -161,6 +159,17 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
       scrollToBottom();
     }
   }, [validMessages.length, isStreaming, scrollToBottom, conversationState]);
+
+  // Maintain scroll position when older messages are loaded
+  useEffect(() => {
+    const handleOpenPreview = (e: any) => {
+      if (e.detail && e.detail.source === "chat") {
+        setPreviewAttachment(e.detail);
+      }
+    };
+    window.addEventListener('open-resource-preview', handleOpenPreview);
+    return () => window.removeEventListener('open-resource-preview', handleOpenPreview);
+  }, []);
 
   // Maintain scroll position when older messages are loaded
   useEffect(() => {
@@ -242,8 +251,6 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                     isLastAssistantMessage={m.id === lastAssistantMessageId}
                     onQuickAction={handleQuickAction}
                     index={index}
-                    onEdit={() => toast.info("Editing messages will be supported in the next backend update")}
-                    onRegenerate={() => toast.info("Regeneration will be supported in the next backend update")}
                     onStop={stopMessage}
                   />
                 ))}
@@ -319,6 +326,23 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
           {mentor.name} can make mistakes. Verify important info.
         </p>
       </div>
+
+      {/* Attachment Preview Modal */}
+      {previewAttachment && (
+        <ResourcePreviewModal
+          open={!!previewAttachment}
+          onOpenChange={(open) => !open && setPreviewAttachment(null)}
+          resource={{
+            id: previewAttachment.url || "1",
+            title: previewAttachment.fileName || "Attachment",
+            type: previewAttachment.type,
+            file_url: previewAttachment.url,
+            previewUrl: previewAttachment.url,
+            mentor_id: mentor.id,
+            created_at: new Date().toISOString()
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -625,62 +625,66 @@ export function ConversationProvider({
         let buffer = "";
         let currentStatuses: any[] = [];
         let currentSources: any[] = [];
+        let lastRenderTime = 0;
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           
           buffer += decoder.decode(value, { stream: true });
-          console.log("Raw chunk:", buffer); // Debug
           const lines = buffer.split("\n\n");
           buffer = lines.pop() || "";
+          
+          let needsUpdate = false;
           
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               const dataStr = line.substring(6);
-              console.log("SSE Received:", dataStr); // Debug
               try {
                 const data = JSON.parse(dataStr);
                 
                 if (data.type === "token") {
                   assistantText += data.content;
+                  needsUpdate = true;
                 } else if (data.type === "status") {
                   currentStatuses.push(data);
+                  needsUpdate = true;
                 } else if (data.type === "sources") {
                   currentSources = data.data;
+                  needsUpdate = true;
                 } else if (data.type === "error") {
                   console.error("Backend Error:", data.message);
                   assistantText += `\n\n[Backend Error: ${data.message}]`;
+                  needsUpdate = true;
                 }
-                
-                setMessages((prev) => {
-                  const next = [...prev];
-                  const last = next[next.length - 1];
-                  if (last && last.role === "assistant") {
-                    return [...next.slice(0, -1), { 
-                      ...last, 
-                      content: assistantText,
-                      metadata: {
-                        ...last.metadata,
-                        statuses: [...currentStatuses],
-                        sources: currentSources.length > 0 ? currentSources : undefined
-                      }
-                    }];
-                  }
-                  return next;
-                });
               } catch (e: any) {
                 console.warn("Failed to parse SSE chunk", dataStr);
                 assistantText += `\n[Parse Error: ${e.message}] Raw chunk: ${dataStr}`;
-                setMessages((prev) => {
-                  const next = [...prev];
-                  const last = next[next.length - 1];
-                  if (last && last.role === "assistant") {
-                    return [...next.slice(0, -1), { ...last, content: assistantText }];
-                  }
-                  return next;
-                });
+                needsUpdate = true;
               }
+            }
+          }
+
+          if (needsUpdate) {
+            const now = performance.now();
+            if (now - lastRenderTime > 30) {
+              lastRenderTime = now;
+              setMessages((prev) => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                if (last && last.role === "assistant") {
+                  return [...next.slice(0, -1), { 
+                    ...last, 
+                    content: assistantText,
+                    metadata: {
+                      ...last.metadata,
+                      statuses: [...currentStatuses],
+                      sources: currentSources.length > 0 ? currentSources : undefined
+                    }
+                  }];
+                }
+                return next;
+              });
             }
           }
         }

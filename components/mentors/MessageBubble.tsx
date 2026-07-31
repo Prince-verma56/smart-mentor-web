@@ -6,6 +6,7 @@ import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { MessageActions } from "./MessageActions";
 import { getInitials } from "@/lib/utils";
 import { FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { AttachmentCard } from "./AttachmentCard";
 
 interface MessageBubbleProps {
   m: any;
@@ -14,8 +15,6 @@ interface MessageBubbleProps {
   isStreaming: boolean;
   isLastAssistantMessage: boolean;
   onQuickAction: (action: string) => void;
-  onEdit?: () => void;
-  onRegenerate?: () => void;
   onStop?: () => void;
   style?: React.CSSProperties;
   measureRef?: (node: HTMLElement | null) => void;
@@ -29,14 +28,16 @@ export const MessageBubble = memo(function MessageBubble({
   isStreaming,
   isLastAssistantMessage,
   onQuickAction,
-  onEdit,
-  onRegenerate,
   onStop,
   style,
   measureRef,
   index,
 }: MessageBubbleProps) {
-  const displayContent = m.content.replace(/\*?\[Analyzing context\.\.\.\]\*?\n*/g, "").trimStart();
+  let displayContent = m.content.replace(/\*?\[Analyzing context\.\.\.\]\*?\n*/g, "").trimStart();
+
+  if (isStreaming && isLastAssistantMessage) {
+    displayContent += " █";
+  }
 
   return (
     <motion.div
@@ -92,16 +93,14 @@ export const MessageBubble = memo(function MessageBubble({
                 {m.metadata?.attachments && m.metadata.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 justify-end mb-2">
                     {m.metadata.attachments.map((att: any, attIdx: number) => (
-                      att.type?.startsWith("image/") ? (
-                        <div key={attIdx} className="rounded-lg overflow-hidden border border-white/10 shadow-sm max-h-[300px]">
-                          <img src={att.url} alt={att.fileName || "Attached"} className="object-contain max-h-[300px]" />
-                        </div>
-                      ) : (
-                        <div key={attIdx} className="bg-black/20 rounded-md px-3 py-2 text-xs border border-white/5 flex items-center gap-2">
-                          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="truncate max-w-[200px] text-white/80">{att.fileName}</span>
-                        </div>
-                      )
+                      <AttachmentCard 
+                        key={attIdx} 
+                        attachment={att} 
+                        onClick={() => {
+                          const event = new CustomEvent('open-resource-preview', { detail: { ...att, source: "chat" } });
+                          window.dispatchEvent(event);
+                        }}
+                      />
                     ))}
                   </div>
                 )}
@@ -110,18 +109,37 @@ export const MessageBubble = memo(function MessageBubble({
             ) : (
               <div className="w-full">
                 {displayContent === "" ? (
-                  <div className="flex items-center gap-1.5 px-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="flex flex-col gap-3 px-2 py-1 w-full max-w-[300px]">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+                      <span className="text-[13px] font-medium text-emerald-500">
+                        {m.metadata?.statuses && m.metadata.statuses.length > 0 
+                          ? m.metadata.statuses[m.metadata.statuses.length - 1].status || m.metadata.statuses[m.metadata.statuses.length - 1].message || "Thinking..."
+                          : "Thinking..."}
+                      </span>
+                    </div>
+                    {/* Animated pipeline history */}
+                    {m.metadata?.statuses && m.metadata.statuses.length > 1 && (
+                      <div className="flex flex-col gap-2 ml-[9px] pl-3 border-l-2 border-white/10 relative overflow-hidden">
+                        {m.metadata.statuses.slice(0, -1).map((s: any, idx: number) => (
+                          <motion.div 
+                            key={idx}
+                            initial={{ opacity: 0, x: -5 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex items-center gap-2"
+                          >
+                            <CheckCircle2 className="h-3 w-3 text-white/40" />
+                            <span className="text-[11px] text-white/40 line-clamp-1">{s.status || s.message || "Done"}</span>
+                          </motion.div>
+                        ))}
+                        {/* Gradient mask for smooth fade out at the top if there are many */}
+                        <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent" />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="w-full text-[15px]">
                     <MarkdownRenderer content={displayContent} />
-                    {/* Streaming cursor */}
-                    {isLastAssistantMessage && isStreaming && displayContent.length > 0 && (
-                      <span className="inline-block w-2 h-[1em] bg-emerald-500 ml-1 animate-[blink_1s_ease-in-out_infinite] align-middle rounded-sm shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                    )}
                     
                     {/* Source References */}
                     {m.metadata?.sources && m.metadata.sources.length > 0 && (
@@ -163,8 +181,6 @@ export const MessageBubble = memo(function MessageBubble({
               <MessageActions
                 content={displayContent}
                 onAction={onQuickAction}
-                onEdit={onEdit}
-                onRegenerate={onRegenerate}
                 isUser={m.role === "user"}
                 isStreaming={isStreaming && isLastAssistantMessage}
                 alwaysShow={m.role === "assistant"}
