@@ -14,6 +14,7 @@ import { WelcomeDashboard } from "./WelcomeDashboard";
 import { Button } from "@/components/ui/button";
 import MaskRevealUp from "@/components/ui/smoothui/mask-reveal-up";
 import { useUser, useClerk } from "@clerk/nextjs";
+import { useSearchParams } from "next/navigation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -72,6 +73,11 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
   } = useConversation();
 
   const suggestedQuestions = getSuggestedQuestions(mentor.subject, stats.currentTopic);
+
+  const searchParams = useSearchParams();
+  const urlSessionId = searchParams?.get("session");
+  const isTransitioning = !!urlSessionId && urlSessionId !== activeSessionId;
+  const isEffectivelyLoading = isLoadingMessages || isTransitioning;
 
   // Sentinel for infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -198,7 +204,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
         data-lenis-prevent="true"
       >
         <div className="px-4 py-8 md:px-6 min-h-full">
-          {isLoadingMessages ? (
+          {isEffectivelyLoading ? (
             <div className="flex flex-col max-w-[760px] mx-auto space-y-4">
               {[1, 2, 3].map((i) => (
                 <div
