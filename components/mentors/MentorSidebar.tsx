@@ -64,7 +64,7 @@ export function MentorSidebar({ mentor, collapsed = false, mobile = false, onTog
       title: "AI Mentor",
       items: [
         { label: "Conversation", icon: MessageSquare, href: baseHref, implemented: true },
-        { label: "Learning Path", icon: Map, href: `${baseHref}/roadmap`, implemented: true },
+        { label: "Learning Universe", icon: Map, href: `${baseHref}/learning-universe`, implemented: true },
         { label: "Knowledge Base", icon: Library, href: `${baseHref}/resources`, implemented: true },
       ],
     },

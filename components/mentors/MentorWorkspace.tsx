@@ -45,7 +45,7 @@ interface MentorWorkspaceProps {
   stats: MentorStats;
   roadmap?: MentorRoadmap;
   roadmapPromise?: Promise<MentorRoadmap | null>;
-  view?: "conversation" | "settings";
+  view?: "conversation" | "settings" | "learning-universe";
   children?: React.ReactNode;
 }
 
@@ -259,11 +259,17 @@ export function MentorWorkspace({
                   <ConversationPanel mentor={mentor} stats={stats} />
                 </div>
                 <div className={cn("absolute inset-0 flex flex-col transition-opacity duration-200", view !== "conversation" ? "z-10 opacity-100 pointer-events-auto delay-100" : "z-0 opacity-0 pointer-events-none")}>
-                  <ScrollArea className="flex-1 h-full min-h-0 bg-background" data-lenis-prevent="true">
-                    <div className="p-6 md:p-10 min-h-full">
+                  {view === 'learning-universe' ? (
+                    <div className="flex-1 h-full min-h-0 relative">
                       {children}
                     </div>
-                  </ScrollArea>
+                  ) : (
+                    <ScrollArea className="flex-1 h-full min-h-0 bg-background" data-lenis-prevent="true">
+                      <div className="p-6 md:p-10 min-h-full">
+                        {children}
+                      </div>
+                    </ScrollArea>
+                  )}
                 </div>
               </div>
             </motion.div>
