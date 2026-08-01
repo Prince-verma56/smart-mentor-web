@@ -4,7 +4,7 @@ import { MentorWorkspace } from "@/components/mentors/MentorWorkspace";
 import { getMentorById } from "@/actions/mentorActions";
 import { getOrGenerateRoadmap } from "@/actions/roadmapActions";
 import { auth } from "@clerk/nextjs/server";
-import { LearningCanvas } from "@/components/learning-universe/LearningCanvas";
+import { LearningCanvasWrapper } from "@/components/learning-universe/LearningCanvasWrapper";
 
 interface LearningUniversePageProps {
   params: Promise<{ mentorId: string }>;
@@ -43,7 +43,7 @@ export default async function LearningUniversePage({ params }: LearningUniverseP
       view="learning-universe"
     >
       <div className="absolute inset-0 w-full h-full">
-        <LearningCanvas mentorId={mentorId} />
+        <LearningCanvasWrapper mentorId={mentorId} />
       </div>
     </MentorWorkspace>
   );

@@ -8,10 +8,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export const LearningToolbar = ({ onGenerate, isGenerating }: { onGenerate?: () => void, isGenerating?: boolean }) => {
-  const { layoutMode, setLayoutMode, isSaving, saveCanvasState } = useLearningUniverseStore();
+  const layoutMode = useLearningUniverseStore(s => s.layoutMode);
+  const setLayoutMode = useLearningUniverseStore(s => s.setLayoutMode);
+  const isSaving = useLearningUniverseStore(s => s.isSaving);
+  const saveCanvasState = useLearningUniverseStore(s => s.saveCanvasState);
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-1.5 bg-background/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-1.5 bg-background/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl pointer-events-auto">
       <TooltipProvider delayDuration={100}>
         {onGenerate && (
           <>

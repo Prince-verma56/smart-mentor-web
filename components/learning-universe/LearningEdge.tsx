@@ -1,32 +1,111 @@
 "use client";
 
-import React, { memo } from 'react';
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, getSmoothStepPath } from '@xyflow/react';
+import React, { memo, useState } from 'react';
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, Position, useReactFlow } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import type { LearningEdgeData } from '@/stores/learningUniverseStore';
+import { useLearningUniverseStore, LearningEdgeData, EdgeSemanticType } from '@/stores/learningUniverseStore';
+import { EdgeTypeSelector } from './EdgeTypeSelector';
 
 export const LearningEdgeComponent = ({
   id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  sourcePosition,
-  targetPosition,
+  source,
+  target,
+  sourceX: defaultSourceX,
+  sourceY: defaultSourceY,
+  targetX: defaultTargetX,
+  targetY: defaultTargetY,
+  sourcePosition: defaultSourcePosition,
+  targetPosition: defaultTargetPosition,
+  sourceHandleId,
+  targetHandleId,
   data,
   style = {},
   markerEnd,
   selected,
 }: EdgeProps<LearningEdgeData>) => {
-  // Try SmoothStep first for a clean structured look, fallback to Bezier if positions dictate
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const { getNode } = useReactFlow();
+  const updateEdge = useLearningUniverseStore(s => s.updateEdge);
+  const setEditingEdgeId = useLearningUniverseStore(s => s.setEditingEdgeId);
+  const isEditing = useLearningUniverseStore(s => s.editingEdgeId === id);
+
+  const sourceNode = getNode(source);
+  const targetNode = getNode(target);
+
+  // Dynamic Routing Logic (Smart Edges)
+  let sourceX = defaultSourceX;
+  let sourceY = defaultSourceY;
+  let targetX = defaultTargetX;
+  let targetY = defaultTargetY;
+  let sourcePosition = defaultSourcePosition;
+  let targetPosition = defaultTargetPosition;
+
+  // Only auto-route if the edge doesn't have explicit handles (e.g. AI generated)
+  const isAutoRouted = !sourceHandleId && !targetHandleId;
+
+  if (isAutoRouted && sourceNode && targetNode && sourceNode.measured && targetNode.measured) {
+    const sW = sourceNode.measured.width || 260;
+    const sH = sourceNode.measured.height || 150;
+    const tW = targetNode.measured.width || 260;
+    const tH = targetNode.measured.height || 150;
+
+    const sCenterX = sourceNode.position.x + sW / 2;
+    const sCenterY = sourceNode.position.y + sH / 2;
+    const tCenterX = targetNode.position.x + tW / 2;
+    const tCenterY = targetNode.position.y + tH / 2;
+
+    const dx = tCenterX - sCenterX;
+    const dy = tCenterY - sCenterY;
+
+    // Determine the dominant direction
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // Horizontal routing
+      if (dx > 0) {
+        // Target is to the right
+        sourcePosition = Position.Right;
+        targetPosition = Position.Left;
+        sourceX = sourceNode.position.x + sW;
+        sourceY = sCenterY;
+        targetX = targetNode.position.x;
+        targetY = tCenterY;
+      } else {
+        // Target is to the left
+        sourcePosition = Position.Left;
+        targetPosition = Position.Right;
+        sourceX = sourceNode.position.x;
+        sourceY = sCenterY;
+        targetX = targetNode.position.x + tW;
+        targetY = tCenterY;
+      }
+    } else {
+      // Vertical routing
+      if (dy > 0) {
+        // Target is below
+        sourcePosition = Position.Bottom;
+        targetPosition = Position.Top;
+        sourceX = sCenterX;
+        sourceY = sourceNode.position.y + sH;
+        targetX = tCenterX;
+        targetY = targetNode.position.y;
+      } else {
+        // Target is above
+        sourcePosition = Position.Top;
+        targetPosition = Position.Bottom;
+        sourceX = sCenterX;
+        sourceY = sourceNode.position.y;
+        targetX = tCenterX;
+        targetY = targetNode.position.y + tH;
+      }
+    }
+  }
+
+  // Use Bezier for a premium smooth curve
+  const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
-    borderRadius: 16,
   });
 
   const semanticType = data?.semanticType || 'dependency';
@@ -69,7 +148,7 @@ export const LearningEdgeComponent = ({
       dasharray: '5,5',
       labelBg: 'bg-rose-500/10 text-rose-400',
     },
-    ai_suggested: {
+    related: {
       stroke: 'stroke-emerald-500/50',
       strokeWidth: 1.5,
       dasharray: '4,4',
@@ -86,16 +165,24 @@ export const LearningEdgeComponent = ({
   const config = edgeConfig[semanticType] || edgeConfig.dependency;
 
   // Enhance styles if selected
-  const strokeClass = selected ? 'stroke-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]' : config.stroke;
+  const strokeClass = selected ? 'stroke-primary filter drop-shadow-[0_0_8px_rgba(var(--primary),0.8)]' : config.stroke;
   const strokeWidth = selected ? config.strokeWidth + 1 : config.strokeWidth;
 
   return (
     <>
+      {/* Invisible thicker interaction path for easier clicking/selecting */}
+      <BaseEdge 
+        path={edgePath} 
+        style={{ strokeWidth: 20, strokeOpacity: 0, cursor: 'pointer' }}
+        className="react-flow__edge-interaction z-10"
+      />
+      {/* Visible edge path */}
       <BaseEdge 
         path={edgePath} 
         markerEnd={markerEnd} 
         style={{ ...style, strokeWidth, strokeDasharray: config.dasharray }}
-        className={cn('transition-all duration-300', strokeClass, selected ? 'z-10' : 'z-0')}
+        // transition-colors instead of transition-all prevents the edge from lagging during drag
+        className={cn('transition-colors duration-300', strokeClass, selected ? 'z-10' : 'z-0')}
       />
       {/* Edge Label Rendered in an overlay */}
       {(data?.label || semanticType) && (
@@ -106,15 +193,34 @@ export const LearningEdgeComponent = ({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: 'all',
             }}
-            className="nodrag nopan z-20"
+            className="nodrag nopan z-20 group"
           >
-            <div className={cn(
-              "px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider backdrop-blur-md border border-white/5 whitespace-nowrap transition-transform hover:scale-110",
+            <div 
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                setEditingEdgeId(id);
+              }}
+              className={cn(
+              "flex flex-col items-center px-3 py-1 rounded-2xl text-[10px] font-bold tracking-wide backdrop-blur-xl border transition-all duration-300 hover:scale-110 shadow-lg cursor-pointer overflow-hidden",
               config.labelBg,
-              selected ? 'ring-1 ring-primary/50' : ''
+              selected ? 'ring-2 ring-primary/50 border-primary/50' : 'border-white/10'
             )}>
-              {data?.label || semanticType.replace('_', ' ')}
+              <span className="uppercase whitespace-nowrap">{data?.label || semanticType.replace('_', ' ')}</span>
+              <div className="h-0 opacity-0 group-hover:h-auto group-hover:opacity-100 group-hover:mt-1 group-hover:mb-1 transition-all duration-300 text-[9px] font-normal text-current/70 max-w-[120px] text-center leading-tight">
+                Click to edit relationship.
+              </div>
             </div>
+            
+            {isEditing && (
+              <EdgeTypeSelector 
+                isRelative={true}
+                onSelect={(newType) => {
+                  updateEdge(id, { semanticType: newType, label: newType.replace('_', ' ') });
+                  setEditingEdgeId(null);
+                }}
+                onCancel={() => setEditingEdgeId(null)}
+              />
+            )}
           </div>
         </EdgeLabelRenderer>
       )}

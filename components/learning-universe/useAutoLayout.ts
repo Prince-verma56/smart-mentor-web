@@ -1,13 +1,19 @@
 "use client";
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { useReactFlow, Node, Edge } from '@xyflow/react';
 
-const elk = new ELK();
-
 const useAutoLayout = () => {
   const { setNodes, setEdges } = useReactFlow();
+  
+  // Lazy-initialize ELK to prevent 'Illegal constructor' SSR error
+  const elk = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      return new ELK();
+    }
+    return null;
+  }, []);
 
   const getLayoutedElements = useCallback(async (nodes: Node[], edges: Edge[], layoutMode: string) => {
     // Determine ELK algorithm based on layout mode
@@ -23,9 +29,11 @@ const useAutoLayout = () => {
 
     const elkOptions: any = {
       'elk.algorithm': algorithm,
-      'elk.layered.spacing.nodeNodeBetweenLayers': '100',
-      'elk.spacing.nodeNode': '80',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '160',
+      'elk.spacing.nodeNode': '140',
       'elk.direction': direction,
+      'elk.layered.crossingMinimization.strategy': 'INTERACTIVE',
+      'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
     };
 
     const graph = {
@@ -42,6 +50,8 @@ const useAutoLayout = () => {
         targets: [e.target],
       })),
     };
+
+    if (!elk) return { nodes, edges };
 
     try {
       const layoutedGraph = await elk.layout(graph);
