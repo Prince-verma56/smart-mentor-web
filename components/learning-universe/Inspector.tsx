@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { useLearningUniverseStore } from '@/stores/learningUniverseStore';
 import { X, ExternalLink, BookOpen, Clock, Activity, Zap, Layers, Code2, Brain } from 'lucide-react';

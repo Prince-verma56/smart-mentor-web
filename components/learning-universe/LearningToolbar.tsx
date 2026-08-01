@@ -1,16 +1,40 @@
+"use client";
+
 import React from 'react';
 import { useLearningUniverseStore } from '@/stores/learningUniverseStore';
-import { Network, Search, Filter, Share2, Workflow, Maximize2, MoreHorizontal, Settings2, Save } from 'lucide-react';
+import { Network, Search, Filter, Share2, Workflow, Maximize2, MoreHorizontal, Settings2, Save, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-export const LearningToolbar = () => {
+export const LearningToolbar = ({ onGenerate, isGenerating }: { onGenerate?: () => void, isGenerating?: boolean }) => {
   const { layoutMode, setLayoutMode, isSaving, saveCanvasState } = useLearningUniverseStore();
 
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-1.5 bg-background/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl">
       <TooltipProvider delayDuration={100}>
+        {onGenerate && (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-9 rounded-xl hover:bg-white/5 text-primary gap-2"
+                  onClick={onGenerate}
+                  disabled={isGenerating}
+                >
+                  <Sparkles className={`w-4 h-4 ${isGenerating ? 'animate-pulse' : ''}`} />
+                  <span className="text-xs font-medium capitalize hidden sm:inline-block">
+                    {isGenerating ? 'Generating...' : 'AI Generate'}
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Generate Roadmap with AI</TooltipContent>
+            </Tooltip>
+            <div className="w-px h-6 bg-white/10 mx-1" />
+          </>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5">

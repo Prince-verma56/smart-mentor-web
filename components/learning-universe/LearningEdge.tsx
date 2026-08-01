@@ -1,3 +1,5 @@
+"use client";
+
 import React, { memo } from 'react';
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, getSmoothStepPath } from '@xyflow/react';
 import { cn } from '@/lib/utils';

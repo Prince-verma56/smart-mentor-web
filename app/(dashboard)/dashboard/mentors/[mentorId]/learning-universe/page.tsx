@@ -43,7 +43,7 @@ export default async function LearningUniversePage({ params }: LearningUniverseP
       view="learning-universe"
     >
       <div className="absolute inset-0 w-full h-full">
-        <LearningCanvas />
+        <LearningCanvas mentorId={mentorId} />
       </div>
     </MentorWorkspace>
   );

@@ -87,6 +87,8 @@ interface LearningUniverseState {
   // Custom Actions
   setNodes: (nodes: LearningNodeType[]) => void;
   setEdges: (edges: Edge<LearningEdgeData>[]) => void;
+  addStreamedNodes: (newNodes: LearningNodeType[]) => void;
+  addStreamedEdges: (newEdges: Edge<LearningEdgeData>[]) => void;
   setSelectedNodeId: (id: string | null) => void;
   setLayoutMode: (mode: LayoutMode) => void;
   setTheme: (theme: ThemeMode) => void;
@@ -185,6 +187,12 @@ export const useLearningUniverseStore = create<LearningUniverseState>((set, get)
   
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
+  addStreamedNodes: (newNodes: LearningNodeType[]) => set((state) => ({
+    nodes: [...state.nodes, ...newNodes.filter(n => !state.nodes.some(existing => existing.id === n.id))]
+  })),
+  addStreamedEdges: (newEdges: Edge<LearningEdgeData>[]) => set((state) => ({
+    edges: [...state.edges, ...newEdges.filter(e => !state.edges.some(existing => existing.id === e.id))]
+  })),
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
   setLayoutMode: (mode) => set({ layoutMode: mode }),
   setTheme: (theme) => set({ theme }),
