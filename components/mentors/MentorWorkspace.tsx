@@ -26,6 +26,7 @@ import { ConversationPanel } from "./ConversationPanel";
 import { ResourcePanel } from "./ResourcePanel";
 import { RoadmapSidebar } from "@/components/roadmap/RoadmapSidebar";
 import { VisualAnalytics } from "./VisualAnalytics";
+
 import { 
   Tooltip, 
   TooltipContent, 
@@ -45,7 +46,7 @@ interface MentorWorkspaceProps {
   stats: MentorStats;
   roadmap?: MentorRoadmap;
   roadmapPromise?: Promise<MentorRoadmap | null>;
-  view?: "conversation" | "settings" | "learning-universe";
+  view?: "conversation" | "settings";
   children?: React.ReactNode;
 }
 
@@ -237,39 +238,44 @@ export function MentorWorkspace({
         ════════════════════════════════════════════════ */}
         <div className="hidden lg:flex h-full w-full">
           {/* ── LEFT SIDEBAR ─────────────────────────── */}
-          <motion.div 
-            animate={{ width: leftCollapsed ? 72 : 280 }}
-            className="h-full overflow-hidden flex flex-col border-r bg-background shrink-0 relative"
-          >
-            <MentorSidebar 
-              mentor={mentor} 
-              collapsed={leftCollapsed} 
-              onToggleCollapse={() => setLeftCollapsed(p => !p)} 
-            />
-          </motion.div>
+          <AnimatePresence initial={false}>
+              <motion.div 
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: leftCollapsed ? 72 : 280, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="h-full overflow-hidden flex flex-col border-r bg-background shrink-0 relative"
+              >
+                <MentorSidebar 
+                  mentor={mentor} 
+                  collapsed={leftCollapsed} 
+                  onToggleCollapse={() => setLeftCollapsed(!leftCollapsed)} 
+                />
+              </motion.div>
+          </AnimatePresence>
 
           {/* ── CENTER + RIGHT (Flexible Workspace) ────────────────── */}
           <div className="flex-1 min-w-0 h-full flex overflow-hidden">
             
             {/* Center Panel */}
             <motion.div layout className="flex-1 min-w-0 flex flex-col bg-background relative overflow-hidden h-full">
-              <MentorHeader mentor={mentor} stats={stats} />
+              <MentorHeader 
+                mentor={mentor} 
+                leftCollapsed={leftCollapsed}
+                setLeftCollapsed={setLeftCollapsed}
+                rightCollapsed={rightCollapsed}
+                setRightCollapsed={setRightCollapsed}
+              />
               <div className="flex-1 min-h-0 overflow-hidden relative">
                 <div className={cn("absolute inset-0 flex flex-col transition-opacity duration-200", view === "conversation" ? "z-10 opacity-100 pointer-events-auto delay-100" : "z-0 opacity-0 pointer-events-none")}>
-                  <ConversationPanel mentor={mentor} stats={stats} />
+                  <ConversationPanel mentor={mentor} stats={stats} isActive={view === "conversation"} />
                 </div>
                 <div className={cn("absolute inset-0 flex flex-col transition-opacity duration-200", view !== "conversation" ? "z-10 opacity-100 pointer-events-auto delay-100" : "z-0 opacity-0 pointer-events-none")}>
-                  {view === 'learning-universe' ? (
-                    <div className="flex-1 h-full min-h-0 relative">
+                  <ScrollArea className="flex-1 h-full min-h-0 bg-background" data-lenis-prevent="true">
+                    <div className="p-6 md:p-10 min-h-full">
                       {children}
                     </div>
-                  ) : (
-                    <ScrollArea className="flex-1 h-full min-h-0 bg-background" data-lenis-prevent="true">
-                      <div className="p-6 md:p-10 min-h-full">
-                        {children}
-                      </div>
-                    </ScrollArea>
-                  )}
+                  </ScrollArea>
                 </div>
               </div>
             </motion.div>
@@ -343,23 +349,23 @@ export function MentorWorkspace({
               >
 
                 <div className="h-full overflow-hidden flex flex-col">
-                  {roadmapPromise ? (
-                    <Suspense fallback={<RoadmapPlaceholder />}>
-                      <AsyncRoadmapRightPanel
-                        stats={stats}
-                        roadmapPromise={roadmapPromise}
-                        mentorId={mentor.id}
+                    {roadmapPromise ? (
+                      <Suspense fallback={<RoadmapPlaceholder />}>
+                        <AsyncRoadmapRightPanel
+                          stats={stats}
+                          roadmapPromise={roadmapPromise}
+                          mentorId={mentor.id}
+                          onCollapse={() => setRightCollapsed(true)}
+                        />
+                      </Suspense>
+                    ) : (
+                      <RightPanelContent 
+                        stats={stats} 
+                        roadmap={roadmap} 
+                        mentorId={mentor.id} 
                         onCollapse={() => setRightCollapsed(true)}
                       />
-                    </Suspense>
-                  ) : (
-                    <RightPanelContent 
-                      stats={stats} 
-                      roadmap={roadmap} 
-                      mentorId={mentor.id} 
-                      onCollapse={() => setRightCollapsed(true)}
-                    />
-                  )}
+                    )}
                 </div>
               </div>
             </motion.div>

@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useLearningUniverseStore } from '@/stores/learningUniverseStore';
+import { useCanvasStore, useSelectionStore } from '@/stores/learningUniverseStore';
 import { 
   X, ExternalLink, BookOpen, Clock, Activity, Zap, Layers, 
   Code2, Brain, FileText, CheckCircle2, Bookmark, Flame, Target, ListChecks,
@@ -17,18 +17,18 @@ import { Separator } from '@/components/ui/separator';
 import { useRouter, useParams } from 'next/navigation';
 
 export const Inspector = () => {
-  const inspectorNodeId = useLearningUniverseStore(s => s.inspectorNodeId);
-  const data = useLearningUniverseStore(s => s.nodes.find(n => n.id === s.inspectorNodeId)?.data);
-  const setInspectorNodeId = useLearningUniverseStore(s => s.setInspectorNodeId);
-  const updateNodeData = useLearningUniverseStore(s => s.updateNodeData);
+  const inspectorNodeId = useSelectionStore(s => s.inspectorNodeId);
+  const data = useCanvasStore(s => s.nodes.find(n => n.id === inspectorNodeId)?.data);
+  const setInspectorNodeId = useSelectionStore(s => s.setInspectorNodeId);
+  const updateNodeData = useCanvasStore(s => s.updateNodeData);
   
-  const prerequisites = useLearningUniverseStore(useShallow(s => 
-    s.edges.filter(e => e.target === s.inspectorNodeId)
+  const prerequisites = useCanvasStore(useShallow(s => 
+    s.edges.filter(e => e.target === inspectorNodeId)
       .map(e => s.nodes.find(n => n.id === e.source)?.data.title).filter(Boolean)
   ));
 
-  const nextNodes = useLearningUniverseStore(useShallow(s => 
-    s.edges.filter(e => e.source === s.inspectorNodeId)
+  const nextNodes = useCanvasStore(useShallow(s => 
+    s.edges.filter(e => e.source === inspectorNodeId)
       .map(e => s.nodes.find(n => n.id === e.target)?.data.title).filter(Boolean)
   ));
 
@@ -60,7 +60,7 @@ export const Inspector = () => {
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: '100%', opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="absolute right-4 top-4 bottom-4 w-96 bg-background/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex flex-col z-50 pointer-events-auto overflow-hidden"
+        className="absolute right-4 top-4 bottom-4 w-96 bg-background/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl flex flex-col z-50 pointer-events-auto overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/5 bg-muted/20">
@@ -74,9 +74,17 @@ export const Inspector = () => {
         </div>
 
         <ScrollArea className="flex-1" data-lenis-prevent="true">
-          <div className="p-5 space-y-6">
-            
-            {/* 1. Overview */}
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={inspectorNodeId}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="p-6 space-y-7"
+            >
+              
+              {/* 1. Overview */}
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <select 
@@ -283,7 +291,8 @@ export const Inspector = () => {
               </div>
             </div>
 
-          </div>
+            </motion.div>
+          </AnimatePresence>
         </ScrollArea>
 
         {/* Footer Action */}

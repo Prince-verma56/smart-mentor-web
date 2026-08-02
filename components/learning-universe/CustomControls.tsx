@@ -1,18 +1,19 @@
 "use client";
 
 import React from 'react';
-import { useReactFlow, useViewport, Panel } from '@xyflow/react';
-import { useLearningUniverseStore } from '@/stores/learningUniverseStore';
-import { Minus, Plus, Undo2, Redo2 } from 'lucide-react';
+import { useReactFlow, Panel, useViewport } from '@xyflow/react';
+import { useCanvasStore } from '@/stores/learningUniverseStore';
+import { Minus, Plus, Undo2, Redo2, Maximize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const CustomControls = () => {
-  const { zoomIn, zoomOut } = useReactFlow();
+  const { fitView, zoomIn, zoomOut } = useReactFlow();
   const { zoom } = useViewport();
   
-  const undo = useLearningUniverseStore(s => s.undo);
-  const redo = useLearningUniverseStore(s => s.redo);
-  const history = useLearningUniverseStore(s => s.history);
+  const undo = useCanvasStore(s => s.undo);
+  const redo = useCanvasStore(s => s.redo);
+  const history = useCanvasStore(s => s.history);
   
   const canUndo = history.past.length > 0;
   const canRedo = history.future.length > 0;

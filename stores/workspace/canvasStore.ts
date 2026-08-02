@@ -1,0 +1,207 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { Edge, Connection, NodeChange, EdgeChange, applyNodeChanges, applyEdgeChanges, addEdge, Viewport } from '@xyflow/react';
+import { LearningNodeType, LearningEdgeData, LearningNodeData, calculateHierarchy, GraphHistoryState } from './types';
+
+// Simple debounce function
+function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return function(this: any, ...args: Parameters<T>) {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  } as T;
+}
+
+let isDirty = false;
+let isSaving = false;
+
+// Robust Debounced saver that queues dirty state
+const processSaveQueue = async () => {
+  if (!isDirty || isSaving) return;
+  
+  isSaving = true;
+  try {
+    const wsStore = require('./workspaceStore').useWorkspaceStore;
+    if (wsStore) {
+      // Clear dirty flag immediately so any concurrent edits set it to true again
+      isDirty = false;
+      await wsStore.getState().saveCanvasState();
+    }
+  } catch (e) {
+    // If saving fails, mark dirty again to retry
+    isDirty = true;
+    console.error("Save pipeline error:", e);
+  } finally {
+    isSaving = false;
+    // If more changes happened during save, process again
+    if (isDirty) {
+      setTimeout(processSaveQueue, 2000);
+    }
+  }
+};
+
+const triggerAutosave = debounce(() => {
+  isDirty = true;
+  processSaveQueue();
+}, 1000);
+
+interface CanvasState {
+  nodes: LearningNodeType[];
+
+  edges: Edge<LearningEdgeData>[];
+  viewport: Viewport;
+  history: { past: GraphHistoryState[]; future: GraphHistoryState[] };
+  
+  onNodesChange: (changes: NodeChange<LearningNodeType>[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
+  onConnect: (connection: Connection) => void;
+  
+  setNodes: (nodes: LearningNodeType[]) => void;
+  setEdges: (edges: Edge<LearningEdgeData>[]) => void;
+  setViewport: (viewport: Viewport) => void;
+  
+  addStreamedNodes: (newNodes: LearningNodeType[]) => void;
+  addStreamedEdges: (newEdges: Edge<LearningEdgeData>[]) => void;
+  
+  pushHistory: () => void;
+  undo: () => void;
+  redo: () => void;
+  
+  addNode: (node: LearningNodeType) => void;
+  addEdge: (edge: Edge<LearningEdgeData>) => void;
+  removeNodes: (nodeIds: string[]) => void;
+  updateNodeData: (id: string, data: Partial<LearningNodeData>) => void;
+  removeEdges: (edgeIds: string[]) => void;
+  updateEdge: (id: string, data: Partial<LearningEdgeData>) => void;
+  resetUniverse: () => void;
+}
+
+export const useCanvasStore = create<CanvasState>()(
+  persist(
+    (set, get) => ({
+      nodes: [],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      history: { past: [], future: [] },
+
+      pushHistory: () => {
+        const state = get();
+        const newPast = [...state.history.past, { nodes: state.nodes, edges: state.edges }].slice(-50);
+        set({ history: { past: newPast, future: [] } });
+      },
+      
+      undo: () => {
+        const state = get();
+        if (state.history.past.length === 0) return;
+        const previous = state.history.past[state.history.past.length - 1];
+        const newPast = state.history.past.slice(0, -1);
+        const newFuture = [{ nodes: state.nodes, edges: state.edges }, ...state.history.future];
+        set({ nodes: previous.nodes, edges: previous.edges, history: { past: newPast, future: newFuture } });
+      },
+      
+      redo: () => {
+        const state = get();
+        if (state.history.future.length === 0) return;
+        const next = state.history.future[0];
+        const newFuture = state.history.future.slice(1);
+        const newPast = [...state.history.past, { nodes: state.nodes, edges: state.edges }];
+        set({ nodes: next.nodes, edges: next.edges, history: { past: newPast, future: newFuture } });
+      },
+
+      onNodesChange: (changes: NodeChange<LearningNodeType>[]) => {
+        set({ nodes: applyNodeChanges(changes, get().nodes) });
+        triggerAutosave();
+      },
+      
+      onEdgesChange: (changes: EdgeChange[]) => {
+        set({ edges: applyEdgeChanges(changes, get().edges) as Edge<LearningEdgeData>[] });
+        triggerAutosave();
+      },
+      
+      onConnect: (connection: Connection) => {
+        get().pushHistory();
+        const newEdge: Edge<LearningEdgeData> = {
+          ...connection,
+          id: `e-${connection.source}-${connection.target}-${Date.now()}`,
+          type: 'semanticEdge',
+          data: { semanticType: 'dependency', metadata: { source: 'user', createdBy: 'user', manual: true, createdAt: new Date().toISOString() } }
+        };
+        const updatedEdges = addEdge(newEdge, get().edges);
+        set({
+          edges: updatedEdges,
+          nodes: calculateHierarchy(get().nodes, updatedEdges as Edge<LearningEdgeData>[])
+        });
+      },
+
+      setNodes: (nodes) => { set({ nodes: calculateHierarchy(nodes, get().edges) }); triggerAutosave(); },
+      setEdges: (edges) => { set({ edges, nodes: calculateHierarchy(get().nodes, edges) }); triggerAutosave(); },
+      setViewport: (viewport) => { set({ viewport }); triggerAutosave(); },
+      
+      addStreamedNodes: (newNodes: LearningNodeType[]) => set((state) => {
+        const combined = [...state.nodes, ...newNodes.filter(n => !state.nodes.some(existing => existing.id === n.id))];
+        triggerAutosave();
+        return { nodes: calculateHierarchy(combined, state.edges) };
+      }),
+      
+      addStreamedEdges: (newEdges: Edge<LearningEdgeData>[]) => set((state) => {
+        const combined = [...state.edges, ...newEdges.filter(e => !state.edges.some(existing => existing.id === e.id))];
+        triggerAutosave();
+        return { edges: combined, nodes: calculateHierarchy(state.nodes, combined) };
+      }),
+      
+      addNode: (node) => {
+        get().pushHistory();
+        set(state => ({ nodes: calculateHierarchy([...state.nodes, node], state.edges) }));
+        triggerAutosave();
+      },
+
+      addEdge: (edge) => {
+        get().pushHistory();
+        const updatedEdges = [...get().edges, edge];
+        set({ edges: updatedEdges, nodes: calculateHierarchy(get().nodes, updatedEdges) });
+        triggerAutosave();
+      },
+      
+      removeNodes: (nodeIds) => {
+        get().pushHistory();
+        const newNodes = get().nodes.filter(n => !nodeIds.includes(n.id));
+        const newEdges = get().edges.filter(e => !nodeIds.includes(e.source) && !nodeIds.includes(e.target));
+        set({ nodes: calculateHierarchy(newNodes, newEdges), edges: newEdges });
+        triggerAutosave();
+      },
+      
+      updateNodeData: (id, data) => {
+        get().pushHistory();
+        set(state => ({
+          nodes: state.nodes.map(n => n.id === id ? { ...n, data: { ...n.data, ...data } } : n)
+        }));
+        triggerAutosave();
+      },
+      
+      removeEdges: (edgeIds) => {
+        get().pushHistory();
+        const updatedEdges = get().edges.filter(e => !edgeIds.includes(e.id));
+        set({ edges: updatedEdges, nodes: calculateHierarchy(get().nodes, updatedEdges) });
+        triggerAutosave();
+      },
+      
+      updateEdge: (id, data) => {
+        get().pushHistory();
+        set(state => ({
+          edges: state.edges.map(e => e.id === id ? { ...e, data: { ...e.data, ...data } as LearningEdgeData } : e)
+        }));
+        triggerAutosave();
+      },
+      
+      resetUniverse: () => { set({ nodes: [], edges: [], history: { past: [], future: [] }, viewport: { x: 0, y: 0, zoom: 1 } }); triggerAutosave(); }
+    }),
+    {
+      name: 'canvas-storage',
+      partialize: (state) => ({
+        nodes: state.nodes,
+        edges: state.edges,
+        viewport: state.viewport,
+      })
+    }
+  )
+);

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 // ─── Create ─────────────────────────────────────────────────────────────────
 
-export async function createChatSession(mentorId: string, title?: string) {
+export async function createChatSession(mentorId: string, title?: string, canvasId?: string | null) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
@@ -14,6 +14,7 @@ export async function createChatSession(mentorId: string, title?: string) {
     .from("chat_sessions")
     .insert({
       mentor_id: mentorId,
+      canvas_id: canvasId || null,
       user_id: userId,
       title: title || "New Conversation",
       is_pinned: false,
@@ -33,17 +34,27 @@ export async function createChatSession(mentorId: string, title?: string) {
 
 // ─── Read ───────────────────────────────────────────────────────────────────
 
-export async function getChatSessions(mentorId: string) {
+export async function getChatSessions(mentorId: string, canvasId?: string | null) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("chat_sessions")
     .select(
-      "id, title, created_at, is_pinned, is_archived, is_favorite, summary, ai_summary, message_count, last_message_at, voice_count, color, description"
+      "id, title, created_at, is_pinned, is_archived, is_favorite, summary, ai_summary, message_count, last_message_at, voice_count, color, description, canvas_id"
     )
     .eq("mentor_id", mentorId)
-    .eq("user_id", userId)
+    .eq("user_id", userId);
+    
+  if (canvasId !== undefined) {
+    if (canvasId === null) {
+      query = query.is("canvas_id", null);
+    } else {
+      query = query.eq("canvas_id", canvasId);
+    }
+  }
+
+  const { data, error } = await query
     .order("is_pinned", { ascending: false })
     .order("last_message_at", { ascending: false });
 

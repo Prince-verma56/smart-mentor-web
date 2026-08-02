@@ -24,6 +24,7 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const composerContainerRef = useRef<HTMLDivElement>(null);
 
   // New State for Capabilities and Context
   // Context State
@@ -119,6 +120,9 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
   };
 
   useEffect(() => {
+    const container = composerContainerRef.current;
+    if (!container) return;
+
     const handleDragEnter = (e: DragEvent) => {
       e.preventDefault(); e.stopPropagation();
       dragCounter.current += 1;
@@ -136,15 +140,15 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) processFiles(Array.from(e.dataTransfer.files));
     };
 
-    window.addEventListener('dragenter', handleDragEnter);
-    window.addEventListener('dragleave', handleDragLeave);
-    window.addEventListener('dragover', handleDragOver);
-    window.addEventListener('drop', handleDrop);
+    container.addEventListener('dragenter', handleDragEnter);
+    container.addEventListener('dragleave', handleDragLeave);
+    container.addEventListener('dragover', handleDragOver);
+    container.addEventListener('drop', handleDrop);
     return () => {
-      window.removeEventListener('dragenter', handleDragEnter);
-      window.removeEventListener('dragleave', handleDragLeave);
-      window.removeEventListener('dragover', handleDragOver);
-      window.removeEventListener('drop', handleDrop);
+      container.removeEventListener('dragenter', handleDragEnter);
+      container.removeEventListener('dragleave', handleDragLeave);
+      container.removeEventListener('dragover', handleDragOver);
+      container.removeEventListener('drop', handleDrop);
     };
   }, [mentor.id]);
 
@@ -187,7 +191,9 @@ export function EnhancedComposer({ mentor }: { mentor: Mentor }) {
   const isExpanded = isInputFocused || hasText;
 
   return (
-    <div className={cn(
+    <div 
+      ref={composerContainerRef}
+      className={cn(
       "flex flex-col gap-2 relative mx-auto transition-[max-width] duration-300 ease-out",
       isExpanded ? "max-w-4xl" : "max-w-3xl"
     )}>

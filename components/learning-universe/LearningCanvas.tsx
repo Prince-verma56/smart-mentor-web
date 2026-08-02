@@ -15,10 +15,10 @@ import {
   Connection
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useLearningUniverseStore, LearningNodeType, EdgeSemanticType, LearningEdgeData } from '@/stores/learningUniverseStore';
+import { useCanvasStore, useWorkspaceStore, useLayoutStore, useSelectionStore, LearningNodeType, EdgeSemanticType, LearningEdgeData } from '@/stores/learningUniverseStore';
 import { LearningNode } from './LearningNode';
 import { LearningEdge } from './LearningEdge';
-import { LearningToolbar } from './LearningToolbar';
+import { CanvasToolbar } from './CanvasToolbar';
 import { Inspector } from './Inspector';
 import { mockGenerateLearningUniverseStream } from '@/lib/api/mockLearningUniverseGenerator';
 import useAutoLayout from './useAutoLayout';
@@ -27,43 +27,38 @@ import { FloatingSelectionToolbar } from './FloatingSelectionToolbar';
 import { EdgeTypeSelector } from './EdgeTypeSelector';
 import { ConnectionLine } from './ConnectionLine';
 import { CustomControls } from './CustomControls';
+import { BlankCanvasEmptyState } from './BlankCanvasEmptyState';
 import { toast } from 'react-hot-toast';
-
-// Custom Node Types mapping
-const nodeTypes = {
-  learningNode: LearningNode,
-};
-
-// Custom Edge Types mapping
-const edgeTypes = {
-  semanticEdge: LearningEdge,
-};
 
 const proOptions = { hideAttribution: true };
 const deleteKeyCode = ['Backspace', 'Delete'];
 
-const LearningCanvasInner = ({ mentorId }: { mentorId: string }) => {
+const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId: string; isOfficialRoadmap?: boolean }) => {
+  // Memoize types inside the component to prevent HMR warnings
+  const nodeTypes = useMemo(() => ({ learningNode: LearningNode }), []);
+  const edgeTypes = useMemo(() => ({ semanticEdge: LearningEdge }), []);
+
   const { setCenter } = useReactFlow();
-  const nodes = useLearningUniverseStore(useShallow(s => s.nodes));
-  const edges = useLearningUniverseStore(useShallow(s => s.edges));
-  const onNodesChange = useLearningUniverseStore(s => s.onNodesChange);
-  const onEdgesChange = useLearningUniverseStore(s => s.onEdgesChange);
-  const onConnect = useLearningUniverseStore(s => s.onConnect);
-  const addStreamedNodes = useLearningUniverseStore(s => s.addStreamedNodes);
-  const addStreamedEdges = useLearningUniverseStore(s => s.addStreamedEdges);
-  const setNodes = useLearningUniverseStore(s => s.setNodes);
-  const setEdges = useLearningUniverseStore(s => s.setEdges);
-  const layoutMode = useLearningUniverseStore(s => s.layoutMode);
-  const setSelectedNodeId = useLearningUniverseStore(s => s.setSelectedNodeId);
-  const onSelectionChange = useLearningUniverseStore(s => s.onSelectionChange);
-  const undo = useLearningUniverseStore(s => s.undo);
-  const redo = useLearningUniverseStore(s => s.redo);
-  const addNode = useLearningUniverseStore(s => s.addNode);
-  const removeNodes = useLearningUniverseStore(s => s.removeNodes);
-  const removeEdges = useLearningUniverseStore(s => s.removeEdges);
-  const selectedNodes = useLearningUniverseStore(s => s.selectedNodes);
-  const selectedEdges = useLearningUniverseStore(s => s.selectedEdges);
-  const setEditingEdgeId = useLearningUniverseStore(s => s.setEditingEdgeId);
+  const nodes = useCanvasStore(useShallow(s => s.nodes));
+  const edges = useCanvasStore(useShallow(s => s.edges));
+  const onNodesChange = useCanvasStore(s => s.onNodesChange);
+  const onEdgesChange = useCanvasStore(s => s.onEdgesChange);
+  const onConnect = useCanvasStore(s => s.onConnect);
+  const addStreamedNodes = useCanvasStore(s => s.addStreamedNodes);
+  const addStreamedEdges = useCanvasStore(s => s.addStreamedEdges);
+  const setNodes = useCanvasStore(s => s.setNodes);
+  const setEdges = useCanvasStore(s => s.setEdges);
+  const layoutMode = useLayoutStore(s => s.layoutMode);
+  const setSelectedNodeId = useSelectionStore(s => s.setSelectedNodeId);
+  const onSelectionChange = useSelectionStore(s => s.onSelectionChange);
+  const undo = useCanvasStore(s => s.undo);
+  const redo = useCanvasStore(s => s.redo);
+  const addNode = useCanvasStore(s => s.addNode);
+  const removeNodes = useCanvasStore(s => s.removeNodes);
+  const removeEdges = useCanvasStore(s => s.removeEdges);
+  const selectedNodes = useSelectionStore(s => s.selectedNodes);
+  const selectedEdges = useSelectionStore(s => s.selectedEdges);
+  const setEditingEdgeId = useSelectionStore(s => s.setEditingEdgeId);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<{
@@ -81,12 +76,31 @@ const LearningCanvasInner = ({ mentorId }: { mentorId: string }) => {
 
   const { getLayoutedElements } = useAutoLayout();
 
-  // Auto-init for Phase 13 First-Time Experience
+  // Only auto-generate for the Official Roadmap canvas
   useEffect(() => {
-    if (nodes.length === 0 && !isGenerating) {
+    if (isOfficialRoadmap && nodes.length === 0 && !isGenerating) {
       handleGenerate();
     }
-  }, [nodes.length, isGenerating]);
+  }, [isOfficialRoadmap, nodes.length, isGenerating]);
+
+  // Listen for sidebar jump events
+  useEffect(() => {
+    const handleJump = (e: CustomEvent) => {
+      const { x, y, zoom, duration, id } = e.detail;
+      setCenter(x, y, { zoom, duration });
+      if (id) {
+        useSelectionStore.getState().setSelectedNodeId(id);
+        useCanvasStore.getState().setNodes(
+          useCanvasStore.getState().nodes.map(n => ({
+            ...n,
+            selected: n.id === id
+          }))
+        );
+      }
+    };
+    window.addEventListener('canvas-jump-to-node', handleJump as EventListener);
+    return () => window.removeEventListener('canvas-jump-to-node', handleJump as EventListener);
+  }, [setCenter]);
 
   // Keyboard Shortcuts for Undo/Redo
   useEffect(() => {
@@ -169,20 +183,20 @@ const LearningCanvasInner = ({ mentorId }: { mentorId: string }) => {
             const newNode = parsed.data;
             addStreamedNodes([newNode]);
             // Layout on the fly
-            const currentNodes = useLearningUniverseStore.getState().nodes;
-            const currentEdges = useLearningUniverseStore.getState().edges;
-            const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes, currentEdges, layoutMode);
-            setNodes(layoutedNodes);
-            setEdges(layoutedEdges);
+            const currentNodes = useCanvasStore.getState().nodes;
+            const currentEdges = useCanvasStore.getState().edges;
+            const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes as any, currentEdges as any, layoutMode);
+            setNodes(layoutedNodes as LearningNodeType[]);
+            setEdges(layoutedEdges as any[]);
           } else if (parsed.type === 'edge') {
             const newEdge = parsed.data;
             addStreamedEdges([newEdge]);
             // Layout on the fly
-            const currentNodes = useLearningUniverseStore.getState().nodes;
-            const currentEdges = useLearningUniverseStore.getState().edges;
-            const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes, currentEdges, layoutMode);
-            setNodes(layoutedNodes);
-            setEdges(layoutedEdges);
+            const currentNodes = useCanvasStore.getState().nodes;
+            const currentEdges = useCanvasStore.getState().edges;
+            const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes as any, currentEdges as any, layoutMode);
+            setNodes(layoutedNodes as LearningNodeType[]);
+            setEdges(layoutedEdges as any[]);
           }
         } catch (e) {
           // Ignore parse errors from partial chunks in a real stream
@@ -197,18 +211,18 @@ const LearningCanvasInner = ({ mentorId }: { mentorId: string }) => {
         toast.success("Generation complete!", { id: 'roadmap-gen' });
         
         // Final layout pass
-        const currentNodes = useLearningUniverseStore.getState().nodes;
-        const currentEdges = useLearningUniverseStore.getState().edges;
-        const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes, currentEdges, layoutMode);
+        const currentNodes = useCanvasStore.getState().nodes;
+        const currentEdges = useCanvasStore.getState().edges;
+        const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes as any, currentEdges as any, layoutMode);
         
-        setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
+        setNodes(layoutedNodes as LearningNodeType[]);
+        setEdges(layoutedEdges as any[]);
       }
     });
   };
 
   const handleNodeDoubleClick = React.useCallback((_: React.MouseEvent, node: any) => {
-    useLearningUniverseStore.getState().setInspectorNodeId(node.id);
+    useSelectionStore.getState().setInspectorNodeId(node.id);
   }, []);
 
   const handleNodeClick = React.useCallback((_: React.MouseEvent, node: any) => {
@@ -242,11 +256,34 @@ const LearningCanvasInner = ({ mentorId }: { mentorId: string }) => {
       type: 'semanticEdge',
       data: { semanticType, metadata: { source: 'user' } }
     };
-    useLearningUniverseStore.getState().addEdge(newEdge as any);
+    useCanvasStore.getState().addEdge(newEdge as any);
     setPendingConnection(null);
   };
 
-  const isValidConnection = React.useCallback((connection: Connection) => {
+  // Apply layout when layoutMode changes
+  useEffect(() => {
+    if (layoutMode === 'free') return;
+    
+    let isMounted = true;
+    const applyLayout = async () => {
+      const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(nodes as any, edges as any, layoutMode);
+      if (isMounted) {
+        setNodes(layoutedNodes as LearningNodeType[]);
+        setEdges(layoutedEdges as any[]);
+        setTimeout(() => {
+          setCenter(0, 0, { zoom: 1, duration: 800 });
+        }, 100);
+      }
+    };
+    
+    if (nodes.length > 0) {
+      applyLayout();
+    }
+    
+    return () => { isMounted = false; };
+  }, [layoutMode, getLayoutedElements]); // intentionally excluding nodes/edges to prevent infinite loops on structural changes
+
+  const isValidConnection = React.useCallback((connection: Connection | import('@xyflow/react').Edge) => {
     // Check for duplicate edges
     const isDuplicate = edges.some(e => e.source === connection.source && e.target === connection.target);
     if (isDuplicate) return false;
@@ -272,12 +309,12 @@ const LearningCanvasInner = ({ mentorId }: { mentorId: string }) => {
     return !hasCycle(connection.source, connection.target);
   }, [edges]);
 
-  const handlePaneClick = React.useCallback(() => {
+  const handlePaneClick = React.useCallback((event: React.MouseEvent | MouseEvent) => {
     setSelectedNodeId(null);
     setEditingEdgeId(null);
   }, [setSelectedNodeId, setEditingEdgeId]);
 
-  const handlePaneContextMenu = React.useCallback((event: React.MouseEvent) => {
+  const handlePaneContextMenu = React.useCallback((event: React.MouseEvent | MouseEvent) => {
     event.preventDefault();
     setContextMenu({ mouseX: event.clientX, mouseY: event.clientY, type: 'canvas' });
   }, []);
@@ -296,8 +333,43 @@ const LearningCanvasInner = ({ mentorId }: { mentorId: string }) => {
     }
   }, []);
 
+  const handleDragOver = React.useCallback((e: React.DragEvent) => {
+    // Only intercept if we're dragging a file
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, []);
+
+  const handleDrop = React.useCallback(async (e: React.DragEvent) => {
+    // Check if it's a file drop
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (file.name.endsWith('.luv') || file.name.endsWith('.json')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        try {
+          // Import engine dynamic load to avoid blocking render
+          const { LuvExportEngine } = await import('@/lib/export/LuvExportEngine');
+          const data = await LuvExportEngine.parseFile(file);
+          setNodes(data.graph.nodes as any);
+          setEdges(data.graph.edges as any);
+          toast.success(`Imported canvas: ${data.metadata.canvasName}`);
+        } catch (err: any) {
+          toast.error(`Import failed: ${err.message}`);
+        }
+      }
+    }
+  }, [setNodes, setEdges]);
+
   return (
-    <div className="learning-universe-wrapper w-full h-full relative bg-[#020617] overflow-hidden outline-none" tabIndex={0}>
+    <div 
+      className="learning-universe-wrapper w-full h-full relative bg-transparent overflow-hidden outline-none" 
+      tabIndex={0}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-teal-900/10 via-transparent to-transparent pointer-events-none" />
       <ReactFlow
         nodes={nodes}
@@ -347,7 +419,10 @@ const LearningCanvasInner = ({ mentorId }: { mentorId: string }) => {
         
         {/* We place custom toolbars using the Panel component or absolute positioning */}
         <Panel position="top-center" className="w-full pointer-events-none mt-4">
-          <LearningToolbar onGenerate={handleGenerate} isGenerating={isGenerating} />
+          <CanvasToolbar 
+            onGenerate={nodes.length === 0 ? handleGenerate : undefined} 
+            isGenerating={isGenerating} 
+          />
         </Panel>
 
         <MiniMap
@@ -395,14 +470,58 @@ const LearningCanvasInner = ({ mentorId }: { mentorId: string }) => {
 
       {/* Inspector Panel */}
       <Inspector />
+
+      {/* Blank Canvas Empty State */}
+      {!isOfficialRoadmap && nodes.length === 0 && !isGenerating && (
+        <BlankCanvasEmptyState
+          onGenerate={handleGenerate}
+          onStartBuilding={() => {
+            // Add a starter node in the center of the viewport
+            const x = window.innerWidth / 2 - 140;
+            const y = window.innerHeight / 2 - 75;
+            addNode({
+              id: `manual-node-${Date.now()}`,
+              position: { x, y },
+              type: 'learningNode',
+              data: {
+                title: 'My First Topic',
+                type: 'topic',
+                status: 'in-progress',
+                difficulty: 'beginner',
+                metadata: { source: 'user', createdBy: 'user', manual: true, createdAt: new Date().toISOString() }
+              }
+            });
+            setCenter(x + 140, y + 75, { zoom: 1.2, duration: 600 });
+          }}
+          onImport={() => {
+            import('@/lib/export/LuvExportEngine').then(({ LuvExportEngine }) => {
+              LuvExportEngine.importFromFile().then((data) => {
+                setNodes(data.graph.nodes as any);
+                setEdges(data.graph.edges as any);
+              }).catch((err) => {
+                import('react-hot-toast').then(({ default: toast }) => toast.error(`Import failed: ${err.message}`));
+              });
+            });
+          }}
+          onTemplate={() => {
+            import('@/lib/templates/learningTemplates').then(({ builtInTemplates }) => {
+              const tpl = builtInTemplates[0]; // Load the first template (Interview Prep)
+              setNodes(tpl.nodes as any);
+              setEdges(tpl.edges as any);
+              toast.success(`Loaded template: ${tpl.name}`);
+            });
+          }}
+          isGenerating={isGenerating}
+        />
+      )}
     </div>
   );
 };
 
-export const LearningCanvas = ({ mentorId }: { mentorId: string }) => {
+export const LearningCanvas = ({ mentorId, isOfficialRoadmap = false }: { mentorId: string; isOfficialRoadmap?: boolean }) => {
   return (
     <ReactFlowProvider>
-      <LearningCanvasInner mentorId={mentorId} />
+      <LearningCanvasInner mentorId={mentorId} isOfficialRoadmap={isOfficialRoadmap} />
     </ReactFlowProvider>
   );
 };

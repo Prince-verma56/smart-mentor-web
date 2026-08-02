@@ -1,18 +1,20 @@
 "use client";
 
 import React from 'react';
-import { useLearningUniverseStore } from '@/stores/learningUniverseStore';
+import { useReactFlow } from '@xyflow/react';
+import { useCanvasStore, useSelectionStore } from '@/stores/learningUniverseStore';
 import { Trash2, Copy, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const FloatingSelectionToolbar = () => {
-  const selectedNodes = useLearningUniverseStore(s => s.selectedNodes);
-  const selectedEdges = useLearningUniverseStore(s => s.selectedEdges);
-  const removeNodes = useLearningUniverseStore(s => s.removeNodes);
-  const removeEdges = useLearningUniverseStore(s => s.removeEdges);
-  const addNode = useLearningUniverseStore(s => s.addNode);
+  const selectedNodes = useSelectionStore(s => s.selectedNodes);
+  const selectedEdges = useSelectionStore(s => s.selectedEdges);
+  const removeNodes = useCanvasStore(s => s.removeNodes);
+  const removeEdges = useCanvasStore(s => s.removeEdges);
+  const addNode = useCanvasStore(s => s.addNode);
 
-  const edges = useLearningUniverseStore(s => s.edges);
+  const edges = useCanvasStore(s => s.edges);
+  const { fitView } = useReactFlow();
 
   if (selectedNodes.length === 0 && selectedEdges.length === 0) return null;
 

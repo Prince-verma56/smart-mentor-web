@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useLearningUniverseStore } from '@/stores/learningUniverseStore';
+import { useCanvasStore, LearningNodeType } from '@/stores/learningUniverseStore';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, BookOpen, Brain, Code2, ExternalLink, 
@@ -19,7 +19,7 @@ export default function NodeWorkspacePage() {
   const mentorId = params.mentorId as string;
   const nodeId = params.nodeId as string;
   
-  const { nodes } = useLearningUniverseStore();
+  const nodes = useCanvasStore(s => s.nodes);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function NodeWorkspacePage() {
 
   if (!isClient) return null;
 
-  const node = nodes.find(n => n.id === nodeId);
+  const node = nodes.find((n: LearningNodeType) => n.id === nodeId);
 
   if (!node) {
     return (

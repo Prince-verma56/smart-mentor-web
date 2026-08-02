@@ -39,6 +39,7 @@ import { EnhancedComposer } from "./composer/EnhancedComposer";
 interface ConversationPanelProps {
   mentor: Mentor;
   stats: MentorStats;
+  isActive?: boolean;
 }
 
 const getSuggestedQuestions = (subject: string, currentTopic?: string) => [
@@ -53,7 +54,7 @@ const getSuggestedQuestions = (subject: string, currentTopic?: string) => [
 
 // ─── ConversationPanel ────────────────────────────────────────────────────────
 
-export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
+export function ConversationPanel({ mentor, stats, isActive = true }: ConversationPanelProps) {
   const { user } = useUser();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -292,7 +293,7 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
                     <div className="text-[14px] text-muted-foreground/60 transition-all duration-300">
                       {(() => {
                         const lastMsg = messages[messages.length - 1];
-                        const statuses = lastMsg?.metadata?.statuses || [];
+                        const statuses = (lastMsg?.metadata as any)?.statuses || [];
                         if (statuses.length > 0) {
                           return statuses[statuses.length - 1].message;
                         }
@@ -325,10 +326,10 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
 
       {/* ── Composer ──────────────────────────────── */}
       <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 pt-4 bg-transparent shrink-0 z-20 pointer-events-none">
-        <div className="w-full max-w-4xl mx-auto relative z-10 pointer-events-auto">
+        <div className={cn("w-full max-w-4xl mx-auto relative z-10", isActive && "pointer-events-auto")}>
             <EnhancedComposer mentor={mentor} />
         </div>
-        <p className="text-center text-[10px] text-white/30 mt-3 tracking-wide pointer-events-auto">
+        <p className={cn("text-center text-[10px] text-white/30 mt-3 tracking-wide", isActive && "pointer-events-auto")}>
           {mentor.name} can make mistakes. Verify important info.
         </p>
       </div>
@@ -340,12 +341,14 @@ export function ConversationPanel({ mentor, stats }: ConversationPanelProps) {
           onOpenChange={(open) => !open && setPreviewAttachment(null)}
           resource={{
             id: previewAttachment.url || "1",
-            title: previewAttachment.fileName || "Attachment",
+            name: previewAttachment.fileName || "Attachment",
             type: previewAttachment.type,
-            file_url: previewAttachment.url,
+            storage_url: previewAttachment.url,
+            status: "ready",
             previewUrl: previewAttachment.url,
             mentor_id: mentor.id,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           }}
         />
       )}

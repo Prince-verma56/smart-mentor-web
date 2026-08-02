@@ -27,6 +27,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import type { ChatSession, Message } from "@/types/session";
+import { useWorkspaceStore } from "@/stores/learningUniverseStore";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -107,6 +108,9 @@ export function ConversationProvider({
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
+  // Get active canvas from workspace store
+  const activeCanvasId = useWorkspaceStore(state => state.activeCanvasId);
+
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -142,7 +146,7 @@ export function ConversationProvider({
     if (!user) return;
     let cancelled = false;
 
-    getChatSessions(mentorId).then((data) => {
+    getChatSessions(mentorId, undefined).then((data) => {
       if (cancelled) return;
       setSessions(data as ChatSession[]);
       setIsLoadingSessions(false);
@@ -316,13 +320,14 @@ export function ConversationProvider({
     [activeSessionId, searchParams, pathname, router]
   );
 
-  // ── Create new chat ───────────────────────────────────────────────────────
   const createNewSession = useCallback(async (title?: string): Promise<string | null> => {
     isNewChatRef.current = true;
     
     if (title && user?.id) {
       try {
-        const newSession = await createChatSession(mentorId, title);
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const canvasFilter = activeCanvasId && UUID_RE.test(activeCanvasId) ? activeCanvasId : null;
+        const newSession = await createChatSession(mentorId, title, canvasFilter);
         
         // Optimistic UI update for sidebar
         setSessions((prev) => [newSession as unknown as ChatSession, ...prev]);
@@ -492,9 +497,12 @@ export function ConversationProvider({
 
   const bootstrapConversation = useCallback(async (content: string) => {
     try {
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const canvasFilter = activeCanvasId && UUID_RE.test(activeCanvasId) ? activeCanvasId : null;
       const newSession = await createChatSession(
         mentorId,
-        content.slice(0, 40) || "New Conversation"
+        content.slice(0, 40) || "New Conversation",
+        canvasFilter
       );
       
       setSessions(prev => {

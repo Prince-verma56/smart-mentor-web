@@ -3,8 +3,10 @@
 import React, { memo, useState } from 'react';
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, Position, useReactFlow } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import { useLearningUniverseStore, LearningEdgeData, EdgeSemanticType } from '@/stores/learningUniverseStore';
+import { useCanvasStore, useSelectionStore, LearningEdgeData, EdgeSemanticType } from '@/stores/learningUniverseStore';
 import { EdgeTypeSelector } from './EdgeTypeSelector';
+
+export type LearningEdgeProps = EdgeProps<LearningEdgeData & import('@xyflow/react').Edge>;
 
 export const LearningEdgeComponent = ({
   id,
@@ -22,11 +24,12 @@ export const LearningEdgeComponent = ({
   style = {},
   markerEnd,
   selected,
-}: EdgeProps<LearningEdgeData>) => {
+}: LearningEdgeProps) => {
   const { getNode } = useReactFlow();
-  const updateEdge = useLearningUniverseStore(s => s.updateEdge);
-  const setEditingEdgeId = useLearningUniverseStore(s => s.setEditingEdgeId);
-  const isEditing = useLearningUniverseStore(s => s.editingEdgeId === id);
+  const updateEdge = useCanvasStore(s => s.updateEdge);
+  const editingEdgeId = useSelectionStore(s => s.editingEdgeId);
+  const setEditingEdgeId = useSelectionStore(s => s.setEditingEdgeId);
+  const isEditing = editingEdgeId === id;
 
   const sourceNode = getNode(source);
   const targetNode = getNode(target);
@@ -108,10 +111,10 @@ export const LearningEdgeComponent = ({
     targetPosition,
   });
 
-  const semanticType = data?.semanticType || 'dependency';
+  const semanticType = (data?.semanticType as EdgeSemanticType) || 'dependency';
   
   // Style config based on semantic type
-  const edgeConfig = {
+  const edgeConfig: Record<EdgeSemanticType, { stroke: string; strokeWidth: number; dasharray: string; labelBg: string }> = {
     prerequisite: {
       stroke: 'stroke-primary/50',
       strokeWidth: 2,
@@ -159,6 +162,12 @@ export const LearningEdgeComponent = ({
       strokeWidth: 2,
       dasharray: 'none',
       labelBg: 'bg-purple-500/10 text-purple-400',
+    },
+    ai_suggested: {
+      stroke: 'stroke-cyan-500/50',
+      strokeWidth: 2,
+      dasharray: '10,5',
+      labelBg: 'bg-cyan-500/10 text-cyan-400',
     }
   };
 
@@ -185,7 +194,7 @@ export const LearningEdgeComponent = ({
         className={cn('transition-colors duration-300', strokeClass, selected ? 'z-10' : 'z-0')}
       />
       {/* Edge Label Rendered in an overlay */}
-      {(data?.label || semanticType) && (
+      {((data?.label as string) || semanticType) && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -205,7 +214,7 @@ export const LearningEdgeComponent = ({
               config.labelBg,
               selected ? 'ring-2 ring-primary/50 border-primary/50' : 'border-white/10'
             )}>
-              <span className="uppercase whitespace-nowrap">{data?.label || semanticType.replace('_', ' ')}</span>
+              <span className="uppercase whitespace-nowrap">{(data?.label as string) || semanticType.replace('_', ' ')}</span>
               <div className="h-0 opacity-0 group-hover:h-auto group-hover:opacity-100 group-hover:mt-1 group-hover:mb-1 transition-all duration-300 text-[9px] font-normal text-current/70 max-w-[120px] text-center leading-tight">
                 Click to edit relationship.
               </div>

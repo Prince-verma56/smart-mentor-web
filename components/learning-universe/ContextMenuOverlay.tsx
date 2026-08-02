@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Copy, Maximize, Target } from 'lucide-react';
-import { useLearningUniverseStore } from '@/stores/learningUniverseStore';
+import { useCanvasStore, useSelectionStore } from '@/stores/learningUniverseStore';
 import { useReactFlow } from '@xyflow/react';
 
 interface ContextMenuProps {
@@ -15,10 +15,10 @@ interface ContextMenuProps {
 }
 
 export const ContextMenuOverlay = ({ mouseX, mouseY, type, nodeId, onClose }: ContextMenuProps) => {
-  const addNode = useLearningUniverseStore(s => s.addNode);
-  const removeNodes = useLearningUniverseStore(s => s.removeNodes);
-  const nodes = useLearningUniverseStore(s => s.nodes);
-  const setSelectedNodeId = useLearningUniverseStore(s => s.setSelectedNodeId);
+  const addNode = useCanvasStore(s => s.addNode);
+  const removeNodes = useCanvasStore(s => s.removeNodes);
+  const nodes = useCanvasStore(s => s.nodes);
+  const setSelectedNodeId = useSelectionStore(s => s.setSelectedNodeId);
   const { screenToFlowPosition, fitView } = useReactFlow();
 
   const handleCreateNode = () => {

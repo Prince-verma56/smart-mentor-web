@@ -2,6 +2,7 @@
 
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
+import { useSelectionStore, useCanvasStore } from '@/stores/learningUniverseStore';
 import { 
   CheckCircle2, Lock, PlayCircle, BookOpen, 
   BrainCircuit, Code2, FlaskConical, Target, Flag,
@@ -10,7 +11,6 @@ import {
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import type { LearningNodeType, NodeType } from '@/stores/learningUniverseStore';
-import { useLearningUniverseStore } from '@/stores/learningUniverseStore';
 
 interface LearningNodeProps extends NodeProps<LearningNodeType> {
   // dragging is injected by React Flow
@@ -79,11 +79,15 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
   const progress = data.progress || 0;
   
   // Store state for smart fading
-  const selectedNodeId = useLearningUniverseStore(s => s.selectedNodeId);
-  const edges = useLearningUniverseStore(s => s.edges);
+  const selectedNodeId = useSelectionStore(s => s.selectedNodeId);
+  const edges = useCanvasStore(s => s.edges);
+  const searchQuery = require('@/stores/learningUniverseStore').useToolbarStore((s: any) => s.searchQuery);
   
-  // Determine if this node should be faded (another node is selected, and this one isn't connected to it)
+  // Determine if this node should be faded (another node is selected, and this one isn't connected to it, OR doesn't match search)
   const isFaded = React.useMemo(() => {
+    if (searchQuery && !data.title?.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return true;
+    }
     if (!selectedNodeId || selectedNodeId === id) return false;
     // Check if connected
     const isConnected = edges.some(e => 
@@ -91,7 +95,7 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
       (e.target === selectedNodeId && e.source === id)
     );
     return !isConnected;
-  }, [selectedNodeId, id, edges]);
+  }, [selectedNodeId, id, edges, searchQuery, data.title]);
 
   // Calculate SVG stroke dasharray for the progress ring
   const radius = 18;

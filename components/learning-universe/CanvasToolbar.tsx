@@ -1,21 +1,22 @@
 "use client";
 
 import React from 'react';
-import { useLearningUniverseStore } from '@/stores/learningUniverseStore';
-import { Network, Search, Filter, Share2, Workflow, Maximize2, MoreHorizontal, Settings2, Save, Sparkles } from 'lucide-react';
+import { useWorkspaceStore, useLayoutStore, useCanvasStore } from '@/stores/learningUniverseStore';
+import { Network, Search, Filter, Share2, Upload, Download, FileDown, Workflow, Maximize2, MoreHorizontal, Settings2, Save, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from 'react-hot-toast';
 
-export const LearningToolbar = ({ onGenerate, isGenerating }: { onGenerate?: () => void, isGenerating?: boolean }) => {
-  const layoutMode = useLearningUniverseStore(s => s.layoutMode);
-  const setLayoutMode = useLearningUniverseStore(s => s.setLayoutMode);
-  const isSaving = useLearningUniverseStore(s => s.isSaving);
-  const saveCanvasState = useLearningUniverseStore(s => s.saveCanvasState);
+export const CanvasToolbar = ({ onGenerate, isGenerating }: { onGenerate?: () => void, isGenerating?: boolean }) => {
+  const layoutMode = useLayoutStore(s => s.layoutMode);
+  const setLayoutMode = useLayoutStore(s => s.setLayoutMode);
+  const isSaving = useWorkspaceStore(s => s.isSaving);
+  const saveCanvasState = useWorkspaceStore(s => s.saveCanvasState);
 
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-1.5 bg-background/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl pointer-events-auto">
-      <TooltipProvider delayDuration={100}>
+      <TooltipProvider delay={100}>
         {onGenerate && (
           <>
             <Tooltip>
@@ -40,11 +41,36 @@ export const LearningToolbar = ({ onGenerate, isGenerating }: { onGenerate?: () 
         )}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5">
-              <Search className="w-4 h-4 text-muted-foreground" />
-            </Button>
+            <div className="flex items-center">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9 rounded-xl hover:bg-white/5"
+                onClick={() => {
+                  const input = document.getElementById('canvas-search');
+                  if (input) {
+                    input.style.width = input.style.width === '150px' ? '0px' : '150px';
+                    input.style.opacity = input.style.opacity === '1' ? '0' : '1';
+                    if (input.style.width === '150px') input.focus();
+                  }
+                }}
+              >
+                <Search className="w-4 h-4 text-muted-foreground" />
+              </Button>
+              <input
+                id="canvas-search"
+                type="text"
+                placeholder="Search nodes..."
+                className="bg-transparent text-sm text-white focus:outline-none transition-all duration-200 overflow-hidden"
+                style={{ width: '0px', opacity: 0, paddingLeft: '4px' }}
+                onChange={(e) => {
+                  const store = require('@/stores/learningUniverseStore').useToolbarStore;
+                  store.getState().setSearchQuery(e.target.value);
+                }}
+              />
+            </div>
           </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">Search Nodes (Ctrl+F)</TooltipContent>
+          <TooltipContent side="bottom" className="text-xs">Search Nodes</TooltipContent>
         </Tooltip>
 
         <div className="w-px h-6 bg-white/10 mx-1" />
@@ -99,14 +125,6 @@ export const LearningToolbar = ({ onGenerate, isGenerating }: { onGenerate?: () 
           <TooltipContent side="bottom" className="text-xs">Sync state to Cloud</TooltipContent>
         </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5">
-              <Share2 className="w-4 h-4 text-muted-foreground" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">Share Roadmap</TooltipContent>
-        </Tooltip>
       </TooltipProvider>
     </div>
   );
