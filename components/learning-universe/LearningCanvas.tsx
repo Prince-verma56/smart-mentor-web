@@ -20,7 +20,7 @@ import { LearningNode } from './LearningNode';
 import { LearningEdge } from './LearningEdge';
 import { CanvasToolbar } from './CanvasToolbar';
 import { Inspector } from './Inspector';
-import { mockGenerateLearningUniverseStream } from '@/lib/api/mockLearningUniverseGenerator';
+import { generateLearningUniverseStream } from '@/lib/api/learningUniverseApi';
 import useAutoLayout from './useAutoLayout';
 import { ContextMenuOverlay } from './ContextMenuOverlay';
 import { FloatingSelectionToolbar } from './FloatingSelectionToolbar';
@@ -170,9 +170,9 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
     setIsGenerating(true);
     setNodes([]); setEdges([]);
     
-    await mockGenerateLearningUniverseStream({
+    await generateLearningUniverseStream({
       mentorId,
-      goal: "I want to become an expert in this field", // In reality, this comes from a modal or input
+      goal: "Generate a complete learning roadmap covering fundamental to advanced concepts for this topic.",
       onStatusUpdate: (status) => {
         toast.loading(status, { id: 'roadmap-gen' });
       },

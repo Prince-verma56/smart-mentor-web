@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/sheet";
 import SmoothTab from "@/components/kokonutui/smooth-tab";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible } from "@/components/ui/collapsible";
+import { useSidebarStore } from "@/stores/sidebarStore";
 import { Button } from "@/components/ui/button";
 import { 
   PanelLeft, 
@@ -225,7 +227,7 @@ export function MentorWorkspace({
 }: MentorWorkspaceProps) {
   const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
   const [mobileRightOpen, setMobileRightOpen] = useState(false);
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const { collapsed: leftCollapsed, setCollapsed: setLeftCollapsed } = useSidebarStore();
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
   // ConversationProvider wraps everything — single source of truth for conversations
