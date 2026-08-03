@@ -68,11 +68,9 @@ export const CanvasCard = ({ canvas, isActive, onOpen, onRename, onDuplicate, on
                   <DropdownMenuItem onClick={(e) => handleAction(e as any, () => onOpen(canvas.id))}>
                     <Map className="w-4 h-4 mr-2" /> Open Canvas
                   </DropdownMenuItem>
-                  {!isOfficial && (
-                    <DropdownMenuItem onClick={(e) => handleAction(e as any, () => onRename(canvas.id, canvas.name))}>
-                      <Edit2 className="w-4 h-4 mr-2" /> Rename
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={(e) => handleAction(e as any, () => onRename(canvas.id, canvas.name))}>
+                    <Edit2 className="w-4 h-4 mr-2" /> Rename
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={(e) => handleAction(e as any, () => onDuplicate(canvas))}>
                     <Copy className="w-4 h-4 mr-2" /> Duplicate
                   </DropdownMenuItem>
@@ -80,11 +78,9 @@ export const CanvasCard = ({ canvas, isActive, onOpen, onRename, onDuplicate, on
                   <DropdownMenuItem onClick={(e) => handleAction(e as any, () => onPin && onPin())}>
                     <Pin className="w-4 h-4 mr-2" /> {canvas.is_pinned ? 'Unpin from Sidebar' : 'Pin to Sidebar'}
                   </DropdownMenuItem>
-                  {!isOfficial && (
-                    <DropdownMenuItem onClick={(e) => handleAction(e as any, () => onArchive && onArchive())}>
-                      <Archive className="w-4 h-4 mr-2" /> {canvas.is_archived ? 'Unarchive' : 'Archive'}
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={(e) => handleAction(e as any, () => onArchive && onArchive())}>
+                    <Archive className="w-4 h-4 mr-2" /> {canvas.is_archived ? 'Unarchive' : 'Archive'}
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-white/10" />
                   <DropdownMenuItem onClick={(e) => handleAction(e as any, () => onShare && onShare())}>
                     <Share2 className="w-4 h-4 mr-2" /> Share
@@ -96,14 +92,10 @@ export const CanvasCard = ({ canvas, isActive, onOpen, onRename, onDuplicate, on
                     <Settings className="w-4 h-4 mr-2" /> Settings
                   </DropdownMenuItem>
                   
-                  {!isOfficial && (
-                    <>
-                      <DropdownMenuSeparator className="bg-white/10" />
-                      <DropdownMenuItem className="text-red-400 focus:text-red-300 focus:bg-red-950/30" onClick={(e) => handleAction(e as any, () => onDelete(canvas.id))}>
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </>
-                  )}
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuItem className="text-red-400 focus:text-red-300 focus:bg-red-950/30" onClick={(e) => handleAction(e as any, () => onDelete(canvas.id))}>
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -140,11 +132,9 @@ export const CanvasCard = ({ canvas, isActive, onOpen, onRename, onDuplicate, on
         <ContextMenuItem onClick={() => onOpen(canvas.id)}>
           <Map className="w-4 h-4 mr-2" /> Open Canvas
         </ContextMenuItem>
-        {!isOfficial && (
-          <ContextMenuItem onClick={() => onRename(canvas.id, canvas.name)}>
-            <Edit2 className="w-4 h-4 mr-2" /> Rename
-          </ContextMenuItem>
-        )}
+        <ContextMenuItem onClick={() => onRename(canvas.id, canvas.name)}>
+          <Edit2 className="w-4 h-4 mr-2" /> Rename
+        </ContextMenuItem>
         <ContextMenuItem onClick={() => onDuplicate(canvas)}>
           <Copy className="w-4 h-4 mr-2" /> Duplicate
         </ContextMenuItem>
@@ -152,11 +142,9 @@ export const CanvasCard = ({ canvas, isActive, onOpen, onRename, onDuplicate, on
         <ContextMenuItem onClick={() => onPin && onPin()}>
           <Pin className="w-4 h-4 mr-2" /> {canvas.is_pinned ? 'Unpin from Sidebar' : 'Pin to Sidebar'}
         </ContextMenuItem>
-        {!isOfficial && (
-          <ContextMenuItem onClick={() => onArchive && onArchive()}>
-            <Archive className="w-4 h-4 mr-2" /> {canvas.is_archived ? 'Unarchive' : 'Archive'}
-          </ContextMenuItem>
-        )}
+        <ContextMenuItem onClick={() => onArchive && onArchive()}>
+          <Archive className="w-4 h-4 mr-2" /> {canvas.is_archived ? 'Unarchive' : 'Archive'}
+        </ContextMenuItem>
         <ContextMenuSeparator className="bg-white/10" />
         <ContextMenuItem onClick={() => onShare && onShare()}>
           <Share2 className="w-4 h-4 mr-2" /> Share
@@ -168,14 +156,10 @@ export const CanvasCard = ({ canvas, isActive, onOpen, onRename, onDuplicate, on
           <Settings className="w-4 h-4 mr-2" /> Settings
         </ContextMenuItem>
         
-        {!isOfficial && (
-          <>
-            <ContextMenuSeparator className="bg-white/10" />
-            <ContextMenuItem className="text-red-400 focus:text-red-300 focus:bg-red-500/10" onClick={() => onDelete(canvas.id)}>
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
-            </ContextMenuItem>
-          </>
-        )}
+        <ContextMenuSeparator className="bg-white/10" />
+        <ContextMenuItem className="text-red-400 focus:text-red-300 focus:bg-red-500/10" onClick={() => onDelete(canvas.id)}>
+          <Trash2 className="w-4 h-4 mr-2" /> Delete
+        </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

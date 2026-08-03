@@ -158,7 +158,7 @@ export const calculateHierarchy = (nodes: LearningNodeType[], edges: Edge<Learni
   });
   
   const roots = nodes.filter(n => inDegree[n.id] === 0);
-  roots.sort((a, b) => (a.data.learning_order ?? 999) - (b.data.learning_order ?? 999) || (a.position.y - b.position.y));
+  roots.sort((a, b) => (a.data.learning_order ?? 999) - (b.data.learning_order ?? 999) || ((a.position?.y ?? 0) - (b.position?.y ?? 0)));
   
   const hierarchyMap: Record<string, string> = {};
   let standardCounter = 1;

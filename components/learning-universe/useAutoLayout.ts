@@ -153,16 +153,16 @@ const useAutoLayout = () => {
       id: 'root',
       layoutOptions: elkOptions,
       children: nodes.map((n) => ({
-        id: n.id,
+        id: String(n.id),
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
       })),
       edges: edges
         .filter(e => nodes.some(n => n.id === e.source) && nodes.some(n => n.id === e.target))
         .map((e) => ({
-          id: e.id,
-          sources: [e.source],
-          targets: [e.target],
+          id: String(e.id),
+          sources: [String(e.source)],
+          targets: [String(e.target)],
         })),
     };
 
@@ -172,7 +172,7 @@ const useAutoLayout = () => {
       if (!layoutedGraph.children) return { nodes, edges };
 
       let layoutedNodes = nodes.map((node) => {
-        const layoutedNode = layoutedGraph.children?.find((n) => n.id === node.id);
+        const layoutedNode = layoutedGraph.children?.find((n) => n.id === String(node.id));
         if (layoutedNode) {
           return {
             ...node,

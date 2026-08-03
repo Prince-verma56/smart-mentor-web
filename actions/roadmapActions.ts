@@ -1,19 +1,8 @@
-"use server";
-
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
-import Groq from "groq-sdk";
 import { getMentorById } from "./mentorActions";
 import type { MentorRoadmap, RoadmapTopic } from "@/types/roadmap";
-
-let _groq: Groq | null = null;
-function getGroq() {
-  if (!_groq) {
-    _groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-  }
-  return _groq;
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,112 +47,35 @@ export async function generateRoadmapForMentor(mentorId: string, userId: string)
   }
 
   try {
-    const prompt = `You are a world-class curriculum designer. Create a detailed structured learning roadmap.
-
-Mentor Role: ${mentor.role}
-Subject: ${mentor.subject}
-Difficulty Level: ${mentor.difficulty_level}
-Learning Goal: ${mentor.learning_goal || `Master ${mentor.subject} at ${mentor.difficulty_level} level`}
-
-Generate a roadmap with 8-12 progressive topics. Each topic should build on the previous.
-
-Respond with ONLY a valid JSON object (no markdown, no explanation):
-{
-  "title": "Descriptive roadmap title",
-  "description": "One sentence describing the outcome",
-  "total_estimated_hours": 40,
-  "topics": [
-    {
-      "title": "Topic Title",
-      "description": "Detailed description of what will be learned and why it matters",
-      "difficulty": "beginner",
-      "estimated_minutes": 45,
-      "order_index": 1
-    }
-  ]
-}
-
-Difficulty must be one of: beginner, intermediate, advanced.
-Make each topic progressively harder. Start with fundamentals.`;
-
-    const completion = await getGroq().chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.4,
-      max_tokens: 2048,
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    
+    // Check auth
+    const { userId, getToken } = await auth();
+    const token = await getToken();
+    
+    const response = await fetch(`${apiUrl}/api/v1/roadmaps/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        mentor_id: mentorId,
+        user_id: userId
+      })
     });
 
-    const raw = completion.choices[0]?.message?.content?.trim() || "";
-    const jsonStr = raw
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "");
-    const roadmapData = JSON.parse(jsonStr);
-
-    console.log(`[RoadmapService] AI generated. Saving to Supabase...`);
-
-    // Insert Roadmap
-    const { data: roadmap, error: roadmapError } = await supabase
-      .from("roadmaps")
-      .insert({
-        mentor_id: mentorId,
-        title: roadmapData.title || `${mentor.subject} Roadmap`,
-        description: roadmapData.description || "",
-        total_estimated_hours: roadmapData.total_estimated_hours || 40,
-      })
-      .select("id")
-      .single();
-
-    if (roadmapError || !roadmap) {
-      console.error("[RoadmapService] Roadmap Insert Error:", roadmapError);
-      throw new Error(`Failed to insert roadmap: ${roadmapError?.message || "Unknown error"}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[RoadmapService] Backend generation failed: ${response.status} ${errorText}`);
+      throw new Error("Failed to generate roadmap from backend.");
     }
 
-    // Insert Topics with all new fields
-    const topicsToInsert = roadmapData.topics.map((t: any, index: number) => ({
-      roadmap_id: roadmap.id,
-      title: t.title || `Topic ${index + 1}`,
-      description: t.description || "",
-      difficulty: t.difficulty || "beginner",
-      estimated_minutes: t.estimated_minutes || 30,
-      order_index: t.order_index || index + 1,
-      status: index === 0 ? "in-progress" : "locked",
-    }));
+    const data = await response.json();
+    console.log(`[RoadmapService] Backend generated successfully: ${JSON.stringify(data)}`);
 
-    const { data: insertedTopics, error: topicsError } = await supabase
-      .from("roadmap_topics")
-      .insert(topicsToInsert)
-      .select("*");
-
-    if (topicsError) throw new Error("Failed to insert roadmap topics");
-
-    console.log(`[RoadmapService] Successfully saved ${topicsToInsert.length} topics.`);
-
-    const formattedTopics: RoadmapTopic[] = (insertedTopics || topicsToInsert).map((t: any, i: number) => ({
-      id: t.id || `temp-${i}`,
-      roadmap_id: roadmap.id,
-      title: t.title,
-      description: t.description || "",
-      difficulty: t.difficulty || "beginner",
-      estimated_minutes: t.estimated_minutes || 30,
-      order_index: t.order_index,
-      status: t.status,
-      prerequisites: t.prerequisites || [],
-      progress_percent: 0,
-    }));
-
-    return {
-      id: roadmap.id,
-      mentorId,
-      title: roadmapData.title || `${mentor.subject} Roadmap`,
-      description: roadmapData.description || "",
-      total_estimated_hours: roadmapData.total_estimated_hours || 40,
-      progress_percent: 0,
-      phases: topicsToPhases(formattedTopics),
-      currentTopicId: formattedTopics[0]?.id,
-      currentTopic: formattedTopics[0] || null,
-      lastUpdated: new Date().toISOString(),
-    };
+    // The backend handles DB insertion, so just fetch the final result from DB
+    return await getOrGenerateRoadmap(mentorId, userId);
   } catch (error) {
     console.error("[RoadmapService] Failed to generate roadmap:", error);
     return null;

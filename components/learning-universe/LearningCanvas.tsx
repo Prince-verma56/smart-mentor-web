@@ -28,6 +28,7 @@ import { EdgeTypeSelector } from './EdgeTypeSelector';
 import { ConnectionLine } from './ConnectionLine';
 import { CustomControls } from './CustomControls';
 import { BlankCanvasEmptyState } from './BlankCanvasEmptyState';
+import { ImmersiveGenerationOverlay } from './ImmersiveGenerationOverlay';
 import { toast } from 'react-hot-toast';
 
 const proOptions = { hideAttribution: true };
@@ -61,6 +62,7 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
   const setEditingEdgeId = useSelectionStore(s => s.setEditingEdgeId);
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState("Preparing roadmap...");
   const [pendingConnection, setPendingConnection] = useState<{
     connection: Connection;
     mouseX: number;
@@ -75,13 +77,18 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
   } | null>(null);
 
   const { getLayoutedElements } = useAutoLayout();
+  const hasAttemptedGenRef = useRef(false);
+  const isWorkspaceInitializing = useWorkspaceStore(s => s.isInitializing);
 
-  // Only auto-generate for the Official Roadmap canvas
+  // Only auto-generate for the Official Roadmap canvas once per mount
   useEffect(() => {
-    if (isOfficialRoadmap && nodes.length === 0 && !isGenerating) {
+    if (isWorkspaceInitializing) return;
+    
+    if (isOfficialRoadmap && nodes.length === 0 && !isGenerating && !hasAttemptedGenRef.current) {
+      hasAttemptedGenRef.current = true;
       handleGenerate();
     }
-  }, [isOfficialRoadmap, nodes.length, isGenerating]);
+  }, [isWorkspaceInitializing, isOfficialRoadmap, nodes.length, isGenerating]);
 
   // Listen for sidebar jump events
   useEffect(() => {
@@ -168,13 +175,23 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    
+    // Backup previous nodes in case of failure
+    const prevNodes = [...useCanvasStore.getState().nodes];
+    const prevEdges = [...useCanvasStore.getState().edges];
+    
+    useCanvasStore.getState().setAutosaveEnabled(false);
     setNodes([]); setEdges([]);
+    
+    const currentCanvasId = useWorkspaceStore.getState().activeCanvasId;
     
     await generateLearningUniverseStream({
       mentorId,
+      canvasId: currentCanvasId || undefined,
       goal: "Generate a complete learning roadmap covering fundamental to advanced concepts for this topic.",
       onStatusUpdate: (status) => {
-        toast.loading(status, { id: 'roadmap-gen' });
+        setGenerationStatus(status);
+        // Only toast if we want, but overlay handles the UI now. We can keep toast for background updates if closed.
       },
       onChunk: async (chunk) => {
         try {
@@ -182,29 +199,21 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
           if (parsed.type === 'node') {
             const newNode = parsed.data;
             addStreamedNodes([newNode]);
-            // Layout on the fly
-            const currentNodes = useCanvasStore.getState().nodes;
-            const currentEdges = useCanvasStore.getState().edges;
-            const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes as any, currentEdges as any, layoutMode);
-            setNodes(layoutedNodes as LearningNodeType[]);
-            setEdges(layoutedEdges as any[]);
           } else if (parsed.type === 'edge') {
             const newEdge = parsed.data;
             addStreamedEdges([newEdge]);
-            // Layout on the fly
-            const currentNodes = useCanvasStore.getState().nodes;
-            const currentEdges = useCanvasStore.getState().edges;
-            const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes as any, currentEdges as any, layoutMode);
-            setNodes(layoutedNodes as LearningNodeType[]);
-            setEdges(layoutedEdges as any[]);
           }
         } catch (e) {
-          // Ignore parse errors from partial chunks in a real stream
+          console.error('Error processing chunk:', e, chunk);
         }
       },
       onError: (err) => {
         setIsGenerating(false);
         toast.error(`Generation failed: ${err}`, { id: 'roadmap-gen' });
+        // Restore previous state and re-enable autosave
+        setNodes(prevNodes);
+        setEdges(prevEdges);
+        useCanvasStore.getState().setAutosaveEnabled(true);
       },
       onDone: async () => {
         setIsGenerating(false);
@@ -213,10 +222,19 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
         // Final layout pass
         const currentNodes = useCanvasStore.getState().nodes;
         const currentEdges = useCanvasStore.getState().edges;
-        const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes as any, currentEdges as any, layoutMode);
         
-        setNodes(layoutedNodes as LearningNodeType[]);
-        setEdges(layoutedEdges as any[]);
+        if (currentNodes.length > 0) {
+          const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes as any, currentEdges as any, layoutMode);
+          
+          setNodes(layoutedNodes as LearningNodeType[]);
+          setEdges(layoutedEdges as any[]);
+        } else {
+          // If no nodes were generated, revert to previous state
+          setNodes(prevNodes);
+          setEdges(prevEdges);
+        }
+        
+        useCanvasStore.getState().setAutosaveEnabled(true);
       }
     });
   };
@@ -400,6 +418,8 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
         onPaneClick={handlePaneClick}
         onPaneContextMenu={handlePaneContextMenu}
         onNodeContextMenu={handleNodeContextMenu}
+        onNodeDragStart={() => useCanvasStore.getState().pushHistory()}
+        onNodesDelete={() => useCanvasStore.getState().pushHistory()}
         // Premium Interaction Props
         panOnScroll={true}
         zoomOnScroll={false}
@@ -470,6 +490,9 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
 
       {/* Inspector Panel */}
       <Inspector />
+      
+      {/* Immersive Generation Overlay */}
+      <ImmersiveGenerationOverlay isGenerating={isGenerating} status={generationStatus} />
 
       {/* Blank Canvas Empty State */}
       {!isOfficialRoadmap && nodes.length === 0 && !isGenerating && (

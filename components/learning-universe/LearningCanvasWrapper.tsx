@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useWorkspaceStore } from '@/stores/learningUniverseStore';
-import { fetchCanvasById } from '@/lib/api/canvasApi';
+import { fetchCanvasById, createCanvas } from '@/lib/api/canvasApi';
 
 const LearningCanvas = dynamic(
   () => import('./LearningCanvas').then((mod) => mod.LearningCanvas),
@@ -15,6 +15,7 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
   const setActiveCanvasId = useWorkspaceStore(s => s.setActiveCanvasId);
   const canvases = useWorkspaceStore(s => s.canvases);
   const addCanvas = useWorkspaceStore(s => s.addCanvas);
+  const isWorkspaceInitializing = useWorkspaceStore(s => s.isInitializing);
 
   useEffect(() => {
     if (!slug) {
@@ -22,6 +23,16 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
       const official = canvases.find(c => c.is_official_roadmap);
       if (official) {
         setActiveCanvasId(official.id);
+      } else if (!isWorkspaceInitializing) {
+        // If it doesn't exist (e.g. user deleted it), create a new one automatically
+        createCanvas(mentorId, 'Official Roadmap', true).then(newOfficial => {
+          if (newOfficial) {
+            addCanvas(newOfficial);
+            setActiveCanvasId(newOfficial.id);
+          }
+        }).catch(err => {
+          console.error('[LearningCanvasWrapper] Failed to auto-create official roadmap:', err);
+        });
       }
       return;
     }
@@ -46,7 +57,7 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
         console.error('[LearningCanvasWrapper] Failed to fetch canvas by slug:', err);
       });
     }
-  }, [slug, canvases, setActiveCanvasId, addCanvas, activeCanvasId]);
+  }, [slug, canvases, setActiveCanvasId, addCanvas, activeCanvasId, isWorkspaceInitializing, mentorId]);
 
   // Determine if the current active canvas is the official roadmap
   const activeCanvas = canvases.find(c => c.id === activeCanvasId);

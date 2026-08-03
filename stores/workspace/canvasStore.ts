@@ -17,7 +17,10 @@ let isSaving = false;
 
 // Robust Debounced saver that queues dirty state
 const processSaveQueue = async () => {
-  if (!isDirty || isSaving) return;
+  const store = require('./workspaceStore').useWorkspaceStore;
+  const canvasStore = useCanvasStore.getState();
+  
+  if (!isDirty || isSaving || !canvasStore?.autosaveEnabled) return;
   
   isSaving = true;
   try {
@@ -41,16 +44,19 @@ const processSaveQueue = async () => {
 };
 
 const triggerAutosave = debounce(() => {
+  const store = useCanvasStore.getState();
+  if (store && store.autosaveEnabled === false) return;
+  
   isDirty = true;
   processSaveQueue();
-}, 1000);
+}, 3000);
 
 interface CanvasState {
   nodes: LearningNodeType[];
-
   edges: Edge<LearningEdgeData>[];
   viewport: Viewport;
   history: { past: GraphHistoryState[]; future: GraphHistoryState[] };
+  autosaveEnabled: boolean;
   
   onNodesChange: (changes: NodeChange<LearningNodeType>[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
@@ -59,6 +65,7 @@ interface CanvasState {
   setNodes: (nodes: LearningNodeType[]) => void;
   setEdges: (edges: Edge<LearningEdgeData>[]) => void;
   setViewport: (viewport: Viewport) => void;
+  setAutosaveEnabled: (enabled: boolean) => void;
   
   addStreamedNodes: (newNodes: LearningNodeType[]) => void;
   addStreamedEdges: (newEdges: Edge<LearningEdgeData>[]) => void;
@@ -83,6 +90,7 @@ export const useCanvasStore = create<CanvasState>()(
       edges: [],
       viewport: { x: 0, y: 0, zoom: 1 },
       history: { past: [], future: [] },
+      autosaveEnabled: true,
 
       pushHistory: () => {
         const state = get();
@@ -110,7 +118,9 @@ export const useCanvasStore = create<CanvasState>()(
 
       onNodesChange: (changes: NodeChange<LearningNodeType>[]) => {
         set({ nodes: applyNodeChanges(changes, get().nodes) });
-        triggerAutosave();
+        // Only trigger autosave for actual modifications, not selections/dimensions
+        const isSignificant = changes.some(c => c.type === 'position' || c.type === 'remove' || c.type === 'add');
+        if (isSignificant) triggerAutosave();
       },
       
       onEdgesChange: (changes: EdgeChange[]) => {
@@ -135,16 +145,52 @@ export const useCanvasStore = create<CanvasState>()(
 
       setNodes: (nodes) => { set({ nodes: calculateHierarchy(nodes, get().edges) }); triggerAutosave(); },
       setEdges: (edges) => { set({ edges, nodes: calculateHierarchy(get().nodes, edges) }); triggerAutosave(); },
-      setViewport: (viewport) => { set({ viewport }); triggerAutosave(); },
+      setViewport: (viewport) => { set({ viewport }); },
+      setAutosaveEnabled: (enabled) => set({ autosaveEnabled: enabled }),
       
       addStreamedNodes: (newNodes: LearningNodeType[]) => set((state) => {
-        const combined = [...state.nodes, ...newNodes.filter(n => !state.nodes.some(existing => existing.id === n.id))];
+        const combined = [...state.nodes];
+        newNodes.forEach(newNode => {
+          const existingIndex = combined.findIndex(n => n.id === newNode.id);
+          if (existingIndex >= 0) {
+            // Merge AI generated fields with existing node state
+            combined[existingIndex] = {
+              ...combined[existingIndex],
+              ...newNode,
+              data: {
+                ...combined[existingIndex].data,
+                ...newNode.data,
+                // Ensure critical properties from existing state aren't wiped
+                status: combined[existingIndex].data.status || newNode.data.status,
+                progress: combined[existingIndex].data.progress || newNode.data.progress,
+                xp: combined[existingIndex].data.xp || newNode.data.xp,
+              }
+            };
+          } else {
+            combined.push(newNode);
+          }
+        });
         triggerAutosave();
         return { nodes: calculateHierarchy(combined, state.edges) };
       }),
       
       addStreamedEdges: (newEdges: Edge<LearningEdgeData>[]) => set((state) => {
-        const combined = [...state.edges, ...newEdges.filter(e => !state.edges.some(existing => existing.id === e.id))];
+        const combined = [...state.edges];
+        newEdges.forEach(newEdge => {
+          const existingIndex = combined.findIndex(e => e.id === newEdge.id);
+          if (existingIndex >= 0) {
+            combined[existingIndex] = {
+              ...combined[existingIndex],
+              ...newEdge,
+              data: {
+                ...combined[existingIndex].data,
+                ...newEdge.data
+              }
+            };
+          } else {
+            combined.push(newEdge);
+          }
+        });
         triggerAutosave();
         return { edges: combined, nodes: calculateHierarchy(state.nodes, combined) };
       }),
