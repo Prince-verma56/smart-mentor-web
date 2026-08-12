@@ -61,6 +61,7 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
   const selectedEdges = useSelectionStore(s => s.selectedEdges);
   const setEditingEdgeId = useSelectionStore(s => s.setEditingEdgeId);
 
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState("Preparing roadmap...");
   const [pendingConnection, setPendingConnection] = useState<{
@@ -79,16 +80,28 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
   const { getLayoutedElements } = useAutoLayout();
   const hasAttemptedGenRef = useRef(false);
   const isWorkspaceInitializing = useWorkspaceStore(s => s.isInitializing);
+  const activeCanvasId = useWorkspaceStore(s => s.activeCanvasId);
 
-  // Only auto-generate for the Official Roadmap canvas once per mount
+  // Reset the guard whenever we switch to a different canvas
+  // so that an empty new canvas can also auto-generate if it's an official roadmap
   useEffect(() => {
+    hasAttemptedGenRef.current = false;
+  }, [activeCanvasId]);
+
+  // Auto-generate for the Official Roadmap canvas when it is empty
+  useEffect(() => {
+    // Wait until workspace has fully initialised (or given up)
     if (isWorkspaceInitializing) return;
+    // Only trigger once per canvas mount — guards against double-fire
+    if (hasAttemptedGenRef.current) return;
     
-    if (isOfficialRoadmap && nodes.length === 0 && !isGenerating && !hasAttemptedGenRef.current) {
+    if (isOfficialRoadmap && nodes.length === 0 && !isGenerating) {
       hasAttemptedGenRef.current = true;
       handleGenerate();
     }
-  }, [isWorkspaceInitializing, isOfficialRoadmap, nodes.length, isGenerating]);
+  // activeCanvasId ensures this re-evaluates after workspace resolves
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWorkspaceInitializing, isOfficialRoadmap, nodes.length, isGenerating, activeCanvasId]);
 
   // Listen for sidebar jump events
   useEffect(() => {
@@ -234,7 +247,22 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
           setEdges(prevEdges);
         }
         
+        // Re-enable autosave and flush the generated content to the server
         useCanvasStore.getState().setAutosaveEnabled(true);
+
+        // Re-sync: save the newly generated canvas state immediately, then
+        // re-initialise the workspace so the store reflects what the server has.
+        // This prevents a subsequent page load from overwriting local nodes with
+        // an empty canvas (the backend state before generation was saved).
+        try {
+          await useWorkspaceStore.getState().saveCanvasState();
+        } catch (saveErr) {
+          console.warn('[LearningCanvas] Post-generation save failed:', saveErr);
+        }
+        // Brief delay to let the backend commit, then re-hydrate from server
+        setTimeout(() => {
+          useWorkspaceStore.getState().initWorkspace(mentorId);
+        }, 1500);
       }
     });
   };

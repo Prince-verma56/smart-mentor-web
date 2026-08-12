@@ -62,7 +62,23 @@ async function proxy(
       }
     }
 
-    const res = await fetch(upstream, { method, headers, body });
+    // 15 s hard timeout — prevents Next.js from hanging for 60 s and returning a 500
+    const signal = AbortSignal.timeout(15_000);
+
+    let res: Response;
+    try {
+      res = await fetch(upstream, { method, headers, body, signal });
+    } catch (fetchErr: any) {
+      if (fetchErr?.name === 'TimeoutError' || fetchErr?.name === 'AbortError') {
+        console.error(`[canvas-proxy] upstream timeout after 15s: ${upstream}`);
+        return NextResponse.json(
+          { detail: 'Canvas service did not respond in time. Please try again.' },
+          { status: 504 }
+        );
+      }
+      throw fetchErr;
+    }
+
     const data = await res.text();
 
     return new NextResponse(data, {

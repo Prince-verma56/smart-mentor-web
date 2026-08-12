@@ -41,6 +41,9 @@ export const WorkspaceHeader = ({ mentorId }: { mentorId: string }) => {
     activeCanvas = canvases.find(c => c.id === activeCanvasId);
   }
   
+  // Derive fallback canvas name from route if the canvas object isn't loaded yet
+  const canvasDisplayName = activeCanvas?.name
+    || (isOfficialRoadmapView ? 'Official Roadmap' : (slugFromUrl ? 'Canvas' : 'Loading...'));
   const currentCanvasId = activeCanvas?.id || null;
   const isDashboard = pathname.endsWith('/workspaces');
   
@@ -141,7 +144,7 @@ export const WorkspaceHeader = ({ mentorId }: { mentorId: string }) => {
                   onClick={handleStartEdit}
                 >
                   <span className="font-medium text-white/90 max-w-[200px] truncate">
-                    {activeCanvas?.name || 'Unknown Canvas'}
+                    {canvasDisplayName}
                   </span>
                   {!activeCanvas?.is_official_roadmap && (
                     <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />

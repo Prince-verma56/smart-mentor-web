@@ -31,7 +31,7 @@ export function CollapsibleSidebar({ mentor }: CollapsibleSidebarProps) {
       style={{ minWidth: 0 }}
     >
       {/* Suppress hydration mismatch for icon-only mode */}
-      <div className="w-[280px] h-full" style={{ width: 280 }}>
+      <div className="w-full h-full">
         {mounted ? (
           <MentorSidebar
             mentor={mentor}

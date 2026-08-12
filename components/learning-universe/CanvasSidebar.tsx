@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Network, Info, BarChart2, Sparkles, ChevronRight, ChevronDown, Search, MapPin, Clock, Zap, Target, Layers, BookOpen, Code2 } from 'lucide-react';
+import { Network, Info, BarChart2, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Search, MapPin, Clock, Zap, Target, Layers, BookOpen, Code2, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import SmoothTab from '@/components/kokonutui/smooth-tab';
 import { useCanvasStore, useWorkspaceStore } from '@/stores/learningUniverseStore';
 import { calculateGraphStats } from '@/stores/workspace/types';
@@ -100,8 +100,7 @@ const OutlineItem = React.memo(({ node, expanded, onToggle, onJump, searchQuery 
       {/* Connection Guide Line (Left) */}
       {node.depth > 0 && (
         <div 
-          className="absolute left-[-16px] top-0 bottom-0 w-[1px] bg-white/[0.05] group-hover/item:bg-white/[0.1] transition-colors" 
-          style={{ left: `${-16 - (node.depth - 1) * 16}px` }}
+          className="absolute left-[-10px] top-0 bottom-0 w-[1px] bg-white/[0.05] group-hover/item:bg-white/[0.2] transition-colors" 
         />
       )}
       
@@ -145,9 +144,9 @@ const OutlineItem = React.memo(({ node, expanded, onToggle, onJump, searchQuery 
             transition={{ duration: 0.2, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="ml-4 mt-0.5 space-y-0.5 relative">
+            <div className="ml-5 mt-0.5 space-y-0.5 relative">
               {/* Vertical line connecting children */}
-              <div className="absolute left-[-8px] top-0 bottom-2 w-[1px] bg-white/[0.05]" />
+              <div className="absolute left-[-10px] top-0 bottom-2 w-[1px] bg-white/[0.05]" />
               {node.children.map(child => (
                 <OutlineItem 
                   key={child.id} 
@@ -191,7 +190,7 @@ const StatsBar = ({ label, value, max, color }: { label: string; value: number; 
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export const CanvasSidebar = ({ mentorId }: { mentorId: string }) => {
+export const CanvasSidebar = () => {
   const nodes = useCanvasStore(s => s.nodes);
   const edges = useCanvasStore(s => s.edges);
   const canvases = useWorkspaceStore(s => s.canvases);
@@ -199,6 +198,7 @@ export const CanvasSidebar = ({ mentorId }: { mentorId: string }) => {
 
   const [outlineSearch, setOutlineSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const activeCanvas = canvases.find(c => c.id === activeCanvasId);
   const stats = useMemo(() => calculateGraphStats(nodes, edges), [nodes, edges]);
@@ -231,8 +231,18 @@ export const CanvasSidebar = ({ mentorId }: { mentorId: string }) => {
   const handleCollapseAll = () => setExpanded(new Set());
 
   return (
-    <div className="flex flex-col h-full overflow-hidden w-80 shrink-0 border-l border-white/5 bg-black/20">
-      <SmoothTab
+    <div className={`relative h-full shrink-0 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 border-l-0' : 'w-80 lg:w-96 border-l border-white/5'}`}>
+      {/* Toggle Button */}
+      <button 
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute top-4 -left-10 z-50 p-2 rounded-xl bg-white/[0.05] border border-white/[0.1] backdrop-blur-md text-muted-foreground hover:text-white hover:bg-white/[0.1] shadow-lg transition-all"
+        title={isCollapsed ? "Open sidebar" : "Close sidebar"}
+      >
+        {isCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
+      </button>
+
+      <div className={`flex flex-col h-full w-full overflow-hidden bg-black/20 transition-opacity duration-200 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <SmoothTab
         defaultTabId="outline"
         wrapperClassName="h-full gap-0 overflow-hidden"
         className="mx-3 mt-3 mb-2 shrink-0 flex bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[20px] p-1.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
@@ -241,7 +251,7 @@ export const CanvasSidebar = ({ mentorId }: { mentorId: string }) => {
         items={[
           {
             id: 'outline',
-            title: 'Knowledge Explorer',
+            title: 'Explorer',
             color: 'bg-emerald-500/10',
             cardContent: (
               <div className="flex flex-col h-full min-h-0">
@@ -415,6 +425,7 @@ export const CanvasSidebar = ({ mentorId }: { mentorId: string }) => {
           },
         ]}
       />
+      </div>
     </div>
   );
 };

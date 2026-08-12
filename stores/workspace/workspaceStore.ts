@@ -5,6 +5,21 @@ import { fetchCanvases, updateCanvasState, deleteCanvas, duplicateCanvas as dupl
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Create a minimal local canvas object that works offline (no backend required). */
+function makeLocalCanvas(mentorId: string, name: string, isOfficial: boolean): any {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    mentor_id: mentorId,
+    is_official_roadmap: isOfficial,
+    slug: null,
+    nodes: [],
+    edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+    _local: true, // marker so we know it was never persisted to server
+  };
+}
+
 interface WorkspaceState {
   activeCanvasId: string | null;
   canvases: any[];
@@ -42,15 +57,36 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       })),
 
       initWorkspace: async (mentorId) => {
+        // If we already have canvases for this mentor in local state and they're still
+        // valid, skip a full re-init to avoid hammering a slow/down backend.
+        const existing = get().canvases;
+        const alreadyHasOfficial = existing.some(
+          (c: any) => c.is_official_roadmap && c.mentor_id === mentorId
+        );
+        if (alreadyHasOfficial && get().activeCanvasId) {
+          // Still make sure activeCanvasId is pointing at something valid
+          const currentActiveId = get().activeCanvasId;
+          if (currentActiveId && existing.some((c: any) => c.id === currentActiveId)) {
+            return; // all good — skip API call
+          }
+        }
+
         set({ isInitializing: true });
         try {
           let serverCanvases = await fetchCanvases(mentorId);
           
           if (!serverCanvases.find((c: any) => c.is_official_roadmap)) {
             const { createCanvas } = await import('@/lib/api/canvasApi');
-            const newOfficial = await createCanvas(mentorId, 'Official Roadmap', true);
-            if (newOfficial) {
-              serverCanvases = [newOfficial, ...serverCanvases];
+            try {
+              const newOfficial = await createCanvas(mentorId, 'Official Roadmap', true);
+              if (newOfficial) {
+                serverCanvases = [newOfficial, ...serverCanvases];
+              }
+            } catch (createErr) {
+              // Backend unavailable for create — we'll fall through to local canvas below
+              console.warn('[initWorkspace] Failed to create canvas on server:', createErr);
+              // Inject local canvas so the UI has something to work with
+              serverCanvases = [makeLocalCanvas(mentorId, 'Official Roadmap', true), ...serverCanvases];
             }
           }
           
@@ -72,8 +108,23 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }
         } catch (error) {
           console.error('Failed to init workspace from API', error);
-          // Clear stale activeCanvasId — prevents it from filtering out conversations
-          set({ canvases: [], activeCanvasId: null });
+          // Backend is unavailable. Keep whatever canvases are already in local state.
+          // If there's still nothing (first visit ever), inject a local canvas so the
+          // UI has something to render and the auto-generate guard can fire.
+          const stillEmpty = get().canvases.length === 0 ||
+            !get().canvases.some((c: any) => c.mentor_id === mentorId);
+          if (stillEmpty) {
+            const localCanvas = makeLocalCanvas(mentorId, 'Official Roadmap', true);
+            set({ canvases: [localCanvas], activeCanvasId: localCanvas.id });
+          } else {
+            // Ensure activeCanvasId is still valid
+            const currentActiveId = get().activeCanvasId;
+            const validCanvases = get().canvases;
+            if (!currentActiveId || !validCanvases.some((c: any) => c.id === currentActiveId)) {
+              const official = validCanvases.find((c: any) => c.is_official_roadmap);
+              set({ activeCanvasId: official ? official.id : (validCanvases[0]?.id || null) });
+            }
+          }
         } finally {
           set({ isInitializing: false });
         }

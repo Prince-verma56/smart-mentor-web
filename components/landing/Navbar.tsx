@@ -112,12 +112,12 @@ export function Navbar() {
               <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
             </svg>
           </Button>
-          <Link href="/sign-in">
+          <Link href="/login">
             <Button variant="ghost" className="rounded-full font-medium">
               Sign In
             </Button>
           </Link>
-          <Link href="/sign-up">
+          <Link href="/signup">
             <Button className="rounded-full bg-primary font-medium text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105">
               Get Started
             </Button>
@@ -162,12 +162,12 @@ export function Navbar() {
           </nav>
           <div className="h-px w-full bg-border" />
           <div className="flex flex-col gap-2">
-            <Link href="/sign-in" className="w-full">
+            <Link href="/login" className="w-full">
               <Button variant="outline" className="w-full justify-center">
                 Sign In
               </Button>
             </Link>
-            <Link href="/sign-up" className="w-full">
+            <Link href="/signup" className="w-full">
               <Button className="w-full justify-center bg-primary">
                 Get Started
               </Button>

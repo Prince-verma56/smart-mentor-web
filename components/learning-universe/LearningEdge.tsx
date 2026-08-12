@@ -194,6 +194,7 @@ export const LearningEdgeComponent = ({
         className={cn('transition-colors duration-300', strokeClass, selected ? 'z-10' : 'z-0')}
       />
       {/* Edge Label Rendered in an overlay */}
+      
       {((data?.label as string) || semanticType) && (
         <EdgeLabelRenderer>
           <div

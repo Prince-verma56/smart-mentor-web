@@ -134,12 +134,12 @@ export function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Link href="/sign-in">
+                <Link href="/login">
                   <Button variant="ghost" className="rounded-full font-medium">
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/sign-up">
+                <Link href="/signup">
                   <Button className="rounded-full bg-primary font-medium text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105">
                     Get Started
                   </Button>
@@ -232,12 +232,12 @@ export function Navbar() {
             </div>
             {!isSignedIn && isLoaded && (
               <div className="flex flex-col gap-2 mt-2">
-                <Link href="/sign-in" className="w-full">
+                <Link href="/login" className="w-full">
                   <Button variant="outline" className="w-full justify-center">
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/sign-up" className="w-full">
+                <Link href="/signup" className="w-full">
                   <Button className="w-full justify-center bg-primary">
                     Get Started
                   </Button>
