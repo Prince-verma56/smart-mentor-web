@@ -94,36 +94,62 @@ function buildOutlineTree(nodes: any[], edges: any[]): OutlineNode[] {
   });
 
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
-  const roots = nodes
+  let roots = nodes
     .filter(n => inDegree[n.id] === 0)
     .sort((a, b) => (a.data.learning_order ?? 99) - (b.data.learning_order ?? 99));
 
-  const buildChildren = (id: string, depth: number): OutlineNode => {
+  const globalVisited = new Set<string>();
+
+  const buildChildren = (id: string, depth: number): OutlineNode | null => {
+    if (globalVisited.has(id)) return null;
+    globalVisited.add(id);
+
     const node = nodeMap.get(id)!;
-    const childIds = (adj[id] || []).filter(cid => nodeMap.has(cid));
+    const childIds = (adj[id] || []).filter(cid => nodeMap.has(cid) && !globalVisited.has(cid));
     const childNodes = childIds
       .map(cid => nodeMap.get(cid)!)
       .sort((a, b) => {
-        const aIsPractice = a.data.type === 'practice' || a.data.nodeCategory === 'PRACTICE';
-        const bIsPractice = b.data.type === 'practice' || b.data.nodeCategory === 'PRACTICE';
-        if (aIsPractice && !bIsPractice) return 1;
-        if (!aIsPractice && bIsPractice) return -1;
+        const aCat = a.data.nodeCategory;
+        const bCat = b.data.nodeCategory;
+        const aIsSide = ['PRACTICE', 'PROJECT', 'ASSESSMENT'].includes(aCat || '') || ['practice', 'quiz', 'project'].includes(a.data.type || '');
+        const bIsSide = ['PRACTICE', 'PROJECT', 'ASSESSMENT'].includes(bCat || '') || ['practice', 'quiz', 'project'].includes(b.data.type || '');
+        if (aIsSide && !bIsSide) return 1;
+        if (!aIsSide && bIsSide) return -1;
         return (a.data.learning_order ?? 99) - (b.data.learning_order ?? 99);
       });
+
+    const nodeCat = node.data.nodeCategory;
+    const isPracticeNode = ['PRACTICE', 'PROJECT', 'ASSESSMENT'].includes(nodeCat || '') || ['practice', 'quiz', 'project'].includes(node.data.type || '');
+
     return {
       id,
       title: node.data.title,
       type: node.data.type,
       status: node.data.status,
       difficulty: node.data.difficulty,
-      hierarchyIndex: node.data.metadata?.hierarchyIndex,
+      hierarchyIndex: node.id.includes('-') ? node.id.split('-')[1] : node.id,
       depth,
-      isPractice: node.data.type === 'practice' || node.data.nodeCategory === 'PRACTICE',
-      children: childNodes.map(cn => buildChildren(cn.id, depth + 1)),
+      isPractice: isPracticeNode,
+      children: childNodes.map(cn => buildChildren(cn.id, depth + 1)).filter(Boolean) as OutlineNode[],
     };
   };
 
-  return roots.map(r => buildChildren(r.id, 0));
+  const outline: OutlineNode[] = [];
+  
+  // 1. Process natural roots
+  for (const root of roots) {
+    const built = buildChildren(root.id, 0);
+    if (built) outline.push(built);
+  }
+
+  // 2. Process disconnected graphs
+  const remaining = nodes.filter(n => !globalVisited.has(n.id));
+  for (const r of remaining) {
+    const built = buildChildren(r.id, 0);
+    if (built) outline.push(built);
+  }
+
+  return outline;
 }
 
 // ── Mind Map Child Node ────────────────────────────────────────────────────────
@@ -192,7 +218,9 @@ const MindMapNode = React.memo(({
         transition={{ duration: 0.1 }}
       >
         {/* Collapse chevron */}
-        <button
+        <div
+          role="button"
+          tabIndex={-1}
           className={`shrink-0 w-4 h-4 flex items-center justify-center rounded-md transition-colors ${
             hasChildren ? 'hover:bg-white/10 text-muted-foreground hover:text-white' : 'opacity-0 pointer-events-none'
           }`}
@@ -201,7 +229,7 @@ const MindMapNode = React.memo(({
           <motion.span animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.15 }} className="flex">
             <ChevronRight className="w-3 h-3" />
           </motion.span>
-        </button>
+        </div>
 
         <Icon className={`w-3.5 h-3.5 shrink-0 ${node.isPractice ? 'text-slate-500' : iconColor}`} />
 
@@ -295,7 +323,9 @@ const RootMindMapNode = React.memo(({
         transition={{ duration: 0.1 }}
       >
         {/* Collapse chevron */}
-        <button
+        <div
+          role="button"
+          tabIndex={-1}
           className={`shrink-0 w-4 h-4 flex items-center justify-center rounded-md transition-colors ${
             hasChildren ? 'hover:bg-white/10 text-muted-foreground hover:text-white' : 'opacity-0 pointer-events-none'
           }`}
@@ -304,7 +334,7 @@ const RootMindMapNode = React.memo(({
           <motion.span animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.15 }} className="flex">
             <ChevronRight className="w-3 h-3" />
           </motion.span>
-        </button>
+        </div>
 
         {/* Icon box */}
         <div className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center bg-white/[0.04] ring-1 ring-white/[0.08]">

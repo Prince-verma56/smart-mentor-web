@@ -1,7 +1,7 @@
 "use client";
 
-import React, { memo, useState } from 'react';
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, getSmoothStepPath, Position, useReactFlow } from '@xyflow/react';
+import React, { memo } from 'react';
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, getSmoothStepPath, Position, useReactFlow, useStore } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { useCanvasStore, useSelectionStore, LearningEdgeData, EdgeSemanticType } from '@/stores/learningUniverseStore';
 import { EdgeTypeSelector } from './EdgeTypeSelector';
@@ -25,14 +25,15 @@ export const LearningEdgeComponent = ({
   markerEnd,
   selected,
 }: LearningEdgeProps) => {
-  const { getNode } = useReactFlow();
   const updateEdge = useCanvasStore(s => s.updateEdge);
   const editingEdgeId = useSelectionStore(s => s.editingEdgeId);
   const setEditingEdgeId = useSelectionStore(s => s.setEditingEdgeId);
   const isEditing = editingEdgeId === id;
 
-  const sourceNode = getNode(source);
-  const targetNode = getNode(target);
+  // Use internal ReactFlow store for 60fps drag updates! 
+  // Calling getNode() only gives static positions from the initial render.
+  const sourceNode = useStore(s => s.nodeLookup.get(source));
+  const targetNode = useStore(s => s.nodeLookup.get(target));
 
   // Dynamic Routing Logic (Smart Edges)
   let sourceX = defaultSourceX;
@@ -42,19 +43,19 @@ export const LearningEdgeComponent = ({
   let sourcePosition = defaultSourcePosition;
   let targetPosition = defaultTargetPosition;
 
-  // Only auto-route if the edge doesn't have explicit handles (e.g. AI generated)
+  // Only auto-route if the edge doesn't have explicit handles
   const isAutoRouted = !sourceHandleId && !targetHandleId;
 
-  if (isAutoRouted && sourceNode && targetNode && sourceNode.measured && targetNode.measured) {
-    const sW = sourceNode.measured.width || 260;
-    const sH = sourceNode.measured.height || 150;
-    const tW = targetNode.measured.width || 260;
-    const tH = targetNode.measured.height || 150;
+  if (isAutoRouted && sourceNode && targetNode) {
+    const sW = sourceNode.measured?.width || 300;
+    const sH = sourceNode.measured?.height || 160;
+    const tW = targetNode.measured?.width || 300;
+    const tH = targetNode.measured?.height || 160;
 
-    const sCenterX = sourceNode.position.x + sW / 2;
-    const sCenterY = sourceNode.position.y + sH / 2;
-    const tCenterX = targetNode.position.x + tW / 2;
-    const tCenterY = targetNode.position.y + tH / 2;
+    const sCenterX = sourceNode.internals.positionAbsolute.x + sW / 2;
+    const sCenterY = sourceNode.internals.positionAbsolute.y + sH / 2;
+    const tCenterX = targetNode.internals.positionAbsolute.x + tW / 2;
+    const tCenterY = targetNode.internals.positionAbsolute.y + tH / 2;
 
     const dx = tCenterX - sCenterX;
     const dy = tCenterY - sCenterY;
@@ -63,40 +64,36 @@ export const LearningEdgeComponent = ({
     if (Math.abs(dx) > Math.abs(dy)) {
       // Horizontal routing
       if (dx > 0) {
-        // Target is to the right
         sourcePosition = Position.Right;
         targetPosition = Position.Left;
-        sourceX = sourceNode.position.x + sW;
+        sourceX = sourceNode.internals.positionAbsolute.x + sW;
         sourceY = sCenterY;
-        targetX = targetNode.position.x;
+        targetX = targetNode.internals.positionAbsolute.x;
         targetY = tCenterY;
       } else {
-        // Target is to the left
         sourcePosition = Position.Left;
         targetPosition = Position.Right;
-        sourceX = sourceNode.position.x;
+        sourceX = sourceNode.internals.positionAbsolute.x;
         sourceY = sCenterY;
-        targetX = targetNode.position.x + tW;
+        targetX = targetNode.internals.positionAbsolute.x + tW;
         targetY = tCenterY;
       }
     } else {
       // Vertical routing
       if (dy > 0) {
-        // Target is below
         sourcePosition = Position.Bottom;
         targetPosition = Position.Top;
         sourceX = sCenterX;
-        sourceY = sourceNode.position.y + sH;
+        sourceY = sourceNode.internals.positionAbsolute.y + sH;
         targetX = tCenterX;
-        targetY = targetNode.position.y;
+        targetY = targetNode.internals.positionAbsolute.y;
       } else {
-        // Target is above
         sourcePosition = Position.Top;
         targetPosition = Position.Bottom;
         sourceX = sCenterX;
-        sourceY = sourceNode.position.y;
+        sourceY = sourceNode.internals.positionAbsolute.y;
         targetX = tCenterX;
-        targetY = targetNode.position.y + tH;
+        targetY = targetNode.internals.positionAbsolute.y + tH;
       }
     }
   }

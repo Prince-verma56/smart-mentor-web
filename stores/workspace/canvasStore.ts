@@ -255,10 +255,12 @@ export const useCanvasStore = create<CanvasState>()(
     }),
     {
       name: 'canvas-storage',
+      // CRITICAL: Do NOT persist nodes/edges/viewport.
+      // Canvas data lives in the database and is loaded via workspaceStore.
+      // Persisting nodes here caused stale empty arrays to overwrite DB-loaded
+      // data on every page refresh, resulting in a permanently blank canvas.
       partialize: (state) => ({
-        nodes: state.nodes,
-        edges: state.edges,
-        viewport: state.viewport,
+        autosaveEnabled: state.autosaveEnabled,
       })
     }
   )

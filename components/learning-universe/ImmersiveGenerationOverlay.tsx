@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Loader2, Workflow, Database, Cpu, Network, Lightbulb, Code2, BrainCircuit, BookOpen } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Sparkles, Workflow, Database, Cpu, Network, Lightbulb, Code2, BrainCircuit, BookOpen } from 'lucide-react';
 
 interface ImmersiveGenerationOverlayProps {
   isGenerating: boolean;
   status: string;
+  nodeCount?: number;
+  edgeCount?: number;
 }
 
 const THINKING_MESSAGES = [
@@ -22,122 +23,138 @@ const THINKING_MESSAGES = [
 ];
 
 const THINKING_ICONS = [
-  <BrainCircuit className="w-8 h-8 text-primary" />,
-  <Database className="w-8 h-8 text-blue-500" />,
-  <Network className="w-8 h-8 text-purple-500" />,
-  <Workflow className="w-8 h-8 text-amber-500" />,
-  <Lightbulb className="w-8 h-8 text-yellow-500" />,
-  <Code2 className="w-8 h-8 text-emerald-500" />,
-  <Cpu className="w-8 h-8 text-indigo-500" />,
-  <BookOpen className="w-8 h-8 text-orange-500" />,
-  <Database className="w-8 h-8 text-teal-500" />,
-  <Sparkles className="w-8 h-8 text-primary" />
+  <BrainCircuit key="brain" className="w-6 h-6 text-primary" />,
+  <Database key="db" className="w-6 h-6 text-blue-500" />,
+  <Network key="net" className="w-6 h-6 text-purple-500" />,
+  <Workflow key="wf" className="w-6 h-6 text-amber-500" />,
+  <Lightbulb key="lb" className="w-6 h-6 text-yellow-500" />,
+  <Code2 key="c2" className="w-6 h-6 text-emerald-500" />,
+  <Cpu key="cpu" className="w-6 h-6 text-indigo-500" />,
+  <BookOpen key="bk" className="w-6 h-6 text-orange-500" />,
+  <Database key="db2" className="w-6 h-6 text-teal-500" />,
+  <Sparkles key="sp" className="w-6 h-6 text-primary" />,
 ];
 
-const statusIcons: Record<string, React.ReactNode> = {
-  'Preparing roadmap...': <Sparkles className="w-8 h-8 text-emerald-400" />,
-  'Validating Semantic Integrity...': <Cpu className="w-8 h-8 text-blue-400" />,
-  'Applying Intelligent Layout...': <Workflow className="w-8 h-8 text-purple-400" />,
-};
-
-export const ImmersiveGenerationOverlay = ({ isGenerating, status }: ImmersiveGenerationOverlayProps) => {
+export const ImmersiveGenerationOverlay = ({
+  isGenerating,
+  status,
+  nodeCount = 0,
+  edgeCount = 0,
+}: ImmersiveGenerationOverlayProps) => {
   const [thinkingIndex, setThinkingIndex] = useState(0);
 
   useEffect(() => {
     if (!isGenerating) return;
-    
-    // Cycle through messages every 2.5 seconds
     const interval = setInterval(() => {
       setThinkingIndex((prev) => (prev + 1) % THINKING_MESSAGES.length);
     }, 2500);
-    
     return () => clearInterval(interval);
   }, [isGenerating]);
 
-  const isGenericStatus = status?.includes('Synthesizing') || status?.includes('Executing') || !status;
+  const isGenericStatus =
+    status?.includes('Synthesizing') || status?.includes('Executing') || !status;
   const displayStatus = isGenericStatus ? THINKING_MESSAGES[thinkingIndex] : status;
-  
-  let Icon: React.ReactNode = <Loader2 className="w-8 h-8 text-primary animate-spin" />;
-  if (!isGenericStatus && statusIcons[status]) {
-    Icon = statusIcons[status];
-  } else if (isGenericStatus) {
-    Icon = THINKING_ICONS[thinkingIndex];
-  }
+  const Icon = THINKING_ICONS[thinkingIndex];
+  const hasNodes = nodeCount > 0;
 
   return (
     <AnimatePresence>
       {isGenerating && (
         <motion.div
-          initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-          animate={{ opacity: 1, backdropFilter: 'blur(12px)' }}
-          exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-          transition={{ duration: 0.5 }}
-          className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-background/80"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+          // Semi-transparent gradient so the canvas building up behind is visible
+          className="absolute inset-0 z-[100] flex flex-col items-end justify-end p-6 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(to top, hsl(var(--background) / 0.85) 0%, hsl(var(--background) / 0.05) 60%)',
+          }}
         >
-          <Card className="relative flex flex-col items-center max-w-lg w-full p-8 rounded-3xl bg-card/95 border-border shadow-2xl overflow-hidden">
-            
-            {/* Background effects */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30 animate-pulse" />
-            <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary/10 rounded-full blur-[80px]" />
-            <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-secondary/10 rounded-full blur-[80px]" />
+          {/* Bottom-right compact status card */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 30, opacity: 0 }}
+            transition={{ type: 'spring', damping: 20, delay: 0.1 }}
+            className="pointer-events-auto relative bg-card/90 backdrop-blur-xl border border-border rounded-2xl shadow-2xl p-4 w-80 overflow-hidden"
+          >
+            {/* Accent bar */}
+            <div className="absolute top-0 left-0 w-full h-0.5 rounded-t-2xl bg-gradient-to-r from-primary/20 via-primary to-primary/20 animate-pulse" />
 
-            <CardContent className="flex flex-col items-center p-0 relative z-10 w-full">
-              {/* Icon Container */}
-              <div className="h-24 flex items-center justify-center">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-muted/60 border border-border shrink-0">
                 <AnimatePresence mode="popLayout">
-                  <motion.div 
-                    key={displayStatus} // changing key triggers re-animation
-                    initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
-                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                    exit={{ scale: 0.8, opacity: 0, rotate: 10 }}
-                    transition={{ type: 'spring', damping: 15 }}
-                    className="flex items-center justify-center w-20 h-20 rounded-2xl bg-muted/50 border border-border shadow-inner"
+                  <motion.div
+                    key={thinkingIndex}
+                    initial={{ scale: 0.7, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.7, opacity: 0 }}
+                    transition={{ type: 'spring', damping: 14 }}
                   >
                     {Icon}
                   </motion.div>
                 </AnimatePresence>
               </div>
-
-              {/* Status Text */}
-              <div className="relative z-10 text-center w-full mt-2">
-                <motion.h2 
-                  className="text-2xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mb-4"
-                >
-                  Synthesizing Learning Universe
-                </motion.h2>
-                
-                <div className="h-10 overflow-hidden relative w-full flex justify-center items-center">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground">Synthesizing Universe</p>
+                <div className="h-4 overflow-hidden">
                   <AnimatePresence mode="popLayout">
                     <motion.p
                       key={displayStatus}
-                      initial={{ y: 20, opacity: 0 }}
+                      initial={{ y: 10, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: -20, opacity: 0 }}
-                      transition={{ duration: 0.4 }}
-                      className="text-muted-foreground text-sm font-medium absolute w-full px-4 text-center"
+                      exit={{ y: -10, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-[11px] text-muted-foreground truncate"
                     >
                       {displayStatus}
                     </motion.p>
                   </AnimatePresence>
                 </div>
               </div>
+            </div>
 
-              {/* Progress Bar (Indeterminate but pulsing) */}
-              <div className="w-full h-1.5 mt-6 bg-secondary rounded-full overflow-hidden relative">
-                <motion.div 
-                  className="absolute top-0 left-0 h-full w-1/3 bg-primary rounded-full"
-                  animate={{
-                    left: ['-30%', '100%']
-                  }}
-                  transition={{
-                    duration: 2,
-                    ease: "linear",
-                    repeat: Infinity
-                  }}
-                />
+            {/* Live counters */}
+            <div className="flex gap-2 mb-3">
+              <motion.div
+                animate={{ scale: hasNodes ? [1, 1.04, 1] : 1 }}
+                className="flex-1 flex flex-col items-center py-2 rounded-xl bg-muted/40 border border-border"
+              >
+                <motion.span
+                  key={nodeCount}
+                  initial={{ scale: 1.4, color: 'hsl(var(--primary))' }}
+                  animate={{ scale: 1, color: 'hsl(var(--foreground))' }}
+                  className="text-xl font-bold tabular-nums"
+                >
+                  {nodeCount}
+                </motion.span>
+                <span className="text-[10px] text-muted-foreground">Nodes</span>
+              </motion.div>
+              <div className="flex-1 flex flex-col items-center py-2 rounded-xl bg-muted/40 border border-border">
+                <motion.span
+                  key={edgeCount}
+                  initial={{ scale: 1.4 }}
+                  animate={{ scale: 1 }}
+                  className="text-xl font-bold tabular-nums text-foreground"
+                >
+                  {edgeCount}
+                </motion.span>
+                <span className="text-[10px] text-muted-foreground">Connections</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Indeterminate progress bar */}
+            <div className="w-full h-1 bg-muted rounded-full overflow-hidden relative">
+              <motion.div
+                className="absolute h-full bg-primary rounded-full w-1/3"
+                animate={{ left: ['-33%', '110%'] }}
+                transition={{ duration: 1.8, ease: 'linear', repeat: Infinity }}
+              />
+            </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

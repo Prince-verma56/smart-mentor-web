@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { LayoutMode, ThemeMode } from './types';
-import { fetchCanvases, updateCanvasState, deleteCanvas, duplicateCanvas as duplicateCanvasApi, archiveCanvas as archiveCanvasApi, CanvasNotFoundError } from '@/lib/api/canvasApi';
+import { fetchCanvases, fetchCanvasById, updateCanvasState, deleteCanvas, duplicateCanvas as duplicateCanvasApi, archiveCanvas as archiveCanvasApi, CanvasNotFoundError } from '@/lib/api/canvasApi';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -73,30 +73,43 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         const existing = get().canvases;
 
+        // ── ISOLATION: Immediately wipe the canvas store so the OLD mentor's
+        // nodes are never visible while we fetch the new mentor's data.
+        // Only do this if the current active canvas belongs to a DIFFERENT mentor.
+        const currentActiveId = get().activeCanvasId;
+        const currentActiveCanvas = existing.find((c: any) => c.id === currentActiveId);
+        if (currentActiveCanvas && currentActiveCanvas.mentor_id !== mentorId) {
+          const canvasStore = require('./canvasStore').useCanvasStore;
+          canvasStore.getState().setAutosaveEnabled(false);
+          canvasStore.getState().resetUniverse();
+        }
+
         // ── Early-return guard ──────────────────────────────────────────────────
-        // If we already have THIS mentor's official canvas in local state, check
-        // whether the active canvas is already pointing at one of this mentor's
-        // canvases. If yes, skip the API round-trip entirely.
+        // Only use the early return if THIS mentor already has a fully loaded,
+        // server-backed canvas AND the active canvas ID belongs to this mentor.
         const mentorCanvases = existing.filter((c: any) => c.mentor_id === mentorId);
-        // Only use the early-return guard if canvases are server-backed (not local-only)
         const hasOfficialForMentor = mentorCanvases.some((c: any) => c.is_official_roadmap && !c._local);
 
         if (hasOfficialForMentor) {
-          const currentActiveId = get().activeCanvasId;
-          const isOnThisMentor = currentActiveId &&
+          const isActiveOnThisMentor = currentActiveId &&
             mentorCanvases.some((c: any) => c.id === currentActiveId && !c._local);
 
-          if (isOnThisMentor) {
-            return; // Already showing the right mentor's canvas — nothing to do
+          if (isActiveOnThisMentor) {
+            const activeCanvas = mentorCanvases.find((c: any) => c.id === currentActiveId);
+            if (activeCanvas && Array.isArray(activeCanvas.nodes) && activeCanvas.nodes.length > 0) {
+              // Re-hydrate the canvas store with saved nodes
+              const canvasStore = require('./canvasStore').useCanvasStore;
+              canvasStore.getState().setAutosaveEnabled(false);
+              canvasStore.getState().setNodes(activeCanvas.nodes);
+              canvasStore.getState().setEdges(activeCanvas.edges || []);
+              if (activeCanvas.viewport) canvasStore.getState().setViewport(activeCanvas.viewport);
+              setTimeout(() => canvasStore.getState().setAutosaveEnabled(true), 100);
+              _initInFlight.delete(mentorId);
+              return;
+            }
+            // Canvas exists but has no nodes — fall through to fetch fresh data
           }
-
-          // We have this mentor's canvases but activeCanvasId points elsewhere
-          // (e.g. user navigated from a different mentor). Switch to this mentor.
-          const official = mentorCanvases.find((c: any) => c.is_official_roadmap && !c._local);
-          if (official) {
-            get().setActiveCanvasId(official.id);
-            return;
-          }
+          // activeCanvasId points to another mentor — fall through to full fetch
         }
 
         // ── Full init ───────────────────────────────────────────────────────────
@@ -124,17 +137,35 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           // Resolve activeCanvasId for this mentor
           const currentActiveId = get().activeCanvasId;
+          const activeCanvasInState = mergedCanvases.find((c: any) => c.id === currentActiveId);
+          
           const isCurrentValidForMentor =
             currentActiveId &&
             UUID_RE.test(currentActiveId) &&
-            serverCanvases.some((c: any) => c.id === currentActiveId);
+            activeCanvasInState;
 
-          if (!isCurrentValidForMentor) {
-            const official = serverCanvases.find((c: any) => c.is_official_roadmap);
-            const targetId = official ? official.id : (serverCanvases[0]?.id || null);
+          // If not valid, or if the active canvas in state is missing full 'nodes' data (it's just a summary)
+          if (!isCurrentValidForMentor || (activeCanvasInState && !Array.isArray(activeCanvasInState.nodes))) {
+            const official = mergedCanvases.find((c: any) => c.is_official_roadmap);
+            const targetId = official ? official.id : (mergedCanvases[0]?.id || null);
             if (targetId) {
-              // Use setActiveCanvasId so canvasStore nodes/edges are properly reset
-              get().setActiveCanvasId(targetId);
+              // Fetch full canvas data before activating, preventing empty summary from wiping nodes
+              const fullCanvas = await fetchCanvasById(targetId);
+              if (fullCanvas?.id && Array.isArray(fullCanvas.nodes)) {
+                // Update merged canvases with the full data so setActiveCanvasId picks up the nodes
+                set((state) => {
+                  const newCanvases = [...state.canvases];
+                  const idx = newCanvases.findIndex(c => c.id === fullCanvas.id);
+                  if (idx !== -1) {
+                    newCanvases[idx] = { ...newCanvases[idx], ...fullCanvas };
+                  }
+                  return { canvases: newCanvases };
+                });
+                // Use setActiveCanvasId so canvasStore nodes/edges are properly reset
+                get().setActiveCanvasId(targetId);
+              } else {
+                console.error("Failed to fetch full canvas data or nodes missing. Aborting activation to prevent data loss.");
+              }
             }
           }
         } catch (error) {
@@ -184,20 +215,26 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           const nextCanvas = updatedCanvases.find(c => c.id === id);
           if (nextCanvas) {
-            // Disable autosave during the switch to prevent the empty slate from
-            // being saved before the new canvas's nodes are loaded
+            // We are changing canvases. Unconditionally wipe the in-memory state
+            // so nodes from the old canvas NEVER bleed into the new one.
             canvasStore.getState().setAutosaveEnabled(false);
             canvasStore.getState().resetUniverse();
-            canvasStore.getState().setNodes(nextCanvas.nodes || []);
-            canvasStore.getState().setEdges(nextCanvas.edges || []);
-            if (nextCanvas.viewport) {
-              canvasStore.getState().setViewport(nextCanvas.viewport);
+
+            const nextHasNodes = Array.isArray(nextCanvas.nodes) && nextCanvas.nodes.length > 0;
+
+            if (nextHasNodes) {
+              // New canvas has saved data — load it
+              canvasStore.getState().setNodes(nextCanvas.nodes || []);
+              canvasStore.getState().setEdges(nextCanvas.edges || []);
+              if (nextCanvas.viewport) {
+                canvasStore.getState().setViewport(nextCanvas.viewport);
+              }
+              if (nextCanvas.history) {
+                canvasStore.setState({ history: nextCanvas.history });
+              }
             }
-            if (nextCanvas.history) {
-              canvasStore.setState({ history: nextCanvas.history });
-            }
-            // Re-enable autosave after a tick so triggerAutosave from setNodes/setEdges
-            // is already scheduled but the enable flag is now true for future edits
+            
+            // Re-enable autosave after a tick so loading doesn't trigger a save
             setTimeout(() => {
               canvasStore.getState().setAutosaveEnabled(true);
             }, 100);
@@ -209,7 +246,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       addCanvas: (canvas: any) => {
         set((state) => {
-          if (state.canvases.some(c => c.id === canvas.id)) return state;
+          const existingIndex = state.canvases.findIndex(c => c.id === canvas.id);
+          if (existingIndex !== -1) {
+            const newCanvases = [...state.canvases];
+            newCanvases[existingIndex] = { ...newCanvases[existingIndex], ...canvas };
+            return { canvases: newCanvases };
+          }
           return { canvases: [...state.canvases, canvas] };
         });
       },
@@ -335,23 +377,35 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
 
       saveCanvasState: async () => {
+        const { activeCanvasId, canvases } = get();
+        if (!activeCanvasId) return;
+
+        const currentCanvas = canvases.find(c => c.id === activeCanvasId);
+        if (currentCanvas?._local) return; // Never save mock canvases
+
+        const canvasStore = require('./canvasStore').useCanvasStore;
+        const { nodes, edges, viewport } = canvasStore.getState();
+
+        // Safety check: if this is an official roadmap and nodes is completely empty, 
+        // DO NOT SAVE to prevent catastrophic data loss bugs from accidental state wipes.
+        if (currentCanvas?.is_official_roadmap && nodes.length === 0) {
+          console.warn("Skipping autosave: Refusing to save 0 nodes to official roadmap (safety catch).");
+          return;
+        }
+
         set({ isSaving: true });
-        const state = get();
-        const activeId = state.activeCanvasId;
 
         // Only save if activeId is a real UUID — never a mock or temp string
-        if (activeId && UUID_RE.test(activeId)) {
+        if (activeCanvasId && UUID_RE.test(activeCanvasId)) {
           try {
-            const canvasStore = require('./canvasStore').useCanvasStore;
-            const { nodes, edges, viewport } = canvasStore.getState();
-            await updateCanvasState(activeId, { nodes, edges, viewport });
+            await updateCanvasState(activeCanvasId, { nodes, edges, viewport });
           } catch (e: any) {
             if (e instanceof CanvasNotFoundError) {
               // Canvas was created offline and was never saved to backend.
               // Remove it from store so initWorkspace creates a real one.
-              console.warn(`[WorkspaceStore] Removing ghost local canvas ${activeId} — not found on backend.`);
+              console.warn(`[WorkspaceStore] Removing ghost local canvas ${activeCanvasId} — not found on backend.`);
               set((state) => ({
-                canvases: state.canvases.filter(c => c.id !== activeId),
+                canvases: state.canvases.filter(c => c.id !== activeCanvasId),
                 activeCanvasId: null,
               }));
             } else {
@@ -365,10 +419,23 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     }),
     {
       name: 'workspace-storage',
-      version: 3, // v3: multi-mentor store (canvases from all mentors coexist)
-      migrate: (_persistedState, _version) => {
-        // Clear any pre-v3 state — nodes will be re-generated on next visit
-        return { activeCanvasId: null, canvases: [] };
+      version: 5, // v5: Do not persist canvases or activeCanvasId — both loaded fresh from DB.
+      // Persisting activeCanvasId caused cross-mentor data leakage: if a user visited
+      // ML Mentor, the ML canvas ID was stored in localStorage. When they then visited
+      // DevOps Mentor, the stale ML canvas_id was sent to the generation API, which
+      // returned ML nodes for the DevOps canvas (cross-tenant data breach).
+      partialize: (state) => ({
+        // ONLY persist UI preferences — never canvas data or IDs
+        workspaceSettings: state.workspaceSettings,
+      }),
+      migrate: (_persistedState: any, _version: number) => {
+        // Clear all pre-v5 state — canvas data will be re-loaded from DB on next visit.
+        const settings = _persistedState?.workspaceSettings;
+        return {
+          activeCanvasId: null,
+          canvases: [],
+          ...(settings ? { workspaceSettings: settings } : {}),
+        };
       },
     }
   )

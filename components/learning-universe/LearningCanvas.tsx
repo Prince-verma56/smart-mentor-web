@@ -98,30 +98,11 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
   // Keep track of which canvases we've attempted to auto-generate for in this session
   const attemptedCanvasIdsRef = useRef<Set<string>>(new Set());
 
-  // Auto-generate for the Official Roadmap canvas when it is empty
+  // Auto-generate for the Official Roadmap canvas is disabled to prevent ghost regeneration.
+  // The user should manually click "AI Generate" from the empty state if the canvas is empty.
   useEffect(() => {
-    // Wait until workspace has fully initialised (or given up)
-    if (isWorkspaceInitializing || !activeCanvasId) return;
-    
-    // Only trigger once per canvas ID in a session — guards against double-fire
-    if (attemptedCanvasIdsRef.current.has(activeCanvasId)) return;
-    
-    if (isOfficialRoadmap && nodes.length === 0 && !isGenerating) {
-      // Small delay to let the workspace settle and avoid racing with the
-      // isInitializing->false transition (which causes a re-render storm)
-      const timer = setTimeout(() => {
-        // Re-check after delay — another instance may have started generating
-        if (!isMountedRef.current) return;
-        if (_generatingCanvasIds.has(activeCanvasId)) return;
-        if (attemptedCanvasIdsRef.current.has(activeCanvasId)) return;
-        const stillEmpty = useCanvasStore.getState().nodes.length === 0;
-        if (stillEmpty) {
-          attemptedCanvasIdsRef.current.add(activeCanvasId);
-          handleGenerate();
-        }
-      }, 500); // 500ms settle delay
-      return () => clearTimeout(timer);
-    }
+    // Left intentionally empty to preserve hook order if necessary,
+    // though React handles removed effects fine if it's not conditional.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWorkspaceInitializing, isOfficialRoadmap, nodes.length, isGenerating, activeCanvasId]);
 
@@ -209,13 +190,29 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
   }, [undo, redo, addNode, selectedNodes, setSelectedNodeId]);
 
   const handleGenerate = async () => {
-    const currentCanvasId = useWorkspaceStore.getState().activeCanvasId;
+    const wsState = useWorkspaceStore.getState();
+    const currentCanvasId = wsState.activeCanvasId;
+
+    // ISOLATION: Validate that the activeCanvasId belongs to THIS mentor.
+    // If the canvas store holds a stale ID from a previously visited mentor,
+    // do NOT send it to the API — the backend would serve the other mentor's data.
+    const activeCanvas = wsState.canvases.find(c => c.id === currentCanvasId);
+    const canvasIsOwnedByThisMentor = activeCanvas && activeCanvas.mentor_id === mentorId;
+    const safeCanvasId = canvasIsOwnedByThisMentor ? currentCanvasId : null;
+
+    if (safeCanvasId !== currentCanvasId) {
+      console.warn(
+        `[LearningCanvas] ISOLATION: Discarded stale canvas_id=${currentCanvasId} ` +
+        `(belongs to mentor_id=${activeCanvas?.mentor_id}), expected ${mentorId}. ` +
+        `Sending null canvas_id to force fresh generation.`
+      );
+    }
     
     // Guard: don't start a second generation for the same canvas
-    if (currentCanvasId && _generatingCanvasIds.has(currentCanvasId)) {
+    if (safeCanvasId && _generatingCanvasIds.has(safeCanvasId)) {
       return;
     }
-    if (currentCanvasId) _generatingCanvasIds.add(currentCanvasId);
+    if (safeCanvasId) _generatingCanvasIds.add(safeCanvasId);
 
     setIsGenerating(true);
     
@@ -228,7 +225,7 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
     
     await generateLearningUniverseStream({
       mentorId,
-      canvasId: currentCanvasId || undefined,
+      canvasId: safeCanvasId || undefined,
       goal: "Generate a complete learning roadmap covering fundamental to advanced concepts for this topic.",
       onStatusUpdate: (status) => {
         if (isMountedRef.current) setGenerationStatus(status);
@@ -550,7 +547,7 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
       <Inspector />
       
       {/* Immersive Generation Overlay */}
-      <ImmersiveGenerationOverlay isGenerating={isGenerating} status={generationStatus} />
+      <ImmersiveGenerationOverlay isGenerating={isGenerating} status={generationStatus} nodeCount={nodes.length} edgeCount={edges.length} />
 
       {/* Blank Canvas Empty State */}
       {!isOfficialRoadmap && nodes.length === 0 && !isGenerating && (

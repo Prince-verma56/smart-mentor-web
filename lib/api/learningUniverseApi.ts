@@ -38,42 +38,58 @@ export const generateLearningUniverseStream = async (params: GenerateRoadmapPara
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
+    let doneCalled = false;
+
+    const processLine = (line: string) => {
+      if (!line.startsWith('data: ')) return;
+      const dataStr = line.slice(6).trim();
+      if (!dataStr) return;
+      try {
+        const data = JSON.parse(dataStr);
+        if (data.type === 'status') {
+          onStatusUpdate?.(`Executing: ${data.node}`);
+        } else if (data.type === 'chunk') {
+          onChunk?.(data.content);
+        } else if (data.type === 'error') {
+          if (!doneCalled) {
+            doneCalled = true;
+            onError?.(data.message);
+          }
+        } else if (data.type === 'done') {
+          if (!doneCalled) {
+            doneCalled = true;
+            onDone?.();
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse SSE JSON:', e, dataStr);
+      }
+    };
 
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (value) {
         buffer += decoder.decode(value, { stream: !done });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
-        
+
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6);
-            try {
-              const data = JSON.parse(dataStr);
-              if (data.type === 'status') {
-                onStatusUpdate?.(`Executing: ${data.node}`);
-              } else if (data.type === 'chunk') {
-                onChunk?.(data.content);
-              } else if (data.type === 'error') {
-                onError?.(data.message);
-              } else if (data.type === 'done') {
-                onDone?.();
-              }
-            } catch (e) {
-              console.error('Failed to parse SSE JSON:', e);
-            }
-          }
+          processLine(line);
         }
       }
 
       if (done) {
-        if (buffer.trim().startsWith('data: ')) {
-           try {
-             const data = JSON.parse(buffer.trim().slice(6));
-             if (data.type === 'done') onDone?.();
-           } catch(e) {}
+        // Process any remaining data left in the buffer
+        if (buffer.trim()) {
+          processLine(buffer.trim());
+        }
+        // CRITICAL: Always fire onDone when the stream physically ends,
+        // even if the backend never sent a "done" event (e.g., on network drop).
+        // This prevents the canvas from being permanently stuck in "generating" state.
+        if (!doneCalled) {
+          doneCalled = true;
+          onDone?.();
         }
         break;
       }

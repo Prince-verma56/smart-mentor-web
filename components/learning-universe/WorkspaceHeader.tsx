@@ -86,7 +86,14 @@ export const WorkspaceHeader = ({ mentorId }: { mentorId: string }) => {
   };
 
   // Switch canvas
-  const handleSwitchCanvas = (targetCanvas: any) => {
+  const handleSwitchCanvas = async (targetCanvas: any) => {
+    if (targetCanvas.nodes === undefined) {
+      const { fetchCanvasById } = await import('@/lib/api/canvasApi');
+      const fullCanvas = await fetchCanvasById(targetCanvas.id);
+      if (fullCanvas) {
+        useWorkspaceStore.getState().addCanvas(fullCanvas);
+      }
+    }
     setActiveCanvasId(targetCanvas.id);
     if (targetCanvas.is_official_roadmap) {
       router.push(basePath);

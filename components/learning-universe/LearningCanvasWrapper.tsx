@@ -34,10 +34,21 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
       // ── Root learning-universe page — activate the official roadmap canvas ──
       const official = canvases.find(c => c.is_official_roadmap);
       if (official) {
-        if (activeCanvasId !== official.id) {
-          setActiveCanvasId(official.id);
+        if (official.nodes === undefined) {
+          if (attemptedRef.current === key) return;
+          attemptedRef.current = key;
+          fetchCanvasById(official.id).then(fullCanvas => {
+            if (fullCanvas?.id) {
+              addCanvas(fullCanvas);
+              setActiveCanvasId(fullCanvas.id);
+            }
+          });
+        } else {
+          if (activeCanvasId !== official.id) {
+            setActiveCanvasId(official.id);
+          }
+          attemptedRef.current = key;
         }
-        attemptedRef.current = key;
         return;
       }
 
@@ -53,8 +64,19 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
     // ── Slug-based canvas route ──
     const found = canvases.find(c => c.slug === slug);
     if (found) {
-      if (activeCanvasId !== found.id) {
-        setActiveCanvasId(found.id);
+      if (found.nodes === undefined) {
+        if (attemptedRef.current === key) return;
+        attemptedRef.current = key;
+        fetchCanvasById(found.id).then(fullCanvas => {
+          if (fullCanvas?.id) {
+            addCanvas(fullCanvas);
+            setActiveCanvasId(fullCanvas.id);
+          }
+        });
+      } else {
+        if (activeCanvasId !== found.id) {
+          setActiveCanvasId(found.id);
+        }
       }
       return;
     }
@@ -73,6 +95,9 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, canvases, isWorkspaceInitializing]);
+
+  // Cleanup is fully handled by setActiveCanvasId in workspaceStore.
+  // We no longer need an artificial mentor-level wipe here, which caused race conditions.
 
   // Reset attempt guard on navigation so new mentor/slug combos work correctly
   useEffect(() => {

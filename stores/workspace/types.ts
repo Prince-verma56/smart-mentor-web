@@ -8,17 +8,15 @@ export type NodeType =
   | 'revision' | 'milestone' | 'bookmark' | 'notes' 
   | 'resource' | 'certificate' | 'subtopic' | 'mini_project' | 'core';
 
-// 13 semantic edge types — each has a specific meaning in the learning graph
+// Semantic edge types — each has a specific meaning in the learning graph
 export type EdgeSemanticType = 
-  // Original lowercase types
+  | 'PREREQUISITE' | 'DEPENDS_ON' | 'PART_OF' 
+  | 'PRACTICE_FOR' | 'PROJECT_FOR' | 'LEADS_TO'
+  // Fallbacks for legacy/local edges
   | 'prerequisite' | 'dependency' | 'unlock' | 'optional' 
   | 'recommended' | 'parallel' | 'alternative' | 'revision' 
   | 'project_requirement' | 'interview_requirement' | 'challenge' 
-  | 'reference' | 'knowledge_bridge'
-  // New uppercase semantic types
-  | 'PREREQUISITE' | 'DEPENDS_ON' | 'PART_OF' | 'NEXT_STEP'
-  | 'PRACTICE_OF' | 'PROJECT_OF' | 'RELATED_TO' | 'REQUIRES'
-  | 'UNLOCK' | 'RECOMMENDED' | 'PARALLEL' | 'REVISION';
+  | 'reference' | 'knowledge_bridge';
 
 export interface NodeResource {
   id: string;
@@ -44,7 +42,8 @@ export type LearningNodeData = {
   description?: string;
   summary?: string;
   type: NodeType;
-  nodeCategory?: 'CONCEPT' | 'PRACTICE' | 'PROJECT'; // Semantic category for AI layout
+  nodeCategory?: 'DOMAIN' | 'CATEGORY' | 'FOUNDATION' | 'CORE_CONCEPT' | 'ADVANCED_CONCEPT' | 'PRACTICE' | 'PROJECT' | 'MILESTONE' | 'ASSESSMENT' | 'RESOURCE';
+  learningStage?: 'foundation' | 'core' | 'specialization' | 'project' | 'career'; // The learning journey stage
   status: NodeStatus;
   progress?: number;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';

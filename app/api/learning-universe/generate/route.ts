@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120; // Allow up to 2 minutes for generation
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,8 @@ export async function POST(req: Request) {
     const payload = {
       mentor_id: body.mentor_id,
       goal: body.goal,
-      preferred_model: body.preferred_model || "llama-3.1-8b-instant",
+      canvas_id: body.canvas_id,
+      preferred_model: body.preferred_model || "chat/balanced",
     };
 
     const response = await fetch("http://127.0.0.1:8000/api/v1/learning-universe/generate", {

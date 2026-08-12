@@ -102,8 +102,20 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  // Semantic Color Map based on type
-  const getTypeColor = (type: NodeType) => {
+  // Semantic Color Map based on category or type
+  const getTypeColor = (category?: string, type?: string) => {
+    switch (category) {
+      case 'DOMAIN': return 'text-violet-400';
+      case 'CATEGORY': return 'text-fuchsia-400';
+      case 'FOUNDATION': return 'text-sky-400';
+      case 'CORE_CONCEPT': return 'text-blue-400';
+      case 'ADVANCED_CONCEPT': return 'text-indigo-400';
+      case 'PRACTICE': return 'text-purple-400';
+      case 'PROJECT': return 'text-orange-400';
+      case 'MILESTONE': return 'text-emerald-400';
+      case 'ASSESSMENT': return 'text-red-400';
+      case 'RESOURCE': return 'text-slate-400';
+    }
     switch (type) {
       case 'topic': return 'text-blue-400';
       case 'lesson': return 'text-emerald-400';
@@ -115,10 +127,13 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
       default: return 'text-slate-400';
     }
   };
-  const semanticColor = getTypeColor(data.type);
+  const semanticColor = getTypeColor(data.nodeCategory, data.type);
 
-  const isPractice = data.type === 'practice' || data.nodeCategory === 'PRACTICE';
-  const isConcept = data.type === 'concept' || data.type === 'topic';
+  const isPractice = data.nodeCategory === 'PRACTICE' || data.nodeCategory === 'ASSESSMENT' || data.type === 'practice' || data.type === 'quiz';
+  const isConcept = data.nodeCategory === 'FOUNDATION' || data.nodeCategory === 'CORE_CONCEPT' || data.nodeCategory === 'ADVANCED_CONCEPT' || data.type === 'concept' || data.type === 'topic';
+  const isCategory = data.nodeCategory === 'CATEGORY';
+  const isDomain = data.nodeCategory === 'DOMAIN';
+  const isMilestone = data.nodeCategory === 'MILESTONE' || data.type === 'milestone';
 
   return (
     <motion.div
@@ -137,6 +152,9 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
       whileHover={dragging ? {} : { scale: 1.02, y: -3, opacity: isPractice ? 1 : 1, boxShadow: '0 12px 24px -4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255,255,255,0.1)' }}
       className={cn(
         'relative group flex flex-col p-[5px] rounded-[22px] backdrop-blur-2xl transition-colors duration-200',
+        isDomain ? 'min-w-[360px] max-w-[400px] bg-zinc-900/95 border-2 border-violet-500/50 shadow-[0_0_30px_rgba(139,92,246,0.3)]' :
+        isCategory ? 'min-w-[340px] max-w-[380px] bg-zinc-900/95 border-2 border-fuchsia-500/30' :
+        isMilestone ? 'min-w-[300px] max-w-[340px] bg-zinc-900/95 border-2 border-emerald-500/40' :
         isPractice ? 'min-w-[200px] max-w-[240px] bg-zinc-950/80 border-dashed border-2' : 
         isConcept ? 'min-w-[320px] max-w-[360px] bg-zinc-900/95 border' : 
         'min-w-[260px] max-w-[300px] bg-zinc-900/95 border',
@@ -146,9 +164,9 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
       )}
     >
         {/* Floating Node Numbering Badge */}
-        {data.metadata?.hierarchyIndex && (
+        {(id.length <= 5 || data.metadata?.hierarchyIndex) && (
           <div className="absolute -top-[11px] left-1/2 -translate-x-1/2 flex items-center justify-center min-w-[40px] h-[22px] px-3 rounded-full bg-zinc-800/90 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_10px_rgba(0,0,0,0.4)] text-[11px] font-bold text-slate-200 tracking-wider z-20 transition-transform duration-200 group-hover:scale-105 group-hover:-translate-y-[1px] pointer-events-none">
-            {data.metadata.hierarchyIndex}
+            {id.length <= 5 ? id : data.metadata?.hierarchyIndex}
           </div>
         )}
 
