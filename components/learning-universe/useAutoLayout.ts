@@ -107,32 +107,15 @@ const useAutoLayout = () => {
 
     const elkOptions = getElkOptions(layoutMode);
 
-      const graph = {
-      id: 'root',
+    // Primary Graph Definition
+    const primaryGraph = {
+      id: 'root-primary',
       layoutOptions: elkOptions,
-      children: primaryNodes.map((n) => {
-        // Find if this node has practice children to augment its ELK bounding box
-        const hasPracticeChildren = edges.some(e => e.source === n.id && practiceNodes.some(pn => pn.id === e.target));
-        
-        let width = NODE_WIDTH;
-        let height = NODE_HEIGHT;
-        
-        if (hasPracticeChildren) {
-          if (layoutMode === 'hierarchy') {
-            // Reserve right-side lane
-            width = NODE_WIDTH + 300;
-          } else if (layoutMode === 'timeline' || layoutMode === 'mindmap') {
-            // Reserve bottom lane
-            height = NODE_HEIGHT + 240;
-          }
-        }
-
-        return {
-          id: String(n.id),
-          width,
-          height,
-        };
-      }),
+      children: primaryNodes.map((n) => ({
+        id: String(n.id),
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+      })),
       edges: edges
         .filter(e => primaryNodes.some(n => n.id === e.source) && primaryNodes.some(n => n.id === e.target))
         .map((e) => ({
@@ -142,21 +125,42 @@ const useAutoLayout = () => {
         })),
     };
 
-    try {
-      const layoutedGraph = await elk.layout(graph);
+    // Practice Graph Definition (uses the same base layout style for consistency)
+    const practiceGraph = {
+      id: 'root-practice',
+      layoutOptions: { ...elkOptions, 'elk.spacing.nodeNode': '40' }, // slightly tighter spacing
+      children: practiceNodes.map((n) => ({
+        id: String(n.id),
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+      })),
+      edges: edges
+        .filter(e => practiceNodes.some(n => n.id === e.source) && practiceNodes.some(n => n.id === e.target))
+        .map((e) => ({
+          id: String(e.id),
+          sources: [String(e.source)],
+          targets: [String(e.target)],
+        })),
+    };
 
+    try {
       let layoutedNodes: Node[] = [];
 
-      if (layoutedGraph.children) {
+      // A. Layout Primary Nodes
+      const layoutedPrimary = await elk.layout(primaryGraph);
+      let pMinX = Infinity, pMaxX = -Infinity, pMinY = Infinity, pMaxY = -Infinity;
+
+      if (layoutedPrimary.children) {
         layoutedNodes = primaryNodes.map((node) => {
-          const layoutedNode = layoutedGraph.children?.find((n) => n.id === String(node.id));
-          if (layoutedNode) {
+          const lNode = layoutedPrimary.children?.find((n) => n.id === String(node.id));
+          if (lNode && lNode.x !== undefined && lNode.y !== undefined) {
+            pMinX = Math.min(pMinX, lNode.x);
+            pMaxX = Math.max(pMaxX, lNode.x + (lNode.width || NODE_WIDTH));
+            pMinY = Math.min(pMinY, lNode.y);
+            pMaxY = Math.max(pMaxY, lNode.y + (lNode.height || NODE_HEIGHT));
             return {
               ...node,
-              position: {
-                x: layoutedNode.x ?? node.position.x,
-                y: layoutedNode.y ?? node.position.y,
-              },
+              position: { x: lNode.x, y: lNode.y },
             };
           }
           return node;
@@ -165,49 +169,64 @@ const useAutoLayout = () => {
         layoutedNodes = [...primaryNodes];
       }
 
-      // 2. Attach practice nodes in their designated zones
-      practiceNodes.forEach(pNode => {
-        const incomingEdge = edges.find(e => e.target === pNode.id);
-        if (incomingEdge) {
-          const parentNode = layoutedNodes.find(n => n.id === incomingEdge.source);
-          if (parentNode) {
-            const siblingEdges = edges.filter(e => e.source === parentNode.id);
-            const siblingIds = siblingEdges.map(e => e.target);
-            const practiceSiblings = practiceNodes.filter(pn => siblingIds.includes(pn.id));
-            
-            const myIndex = practiceSiblings.findIndex(pn => pn.id === pNode.id);
-            const totalSiblings = practiceSiblings.length;
-            
-            const practiceWidth = 240;
-            const practiceHeight = 140;
-            const gap = 30;
+      // If no primary nodes, set safe defaults
+      if (pMinX === Infinity) { pMinX = 0; pMaxX = 0; pMinY = 0; pMaxY = 0; }
 
-            let finalX = parentNode.position.x;
-            let finalY = parentNode.position.y;
-            
-            if (layoutMode === 'hierarchy') {
-              // Stack vertically on the right side
-              finalX = parentNode.position.x + NODE_WIDTH + 60;
-              finalY = parentNode.position.y + (myIndex * (practiceHeight + gap));
-            } else {
-              // Timeline/Mindmap: Layout horizontally beneath the parent
-              const totalWidth = (practiceWidth * totalSiblings) + (gap * (totalSiblings - 1));
-              const startX = parentNode.position.x + (NODE_WIDTH / 2) - (totalWidth / 2);
-              finalX = startX + (myIndex * (practiceWidth + gap));
-              finalY = parentNode.position.y + NODE_HEIGHT + 80;
-            }
-            
-            layoutedNodes.push({
-              ...pNode,
-              position: { x: finalX, y: finalY }
-            });
-          } else {
-            layoutedNodes.push(pNode);
-          }
-        } else {
-          layoutedNodes.push(pNode);
+      // B. Layout Practice Nodes (if any exist)
+      if (practiceNodes.length > 0) {
+        const layoutedPractice = await elk.layout(practiceGraph);
+        let pracMinX = Infinity, pracMinY = Infinity;
+        
+        // Find local bounds to normalize offsets
+        if (layoutedPractice.children) {
+          layoutedPractice.children.forEach(lNode => {
+             if (lNode.x !== undefined && lNode.y !== undefined) {
+                pracMinX = Math.min(pracMinX, lNode.x);
+                pracMinY = Math.min(pracMinY, lNode.y);
+             }
+          });
         }
-      });
+        if (pracMinX === Infinity) { pracMinX = 0; pracMinY = 0; }
+
+        // Determine regional offset based on layout rules
+        let offsetX = 0;
+        let offsetY = 0;
+        const GAP = 250; // visual gap between primary zone and practice zone
+
+        if (layoutMode === 'hierarchy' || layoutMode === 'tree') {
+          // Far right column
+          offsetX = pMaxX + GAP - pracMinX;
+          offsetY = pMinY - pracMinY; // align top
+        } else if (layoutMode === 'timeline') {
+          // Parallel lane below
+          offsetX = pMinX - pracMinX; // align left
+          offsetY = pMaxY + GAP - pracMinY;
+        } else if (layoutMode === 'mindmap' || layoutMode === 'radial') {
+          // Independent outer ring area (shifted heavily to bottom-right to avoid primary radial cluster)
+          offsetX = pMaxX + GAP - pracMinX;
+          offsetY = pMaxY + GAP - pracMinY;
+        } else {
+          offsetX = pMaxX + GAP - pracMinX;
+          offsetY = pMinY - pracMinY;
+        }
+
+        // Apply translated positions to practice nodes
+        if (layoutedPractice.children) {
+          practiceNodes.forEach((node) => {
+            const lNode = layoutedPractice.children?.find((n) => n.id === String(node.id));
+            if (lNode && lNode.x !== undefined && lNode.y !== undefined) {
+              layoutedNodes.push({
+                ...node,
+                position: { x: lNode.x + offsetX, y: lNode.y + offsetY },
+              });
+            } else {
+              layoutedNodes.push(node);
+            }
+          });
+        } else {
+          layoutedNodes.push(...practiceNodes);
+        }
+      }
 
       // Center viewport
       centerViewportOnNodes(fitView);
