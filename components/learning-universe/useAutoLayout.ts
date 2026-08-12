@@ -4,85 +4,94 @@ import { useCallback, useMemo } from 'react';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { useReactFlow, Node, Edge } from '@xyflow/react';
 
-// Node dimensions
+// ── Node dimensions ──────────────────────────────────────────────────────────
+
 const NODE_WIDTH = 300;
 const NODE_HEIGHT = 160;
 
-// ── Per-Layout ELK Configurations ─────────────────────────────────────────────
+// Side-activity node categories & types (PRACTICE / QUIZ / PROJECT) 
+const SIDE_CATEGORIES = new Set(['PRACTICE', 'PROJECT', 'ASSESSMENT']);
+const SIDE_TYPES = new Set(['practice', 'quiz', 'project']);
+
+const isSideNode = (n: Node): boolean =>
+  SIDE_CATEGORIES.has((n.data?.nodeCategory as string) || '') ||
+  SIDE_TYPES.has((n.data?.type as string) || '');
+
+// ── Per-Layout ELK Configurations ────────────────────────────────────────────
 
 const getElkOptions = (layoutMode: string): Record<string, string> => {
   switch (layoutMode) {
+
+    // ── HIERARCHY: strict top-down tree.
     case 'hierarchy':
       return {
         'elk.algorithm': 'layered',
         'elk.direction': 'DOWN',
         'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
         'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
-        'elk.layered.spacing.nodeNodeBetweenLayers': '180',
-        'elk.spacing.nodeNode': '80',
+        'elk.layered.spacing.nodeNodeBetweenLayers': '250',
+        'elk.spacing.nodeNode': '150',
         'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-        'elk.layered.compaction.postCompaction.strategy': 'LEFT_RIGHT_CONSTRAINT_LOCKING',
-        'elk.layered.highDegreeNode.treatment': 'true',
-        'elk.layered.highDegreeNode.threshold': '4',
         'elk.alignment': 'CENTER',
-        'elk.padding': '[top=80,left=80,bottom=80,right=80]',
+        'elk.padding': '[top=100,left=120,bottom=100,right=120]',
         'elk.edgeRouting': 'ORTHOGONAL',
         'elk.layered.unnecessaryBendpoints': 'true',
+        'elk.layered.mergeEdges': 'true',
+        'elk.separateConnectedComponents': 'true', // PREVENTS STACKING
+        'elk.spacing.componentComponent': '200',
       };
 
+    // ── MIND MAP: true radial layout — root in center, categories spread outward.
     case 'mindmap':
       return {
         'elk.algorithm': 'radial',
-        'elk.radial.compactor': 'WEDGE',
-        'elk.radial.optimizationCriteria': 'NONE',
-        'elk.spacing.nodeNode': '120',
+        'elk.radial.compactor': 'NONE', // WEDGE often crashes on non-trees
         'elk.radial.centerOnRoot': 'true',
-        'elk.padding': '[top=80,left=80,bottom=80,right=80]',
+        'elk.spacing.nodeNode': '180',
+        'elk.padding': '[top=120,left=120,bottom=120,right=120]',
+        'elk.separateConnectedComponents': 'true', // PREVENTS STACKING
+        'elk.spacing.componentComponent': '250',
       };
 
+    // ── TIMELINE: strict LEFT to RIGHT progression.
     case 'timeline':
       return {
         'elk.algorithm': 'layered',
         'elk.direction': 'RIGHT',
-        'elk.layered.nodePlacement.strategy': 'LINEAR_SEGMENTS',
-        'elk.spacing.nodeNode': '80',
-        'elk.layered.spacing.nodeNodeBetweenLayers': '220',
+        'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+        'elk.spacing.nodeNode': '120',
+        'elk.layered.spacing.nodeNodeBetweenLayers': '300',
         'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-        'elk.padding': '[top=80,left=80,bottom=80,right=80]',
+        'elk.padding': '[top=120,left=120,bottom=120,right=120]',
         'elk.edgeRouting': 'SPLINES',
+        'elk.separateConnectedComponents': 'true', // PREVENTS STACKING
+        'elk.spacing.componentComponent': '200',
       };
 
-    case 'radial':
-      return {
-        'elk.algorithm': 'radial',
-        'elk.radial.compactor': 'NONE',
-        'elk.spacing.nodeNode': '100',
-        'elk.radial.sortNodes': 'true',
-        'elk.padding': '[top=100,left=100,bottom=100,right=100]',
-      };
-
+    // ── FREE: force-directed, organic.
     case 'free':
     default:
       return {
         'elk.algorithm': 'force',
-        'elk.force.repulsivePower': '2',
-        'elk.spacing.nodeNode': '140',
-        'elk.padding': '[top=60,left=60,bottom=60,right=60]',
-        'elk.force.iterations': '300',
+        'elk.force.repulsivePower': '4',
+        'elk.spacing.nodeNode': '200',
+        'elk.padding': '[top=100,left=100,bottom=100,right=100]',
+        'elk.force.iterations': '500',
+        'elk.separateConnectedComponents': 'true', // PREVENTS STACKING
+        'elk.spacing.componentComponent': '200',
       };
   }
-}
-
-
-// ── Smart Viewport Centering ──────────────────────────────────────────────────
-
-const centerViewportOnNodes = (fitView: Function, duration = 600): void => {
-  setTimeout(() => {
-    fitView({ padding: 0.12, duration, maxZoom: 1.2 });
-  }, 50);
 };
 
-// ── Main Hook ─────────────────────────────────────────────────────────────────
+// ── Smart Viewport Centering ───────────────────────────────────────────────────
+
+const centerViewportOnNodes = (fitView: Function, duration = 700): void => {
+  setTimeout(() => {
+    fitView({ padding: 0.10, duration, maxZoom: 1.0 });
+  }, 80);
+};
+
+// ── Main Hook ──────────────────────────────────────────────────────────────────
 
 const useAutoLayout = () => {
   const { fitView } = useReactFlow();
@@ -99,39 +108,38 @@ const useAutoLayout = () => {
     edges: Edge[],
     layoutMode: string
   ): Promise<{ nodes: Node[]; edges: Edge[] }> => {
-    if (!elk || nodes.length === 0 || layoutMode === 'free') return { nodes, edges };
-
-    // Group nodes for edge weighting (keep primary learning path straight, branch out practice/projects)
-    const practiceNodeIds = new Set(
-      nodes.filter(n => 
-        ['PRACTICE', 'PROJECT', 'ASSESSMENT'].includes(n.data?.nodeCategory || '') || 
-        ['practice', 'quiz', 'project'].includes(n.data?.type || '')
-      ).map(n => String(n.id))
-    );
+    if (!elk || nodes.length === 0) return { nodes, edges };
 
     const elkOptions = getElkOptions(layoutMode);
+    const sideNodeIds = new Set(nodes.filter(isSideNode).map(n => String(n.id)));
 
     const graph = {
       id: 'root',
       layoutOptions: elkOptions,
-      children: nodes.map((n) => ({
-        id: String(n.id),
-        width: NODE_WIDTH,
-        height: NODE_HEIGHT,
-        layoutOptions: practiceNodeIds.has(String(n.id)) ? {
-          'elk.layered.layering.layerConstraint': 'NONE'
-        } : {}
-      })),
+      children: nodes.map((n) => {
+        const side = isSideNode(n);
+        const nodeOpts: Record<string, string> = {};
+
+        if (layoutMode === 'hierarchy' && side) {
+          nodeOpts['elk.layered.layering.layerConstraint'] = 'NONE';
+        }
+
+        return {
+          id: String(n.id),
+          width: side ? Math.round(NODE_WIDTH * 0.78) : NODE_WIDTH,
+          height: side ? Math.round(NODE_HEIGHT * 0.78) : NODE_HEIGHT,
+          layoutOptions: nodeOpts,
+        };
+      }),
       edges: edges.map((e) => {
-        // High priority for primary flow, low priority for practice branching
-        const isPrimaryToPrimary = !practiceNodeIds.has(String(e.source)) && !practiceNodeIds.has(String(e.target));
+        const isPrimaryEdge =
+          !sideNodeIds.has(String(e.source)) && !sideNodeIds.has(String(e.target));
         return {
           id: String(e.id),
           sources: [String(e.source)],
           targets: [String(e.target)],
           layoutOptions: {
-            // Keep main flow straight, let practice branch out
-            'elk.edge.weight': isPrimaryToPrimary ? '10' : '1',
+            'elk.edge.weight': isPrimaryEdge ? '10' : '1',
           }
         };
       }),
@@ -168,4 +176,3 @@ const useAutoLayout = () => {
 };
 
 export default useAutoLayout;
-

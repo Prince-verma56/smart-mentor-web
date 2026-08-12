@@ -84,19 +84,54 @@ const TYPE_RING: Record<string, string> = {
   default:      'ring-white/10',
 };
 
-function buildOutlineTree(nodes: any[], edges: any[]): OutlineNode[] {
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const SIDE_NODE_CATEGORIES = new Set(['PRACTICE', 'PROJECT', 'ASSESSMENT']);
+const SIDE_NODE_TYPES = new Set(['practice', 'quiz', 'project']);
+
+const isSideOutlineNode = (n: any): boolean =>
+  SIDE_NODE_CATEGORIES.has(n?.data?.nodeCategory || '') ||
+  SIDE_NODE_TYPES.has(n?.data?.type || '');
+
+// Nodes that look like AI generation artifacts, not real nodes
+const isArtifactNode = (n: any): boolean => {
+  const title = (n?.data?.title || '').trim().toLowerCase();
+  // Filter out nodes that are obviously schema/artifact text, not learning nodes
+  const ARTIFACT_TITLES = new Set(['edges', 'nodes', 'edge', 'graph', 'schema', 'json', '']);
+  return ARTIFACT_TITLES.has(title) || title.length <= 2;
+};
+
+function buildOutlineTree(rawNodes: any[], edges: any[]): OutlineNode[] {
+  // Sanitize: remove artifact nodes (e.g. node titled "Edges" from bad AI output)
+  const nodes = rawNodes.filter(n => !isArtifactNode(n));
+  const validIds = new Set(nodes.map((n: any) => n.id));
+
   const adj: Record<string, string[]> = {};
   const inDegree: Record<string, number> = {};
   nodes.forEach(n => { adj[n.id] = []; inDegree[n.id] = 0; });
   edges.forEach(e => {
+    // Only process edges where BOTH source and target are valid learning nodes
+    if (!validIds.has(e.source) || !validIds.has(e.target)) return;
     if (adj[e.source]) adj[e.source].push(e.target);
     if (inDegree[e.target] !== undefined) inDegree[e.target]++;
   });
 
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
-  let roots = nodes
+
+  // Separate main-path nodes from side nodes
+  const mainNodes = nodes.filter(n => !isSideOutlineNode(n));
+  const sideNodes = nodes.filter(n => isSideOutlineNode(n));
+
+  let roots = mainNodes
     .filter(n => inDegree[n.id] === 0)
     .sort((a, b) => (a.data.learning_order ?? 99) - (b.data.learning_order ?? 99));
+
+  // If no roots found on main nodes, fall back to all nodes with in-degree 0
+  if (roots.length === 0) {
+    roots = nodes
+      .filter(n => inDegree[n.id] === 0)
+      .sort((a, b) => (a.data.learning_order ?? 99) - (b.data.learning_order ?? 99));
+  }
 
   const globalVisited = new Set<string>();
 
@@ -105,21 +140,20 @@ function buildOutlineTree(nodes: any[], edges: any[]): OutlineNode[] {
     globalVisited.add(id);
 
     const node = nodeMap.get(id)!;
+    if (!node) return null;
+
     const childIds = (adj[id] || []).filter(cid => nodeMap.has(cid) && !globalVisited.has(cid));
     const childNodes = childIds
       .map(cid => nodeMap.get(cid)!)
       .sort((a, b) => {
-        const aCat = a.data.nodeCategory;
-        const bCat = b.data.nodeCategory;
-        const aIsSide = ['PRACTICE', 'PROJECT', 'ASSESSMENT'].includes(aCat || '') || ['practice', 'quiz', 'project'].includes(a.data.type || '');
-        const bIsSide = ['PRACTICE', 'PROJECT', 'ASSESSMENT'].includes(bCat || '') || ['practice', 'quiz', 'project'].includes(b.data.type || '');
+        const aIsSide = isSideOutlineNode(a);
+        const bIsSide = isSideOutlineNode(b);
         if (aIsSide && !bIsSide) return 1;
         if (!aIsSide && bIsSide) return -1;
         return (a.data.learning_order ?? 99) - (b.data.learning_order ?? 99);
       });
 
-    const nodeCat = node.data.nodeCategory;
-    const isPracticeNode = ['PRACTICE', 'PROJECT', 'ASSESSMENT'].includes(nodeCat || '') || ['practice', 'quiz', 'project'].includes(node.data.type || '');
+    const isPracticeNode = isSideOutlineNode(node);
 
     return {
       id,
@@ -135,22 +169,77 @@ function buildOutlineTree(nodes: any[], edges: any[]): OutlineNode[] {
   };
 
   const outline: OutlineNode[] = [];
-  
-  // 1. Process natural roots
+
+  // 1. Process main learning path from roots
   for (const root of roots) {
     const built = buildChildren(root.id, 0);
     if (built) outline.push(built);
   }
 
-  // 2. Process disconnected graphs
-  const remaining = nodes.filter(n => !globalVisited.has(n.id));
-  for (const r of remaining) {
+  // 2. Process remaining unvisited main nodes (disconnected or multi-root)
+  const remainingMain = mainNodes.filter(n => !globalVisited.has(n.id));
+  for (const r of remainingMain) {
     const built = buildChildren(r.id, 0);
     if (built) outline.push(built);
   }
 
+  // 3. Group unvisited side nodes (Projects / Practice / Assessment) into 
+  //    dedicated sections at the bottom of the tree.
+  const practiceNodes = sideNodes.filter(n => !globalVisited.has(n.id) && 
+    ['PRACTICE', 'ASSESSMENT'].includes(n.data?.nodeCategory || '') ||
+    ['practice', 'quiz'].includes(n.data?.type || ''));
+  const projectNodes = sideNodes.filter(n => !globalVisited.has(n.id) && 
+    n.data?.nodeCategory === 'PROJECT' || n.data?.type === 'project');
+
+  if (projectNodes.length > 0) {
+    const projectSection: OutlineNode = {
+      id: '__projects__',
+      title: 'Projects',
+      type: 'project',
+      status: 'locked',
+      depth: 0,
+      isPractice: true,
+      children: projectNodes.map(n => ({
+        id: n.id,
+        title: n.data.title,
+        type: n.data.type || 'project',
+        status: n.data.status || 'locked',
+        difficulty: n.data.difficulty,
+        depth: 1,
+        isPractice: true,
+        children: [],
+      })),
+    };
+    outline.push(projectSection);
+    projectNodes.forEach(n => globalVisited.add(n.id));
+  }
+
+  if (practiceNodes.length > 0) {
+    const practiceSection: OutlineNode = {
+      id: '__assessments__',
+      title: 'Assessments & Practice',
+      type: 'assessment',
+      status: 'locked',
+      depth: 0,
+      isPractice: true,
+      children: practiceNodes.map(n => ({
+        id: n.id,
+        title: n.data.title,
+        type: n.data.type || 'practice',
+        status: n.data.status || 'locked',
+        difficulty: n.data.difficulty,
+        depth: 1,
+        isPractice: true,
+        children: [],
+      })),
+    };
+    outline.push(practiceSection);
+    practiceNodes.forEach(n => globalVisited.add(n.id));
+  }
+
   return outline;
 }
+
 
 // ── Mind Map Child Node ────────────────────────────────────────────────────────
 
