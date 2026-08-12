@@ -81,6 +81,14 @@ export const createCanvas = async (
   return handleApiResponse(response, 'createCanvas');
 };
 
+/** Thrown when PATCH returns 404 — canvas was never saved on the backend. */
+export class CanvasNotFoundError extends Error {
+  constructor(canvasId: string) {
+    super(`Canvas not found on backend: ${canvasId}`);
+    this.name = 'CanvasNotFoundError';
+  }
+}
+
 export const updateCanvasState = async (canvasId: string, updates: any): Promise<any | null> => {
   const response = await safeFetch(`${BASE}/canvas/${canvasId}`, {
     method: 'PATCH',
@@ -88,6 +96,10 @@ export const updateCanvasState = async (canvasId: string, updates: any): Promise
     body: JSON.stringify(updates),
   });
   if (!response) return null;
+  // 404 means the canvas was never persisted to the backend (created when offline)
+  if (response.status === 404) {
+    throw new CanvasNotFoundError(canvasId);
+  }
   return handleApiResponse(response, 'updateCanvasState');
 };
 

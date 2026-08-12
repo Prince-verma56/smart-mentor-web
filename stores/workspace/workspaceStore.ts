@@ -1,9 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { LayoutMode, ThemeMode } from './types';
-import { fetchCanvases, updateCanvasState, deleteCanvas, duplicateCanvas as duplicateCanvasApi, archiveCanvas as archiveCanvasApi } from '@/lib/api/canvasApi';
+import { fetchCanvases, updateCanvasState, deleteCanvas, duplicateCanvas as duplicateCanvasApi, archiveCanvas as archiveCanvasApi, CanvasNotFoundError } from '@/lib/api/canvasApi';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Module-level concurrency guard: prevents multiple simultaneous initWorkspace
+ * calls for the same mentorId from creating duplicate canvases.
+ * This guards against React Strict Mode double-invocation and multiple
+ * component mounts (WorkspaceInitializer + LearningCanvasWrapper) racing.
+ */
+const _initInFlight = new Set<string>();
 
 /** Create a minimal local canvas object that works offline (no backend required). */
 function makeLocalCanvas(mentorId: string, name: string, isOfficial: boolean): any {
@@ -57,6 +65,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       })),
 
       initWorkspace: async (mentorId) => {
+        // ── Concurrency guard: if already in-flight for this mentorId, skip ────
+        if (_initInFlight.has(mentorId)) {
+          return;
+        }
+        _initInFlight.add(mentorId);
+
         const existing = get().canvases;
 
         // ── Early-return guard ──────────────────────────────────────────────────
@@ -64,12 +78,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         // whether the active canvas is already pointing at one of this mentor's
         // canvases. If yes, skip the API round-trip entirely.
         const mentorCanvases = existing.filter((c: any) => c.mentor_id === mentorId);
-        const hasOfficialForMentor = mentorCanvases.some((c: any) => c.is_official_roadmap);
+        // Only use the early-return guard if canvases are server-backed (not local-only)
+        const hasOfficialForMentor = mentorCanvases.some((c: any) => c.is_official_roadmap && !c._local);
 
         if (hasOfficialForMentor) {
           const currentActiveId = get().activeCanvasId;
           const isOnThisMentor = currentActiveId &&
-            mentorCanvases.some((c: any) => c.id === currentActiveId);
+            mentorCanvases.some((c: any) => c.id === currentActiveId && !c._local);
 
           if (isOnThisMentor) {
             return; // Already showing the right mentor's canvas — nothing to do
@@ -77,7 +92,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           // We have this mentor's canvases but activeCanvasId points elsewhere
           // (e.g. user navigated from a different mentor). Switch to this mentor.
-          const official = mentorCanvases.find((c: any) => c.is_official_roadmap);
+          const official = mentorCanvases.find((c: any) => c.is_official_roadmap && !c._local);
           if (official) {
             get().setActiveCanvasId(official.id);
             return;
@@ -100,7 +115,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
           }
 
-          // Merge: keep other mentors' canvases in the store, replace only THIS mentor's
+          // Merge: keep other mentors' canvases, replace THIS mentor's (drop stale local-only canvases)
           const otherMentorCanvases = get().canvases.filter(
             (c: any) => c.mentor_id !== mentorId
           );
@@ -147,6 +162,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }
         } finally {
           set({ isInitializing: false });
+          _initInFlight.delete(mentorId); // Release lock so future visits re-initialize
         }
       },
 
@@ -329,8 +345,18 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             const canvasStore = require('./canvasStore').useCanvasStore;
             const { nodes, edges, viewport } = canvasStore.getState();
             await updateCanvasState(activeId, { nodes, edges, viewport });
-          } catch (e) {
-            console.error('Failed to save to API', e);
+          } catch (e: any) {
+            if (e instanceof CanvasNotFoundError) {
+              // Canvas was created offline and was never saved to backend.
+              // Remove it from store so initWorkspace creates a real one.
+              console.warn(`[WorkspaceStore] Removing ghost local canvas ${activeId} — not found on backend.`);
+              set((state) => ({
+                canvases: state.canvases.filter(c => c.id !== activeId),
+                activeCanvasId: null,
+              }));
+            } else {
+              console.error('Failed to save to API', e);
+            }
           }
         }
 

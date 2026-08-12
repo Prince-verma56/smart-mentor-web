@@ -90,6 +90,14 @@ async function proxy(
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {
+    // Client disconnected (ECONNRESET / AbortError) — suppress silently, don't crash Next.js
+    const isDisconnect =
+      err?.code === 'ECONNRESET' ||
+      err?.name === 'AbortError' ||
+      err?.message?.includes('aborted');
+    if (isDisconnect) {
+      return new NextResponse(null, { status: 499 });
+    }
     console.error('[canvas-proxy] error:', err);
     return NextResponse.json({ detail: 'Proxy error' }, { status: 502 });
   }

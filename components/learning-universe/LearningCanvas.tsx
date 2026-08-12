@@ -34,6 +34,11 @@ import { toast } from 'react-hot-toast';
 const proOptions = { hideAttribution: true };
 const deleteKeyCode = ['Backspace', 'Delete'];
 
+// Module-level guard: prevents multiple parallel generation calls for the same canvas.
+// React's key-based remounting can cause multiple LearningCanvas instances to briefly
+// coexist, each trying to auto-generate. This ensures only ONE generation runs at a time.
+const _generatingCanvasIds = new Set<string>();
+
 const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId: string; isOfficialRoadmap?: boolean }) => {
   // Memoize types inside the component to prevent HMR warnings
   const nodeTypes = useMemo(() => ({ learningNode: LearningNode }), []);
@@ -64,6 +69,15 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState("Preparing roadmap...");
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const [pendingConnection, setPendingConnection] = useState<{
     connection: Connection;
     mouseX: number;
@@ -93,8 +107,20 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
     if (attemptedCanvasIdsRef.current.has(activeCanvasId)) return;
     
     if (isOfficialRoadmap && nodes.length === 0 && !isGenerating) {
-      attemptedCanvasIdsRef.current.add(activeCanvasId);
-      handleGenerate();
+      // Small delay to let the workspace settle and avoid racing with the
+      // isInitializing->false transition (which causes a re-render storm)
+      const timer = setTimeout(() => {
+        // Re-check after delay — another instance may have started generating
+        if (!isMountedRef.current) return;
+        if (_generatingCanvasIds.has(activeCanvasId)) return;
+        if (attemptedCanvasIdsRef.current.has(activeCanvasId)) return;
+        const stillEmpty = useCanvasStore.getState().nodes.length === 0;
+        if (stillEmpty) {
+          attemptedCanvasIdsRef.current.add(activeCanvasId);
+          handleGenerate();
+        }
+      }, 500); // 500ms settle delay
+      return () => clearTimeout(timer);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWorkspaceInitializing, isOfficialRoadmap, nodes.length, isGenerating, activeCanvasId]);
@@ -183,6 +209,14 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
   }, [undo, redo, addNode, selectedNodes, setSelectedNodeId]);
 
   const handleGenerate = async () => {
+    const currentCanvasId = useWorkspaceStore.getState().activeCanvasId;
+    
+    // Guard: don't start a second generation for the same canvas
+    if (currentCanvasId && _generatingCanvasIds.has(currentCanvasId)) {
+      return;
+    }
+    if (currentCanvasId) _generatingCanvasIds.add(currentCanvasId);
+
     setIsGenerating(true);
     
     // Backup previous nodes in case of failure
@@ -192,31 +226,34 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
     useCanvasStore.getState().setAutosaveEnabled(false);
     setNodes([]); setEdges([]);
     
-    const currentCanvasId = useWorkspaceStore.getState().activeCanvasId;
-    
     await generateLearningUniverseStream({
       mentorId,
       canvasId: currentCanvasId || undefined,
       goal: "Generate a complete learning roadmap covering fundamental to advanced concepts for this topic.",
       onStatusUpdate: (status) => {
-        setGenerationStatus(status);
-        // Only toast if we want, but overlay handles the UI now. We can keep toast for background updates if closed.
+        if (isMountedRef.current) setGenerationStatus(status);
       },
       onChunk: async (chunk) => {
+        // NOTE: Do NOT guard with isMountedRef here.
+        // addStreamedNodes/addStreamedEdges update the ZUSTAND STORE, not component state.
+        // Guarding with isMountedRef would silently drop all streamed nodes if the component
+        // had a brief unmount/remount (which happens during workspace initialization).
         try {
           const parsed = JSON.parse(chunk);
           if (parsed.type === 'node') {
             const newNode = parsed.data;
-            addStreamedNodes([newNode]);
+            useCanvasStore.getState().addStreamedNodes([newNode]);
           } else if (parsed.type === 'edge') {
             const newEdge = parsed.data;
-            addStreamedEdges([newEdge]);
+            useCanvasStore.getState().addStreamedEdges([newEdge]);
           }
         } catch (e) {
           console.error('Error processing chunk:', e, chunk);
         }
       },
       onError: (err) => {
+        if (currentCanvasId) _generatingCanvasIds.delete(currentCanvasId);
+        if (!isMountedRef.current) return;
         setIsGenerating(false);
         toast.error(`Generation failed: ${err}`, { id: 'roadmap-gen' });
         // Restore previous state and re-enable autosave
@@ -225,31 +262,32 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
         useCanvasStore.getState().setAutosaveEnabled(true);
       },
       onDone: async () => {
-        setIsGenerating(false);
-        toast.success("Generation complete!", { id: 'roadmap-gen' });
+        if (currentCanvasId) _generatingCanvasIds.delete(currentCanvasId);
         
-        // Final layout pass
+        // Always re-enable autosave and trigger layout via store — regardless of mount state
+        useCanvasStore.getState().setAutosaveEnabled(true);
+
+        // Final layout pass — read directly from store (works even if component remounted)
         const currentNodes = useCanvasStore.getState().nodes;
         const currentEdges = useCanvasStore.getState().edges;
         
         if (currentNodes.length > 0) {
           const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(currentNodes as any, currentEdges as any, layoutMode);
-          
-          setNodes(layoutedNodes as LearningNodeType[]);
-          setEdges(layoutedEdges as any[]);
+          useCanvasStore.getState().setNodes(layoutedNodes as LearningNodeType[]);
+          useCanvasStore.getState().setEdges(layoutedEdges as any[]);
         } else {
-          // If no nodes were generated, revert to previous state
-          setNodes(prevNodes);
-          setEdges(prevEdges);
+          // No nodes were generated — restore previous content
+          useCanvasStore.getState().setNodes(prevNodes);
+          useCanvasStore.getState().setEdges(prevEdges);
         }
-        
-        // Re-enable autosave
-        useCanvasStore.getState().setAutosaveEnabled(true);
 
-        // Flush the generated content to the server in the background after a delay.
-        // We delay 3s so the canvas rendering settles and the autosave debounce from
-        // setNodes/setEdges doesn't stack up with this explicit save, creating a PATCH storm.
-        // We do NOT await this — if the backend is slow, the local state is already correct.
+        // Update component state only if still mounted
+        if (isMountedRef.current) {
+          setIsGenerating(false);
+          toast.success("Generation complete!", { id: 'roadmap-gen' });
+        }
+
+        // Save to backend after a short settle delay
         setTimeout(() => {
           useWorkspaceStore.getState().saveCanvasState().catch(saveErr => {
             console.warn('[LearningCanvas] Post-generation save failed:', saveErr);
