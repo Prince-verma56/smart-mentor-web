@@ -78,28 +78,24 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
   } | null>(null);
 
   const { getLayoutedElements } = useAutoLayout();
-  const hasAttemptedGenRef = useRef(false);
   const isWorkspaceInitializing = useWorkspaceStore(s => s.isInitializing);
   const activeCanvasId = useWorkspaceStore(s => s.activeCanvasId);
 
-  // Reset the guard whenever we switch to a different canvas
-  // so that an empty new canvas can also auto-generate if it's an official roadmap
-  useEffect(() => {
-    hasAttemptedGenRef.current = false;
-  }, [activeCanvasId]);
+  // Keep track of which canvases we've attempted to auto-generate for in this session
+  const attemptedCanvasIdsRef = useRef<Set<string>>(new Set());
 
   // Auto-generate for the Official Roadmap canvas when it is empty
   useEffect(() => {
     // Wait until workspace has fully initialised (or given up)
-    if (isWorkspaceInitializing) return;
-    // Only trigger once per canvas mount — guards against double-fire
-    if (hasAttemptedGenRef.current) return;
+    if (isWorkspaceInitializing || !activeCanvasId) return;
+    
+    // Only trigger once per canvas ID in a session — guards against double-fire
+    if (attemptedCanvasIdsRef.current.has(activeCanvasId)) return;
     
     if (isOfficialRoadmap && nodes.length === 0 && !isGenerating) {
-      hasAttemptedGenRef.current = true;
+      attemptedCanvasIdsRef.current.add(activeCanvasId);
       handleGenerate();
     }
-  // activeCanvasId ensures this re-evaluates after workspace resolves
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWorkspaceInitializing, isOfficialRoadmap, nodes.length, isGenerating, activeCanvasId]);
 
@@ -247,22 +243,18 @@ const LearningCanvasInner = ({ mentorId, isOfficialRoadmap = false }: { mentorId
           setEdges(prevEdges);
         }
         
-        // Re-enable autosave and flush the generated content to the server
+        // Re-enable autosave
         useCanvasStore.getState().setAutosaveEnabled(true);
 
-        // Re-sync: save the newly generated canvas state immediately, then
-        // re-initialise the workspace so the store reflects what the server has.
-        // This prevents a subsequent page load from overwriting local nodes with
-        // an empty canvas (the backend state before generation was saved).
-        try {
-          await useWorkspaceStore.getState().saveCanvasState();
-        } catch (saveErr) {
-          console.warn('[LearningCanvas] Post-generation save failed:', saveErr);
-        }
-        // Brief delay to let the backend commit, then re-hydrate from server
+        // Flush the generated content to the server in the background after a delay.
+        // We delay 3s so the canvas rendering settles and the autosave debounce from
+        // setNodes/setEdges doesn't stack up with this explicit save, creating a PATCH storm.
+        // We do NOT await this — if the backend is slow, the local state is already correct.
         setTimeout(() => {
-          useWorkspaceStore.getState().initWorkspace(mentorId);
-        }, 1500);
+          useWorkspaceStore.getState().saveCanvasState().catch(saveErr => {
+            console.warn('[LearningCanvas] Post-generation save failed:', saveErr);
+          });
+        }, 3000);
       }
     });
   };

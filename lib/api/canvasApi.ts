@@ -38,9 +38,16 @@ async function handleApiResponse(response: Response, context: string): Promise<a
 /** Wraps a fetch call, returning null on any network/timeout error. */
 async function safeFetch(url: string, options?: RequestInit): Promise<Response | null> {
   try {
-    return await fetch(url, options);
+    // 8-second client timeout — well under the 15s proxy timeout.
+    // This ensures a hung backend doesn't block Next.js server action processing.
+    const signal = AbortSignal.timeout(8_000);
+    return await fetch(url, { ...options, signal });
   } catch (err: any) {
-    console.warn(`[canvasApi] Network error for ${url}:`, err?.message || err);
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+      console.warn(`[canvasApi] Request timed out after 8s for ${url}`);
+    } else {
+      console.warn(`[canvasApi] Network error for ${url}:`, err?.message || err);
+    }
     return null;
   }
 }

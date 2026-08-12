@@ -47,7 +47,7 @@ export async function generateRoadmapForMentor(mentorId: string, userId: string)
   }
 
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace('localhost', '127.0.0.1');
     
     // Check auth
     const { userId, getToken } = await auth();

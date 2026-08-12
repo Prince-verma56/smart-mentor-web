@@ -54,7 +54,7 @@ Provide a concise summary (max 200 words):`;
   try {
     // Call the backend Python service for summarization
     const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      (process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000").replace('localhost', '127.0.0.1');
     const response = await fetch(`${backendUrl}/api/v1/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

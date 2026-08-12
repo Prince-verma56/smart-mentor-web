@@ -5,9 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-
-const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-
+const BACKEND = (process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000').replace('localhost', '127.0.0.1');
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
@@ -67,7 +65,13 @@ async function proxy(
 
     let res: Response;
     try {
-      res = await fetch(upstream, { method, headers, body, signal });
+      res = await fetch(upstream, { 
+        method, 
+        headers: { ...headers, 'Connection': 'close' }, 
+        body, 
+        signal,
+        cache: 'no-store' 
+      });
     } catch (fetchErr: any) {
       if (fetchErr?.name === 'TimeoutError' || fetchErr?.name === 'AbortError') {
         console.error(`[canvas-proxy] upstream timeout after 15s: ${upstream}`);

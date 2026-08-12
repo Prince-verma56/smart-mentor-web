@@ -14,5 +14,5 @@ export const ENV = {
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "",
 
   // Backend API (public — base URL only)
-  API_URL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
+  API_URL: (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000").replace('localhost', '127.0.0.1'),
 } as const;

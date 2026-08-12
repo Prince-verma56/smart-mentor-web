@@ -14,6 +14,8 @@ function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T 
 
 let isDirty = false;
 let isSaving = false;
+let consecutiveFailures = 0;
+const MAX_FAILURES = 3; // Circuit-breaker: stop autosave after 3 consecutive failures
 
 // Robust Debounced saver that queues dirty state
 const processSaveQueue = async () => {
@@ -21,6 +23,8 @@ const processSaveQueue = async () => {
   const canvasStore = useCanvasStore.getState();
   
   if (!isDirty || isSaving || !canvasStore?.autosaveEnabled) return;
+  // Circuit-breaker: stop hammering a broken backend
+  if (consecutiveFailures >= MAX_FAILURES) return;
   
   isSaving = true;
   try {
@@ -29,16 +33,21 @@ const processSaveQueue = async () => {
       // Clear dirty flag immediately so any concurrent edits set it to true again
       isDirty = false;
       await wsStore.getState().saveCanvasState();
+      consecutiveFailures = 0; // Reset on success
     }
   } catch (e) {
     // If saving fails, mark dirty again to retry
     isDirty = true;
-    console.error("Save pipeline error:", e);
+    consecutiveFailures++;
+    console.error(`Save pipeline error (failure #${consecutiveFailures}):`, e);
+    if (consecutiveFailures >= MAX_FAILURES) {
+      console.warn('[canvasStore] Autosave circuit-breaker opened: backend appears unavailable. Saves paused.');
+    }
   } finally {
     isSaving = false;
-    // If more changes happened during save, process again
-    if (isDirty) {
-      setTimeout(processSaveQueue, 2000);
+    // If more changes happened during save, and circuit is not open, process again
+    if (isDirty && consecutiveFailures < MAX_FAILURES) {
+      setTimeout(processSaveQueue, 5000); // Longer backoff on retry
     }
   }
 };
@@ -46,10 +55,13 @@ const processSaveQueue = async () => {
 const triggerAutosave = debounce(() => {
   const store = useCanvasStore.getState();
   if (store && store.autosaveEnabled === false) return;
-  
+  // Reset circuit-breaker on user interaction (manual edit = backend might be back up)
+  if (consecutiveFailures >= MAX_FAILURES) {
+    consecutiveFailures = 0;
+  }
   isDirty = true;
   processSaveQueue();
-}, 3000);
+}, 5000); // Increased to 5s debounce to reduce PATCH storm frequency
 
 interface CanvasState {
   nodes: LearningNodeType[];

@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const BACKEND = (process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000').replace('localhost', '127.0.0.1');
 
 export async function POST(
   request: NextRequest,
@@ -39,7 +39,7 @@ async function proxy(
 
     const response = await fetch(upstream, {
       method,
-      headers,
+      headers: { ...headers, 'Connection': 'close' },
       body: body ? body : undefined,
     });
 

@@ -31,14 +31,17 @@ export const WorkspaceHeader = ({ mentorId }: { mentorId: string }) => {
   const slugFromUrl = isCanvasView ? pathname.split('/').pop() : null;
   const isOfficialRoadmapView = pathname.endsWith('/learning-universe');
   
+  // Filter canvases to ONLY this mentor — the store holds all mentors' canvases together
+  const mentorCanvases = canvases.filter(c => c.mentor_id === mentorId);
+
   // Find active canvas by slug first, then by ID, fallback to official
   let activeCanvas = null;
   if (slugFromUrl) {
-    activeCanvas = canvases.find(c => c.slug === slugFromUrl || c.id === slugFromUrl);
+    activeCanvas = mentorCanvases.find(c => c.slug === slugFromUrl || c.id === slugFromUrl);
   } else if (isOfficialRoadmapView) {
-    activeCanvas = canvases.find(c => c.is_official_roadmap);
+    activeCanvas = mentorCanvases.find(c => c.is_official_roadmap);
   } else {
-    activeCanvas = canvases.find(c => c.id === activeCanvasId);
+    activeCanvas = mentorCanvases.find(c => c.id === activeCanvasId);
   }
   
   // Derive fallback canvas name from route if the canvas object isn't loaded yet
@@ -162,7 +165,7 @@ export const WorkspaceHeader = ({ mentorId }: { mentorId: string }) => {
                 <DropdownMenuContent align="start" className="w-64 bg-zinc-950 border-white/10">
                   <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Switch Canvas</div>
                   <DropdownMenuSeparator className="bg-white/5" />
-                  {canvases.map(c => (
+                  {mentorCanvases.map(c => (
                     <DropdownMenuItem 
                       key={c.id} 
                       onClick={() => handleSwitchCanvas(c)}

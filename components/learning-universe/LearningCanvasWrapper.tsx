@@ -13,9 +13,13 @@ const LearningCanvas = dynamic(
 export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, slug?: string }) {
   const activeCanvasId = useWorkspaceStore(s => s.activeCanvasId);
   const setActiveCanvasId = useWorkspaceStore(s => s.setActiveCanvasId);
-  const canvases = useWorkspaceStore(s => s.canvases);
+  const allCanvases = useWorkspaceStore(s => s.canvases);
   const addCanvas = useWorkspaceStore(s => s.addCanvas);
   const isWorkspaceInitializing = useWorkspaceStore(s => s.isInitializing);
+
+  // CRITICAL: scope all canvas lookups to THIS mentor only.
+  // workspaceStore.canvases holds canvases for ALL mentors together.
+  const canvases = allCanvases.filter(c => c.mentor_id === mentorId);
 
   // Guard against infinite retry: once we've attempted to resolve a canvas for this
   // mentorId + slug combination, we don't retry until those inputs change.
@@ -30,11 +34,9 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
       // ── Root learning-universe page — activate the official roadmap canvas ──
       const official = canvases.find(c => c.is_official_roadmap);
       if (official) {
-        // Canvas exists — just make it active (idempotent)
         if (activeCanvasId !== official.id) {
           setActiveCanvasId(official.id);
         }
-        // Reset the attempt guard so re-renders don't re-create
         attemptedRef.current = key;
         return;
       }
@@ -43,16 +45,12 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
       if (attemptedRef.current === key) return; // already tried — don't loop
       attemptedRef.current = key;
 
-      // workspaceStore.initWorkspace already creates a local canvas when the API is
-      // down. If we reach here it means initWorkspace hasn't run yet or the canvas
-      // list is truly empty — let initWorkspace handle it by triggering it again.
-      // We do NOT call the canvas API directly here to avoid the infinite-retry loop.
+      // Delegate to initWorkspace — it creates a local canvas when the API is down
       useWorkspaceStore.getState().initWorkspace(mentorId);
       return;
     }
 
     // ── Slug-based canvas route ──
-    // Slug-only lookup: never fall back to c.id === slug (fake IDs would match)
     const found = canvases.find(c => c.slug === slug);
     if (found) {
       if (activeCanvasId !== found.id) {
@@ -61,8 +59,7 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
       return;
     }
 
-    // Canvas not in store yet (e.g. browser refresh, deep link)
-    // Only attempt once per key to avoid hammering API
+    // Canvas not in store yet — only attempt fetch once per key
     if (attemptedRef.current === key) return;
     attemptedRef.current = key;
 
@@ -74,8 +71,6 @@ export function LearningCanvasWrapper({ mentorId, slug }: { mentorId: string, sl
     }).catch(err => {
       console.warn('[LearningCanvasWrapper] Failed to fetch canvas by slug:', err);
     });
-  // canvases + isWorkspaceInitializing are the reactive triggers; slug and mentorId
-  // reset attemptedRef below so the effect re-runs on navigation.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, canvases, isWorkspaceInitializing]);
 

@@ -29,7 +29,7 @@ export function ShareCanvasModal({
         setIsLoading(true);
         try {
           const tokenStr = localStorage.getItem('token') || '';
-          const res = await fetch(`http://localhost:8000/api/v1/canvas/canvas/${canvasId}/share`, {
+          const res = await fetch(`http://127.0.0.1:8000/api/v1/canvas/canvas/${canvasId}/share`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${tokenStr}` }
           });
