@@ -17,11 +17,14 @@ const getElkOptions = (layoutMode: string): Record<string, string> => {
       return {
         'elk.algorithm': 'layered',
         'elk.direction': 'DOWN',
-        'elk.layered.spacing.nodeNodeBetweenLayers': '180',
-        'elk.spacing.nodeNode': '80',
+        // Force nodes in the same layer to be perfectly aligned
+        'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+        'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
+        'elk.layered.spacing.nodeNodeBetweenLayers': '350', // Reserved space for Practice layer
+        'elk.spacing.nodeNode': '100',
         'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-        'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
         'elk.layered.compaction.postCompaction.strategy': 'LEFT_RIGHT_CONSTRAINT_LOCKING',
+        'elk.alignment': 'CENTER',
         'elk.padding': '[top=60,left=60,bottom=60,right=60]',
         'elk.layered.unnecessaryBendpoints': 'true',
         'elk.edgeRouting': 'ORTHOGONAL',
@@ -32,7 +35,7 @@ const getElkOptions = (layoutMode: string): Record<string, string> => {
         'elk.algorithm': 'radial',
         'elk.radial.compactor': 'WEDGE',
         'elk.radial.optimizationCriteria': 'NONE',
-        'elk.spacing.nodeNode': '90',
+        'elk.spacing.nodeNode': '200', // Room for practice clusters
         'elk.radial.centerOnRoot': 'true',
         'elk.padding': '[top=80,left=80,bottom=80,right=80]',
       };
@@ -41,8 +44,8 @@ const getElkOptions = (layoutMode: string): Record<string, string> => {
       return {
         'elk.algorithm': 'layered',
         'elk.direction': 'RIGHT',
-        'elk.layered.spacing.nodeNodeBetweenLayers': '220',
-        'elk.spacing.nodeNode': '70',
+        'elk.layered.spacing.nodeNodeBetweenLayers': '400',
+        'elk.spacing.nodeNode': '200',
         'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
         'elk.layered.nodePlacement.strategy': 'LINEAR_SEGMENTS',
         'elk.padding': '[top=80,left=80,bottom=80,right=80]',
@@ -70,55 +73,6 @@ const getElkOptions = (layoutMode: string): Record<string, string> => {
   }
 };
 
-// ── Collision Detection & Padding ─────────────────────────────────────────────
-
-const resolveCollisions = (nodes: Node[]): Node[] => {
-  const resolved = nodes.map(n => ({ ...n }));
-  const MAX_ITERATIONS = 5;
-
-  for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
-    let hasCollision = false;
-
-    for (let i = 0; i < resolved.length; i++) {
-      for (let j = i + 1; j < resolved.length; j++) {
-        const a = resolved[i];
-        const b = resolved[j];
-
-        const ax1 = a.position.x - PADDING;
-        const ay1 = a.position.y - PADDING;
-        const ax2 = a.position.x + NODE_WIDTH + PADDING;
-        const ay2 = a.position.y + NODE_HEIGHT + PADDING;
-
-        const bx1 = b.position.x - PADDING;
-        const by1 = b.position.y - PADDING;
-        const bx2 = b.position.x + NODE_WIDTH + PADDING;
-        const by2 = b.position.y + NODE_HEIGHT + PADDING;
-
-        const overlaps = ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1;
-
-        if (overlaps) {
-          hasCollision = true;
-          const overlapX = Math.min(ax2 - bx1, bx2 - ax1);
-          const overlapY = Math.min(ay2 - by1, by2 - ay1);
-
-          if (overlapX < overlapY) {
-            const shift = overlapX / 2 + 10;
-            resolved[i].position = { ...resolved[i].position, x: resolved[i].position.x - shift };
-            resolved[j].position = { ...resolved[j].position, x: resolved[j].position.x + shift };
-          } else {
-            const shift = overlapY / 2 + 10;
-            resolved[i].position = { ...resolved[i].position, y: resolved[i].position.y - shift };
-            resolved[j].position = { ...resolved[j].position, y: resolved[j].position.y + shift };
-          }
-        }
-      }
-    }
-
-    if (!hasCollision) break;
-  }
-
-  return resolved;
-};
 
 // ── Smart Viewport Centering ──────────────────────────────────────────────────
 
@@ -147,18 +101,40 @@ const useAutoLayout = () => {
   ): Promise<{ nodes: Node[]; edges: Edge[] }> => {
     if (!elk || nodes.length === 0) return { nodes, edges };
 
+    // 1. Separate nodes into primary (ELK layout) and secondary (Practice nodes)
+    const primaryNodes = nodes.filter(n => n.data?.type !== 'practice' && n.data?.nodeCategory !== 'PRACTICE');
+    const practiceNodes = nodes.filter(n => n.data?.type === 'practice' || n.data?.nodeCategory === 'PRACTICE');
+
     const elkOptions = getElkOptions(layoutMode);
 
-    const graph = {
+      const graph = {
       id: 'root',
       layoutOptions: elkOptions,
-      children: nodes.map((n) => ({
-        id: String(n.id),
-        width: NODE_WIDTH,
-        height: NODE_HEIGHT,
-      })),
+      children: primaryNodes.map((n) => {
+        // Find if this node has practice children to augment its ELK bounding box
+        const hasPracticeChildren = edges.some(e => e.source === n.id && practiceNodes.some(pn => pn.id === e.target));
+        
+        let width = NODE_WIDTH;
+        let height = NODE_HEIGHT;
+        
+        if (hasPracticeChildren) {
+          if (layoutMode === 'hierarchy') {
+            // Reserve right-side lane
+            width = NODE_WIDTH + 300;
+          } else if (layoutMode === 'timeline' || layoutMode === 'mindmap') {
+            // Reserve bottom lane
+            height = NODE_HEIGHT + 240;
+          }
+        }
+
+        return {
+          id: String(n.id),
+          width,
+          height,
+        };
+      }),
       edges: edges
-        .filter(e => nodes.some(n => n.id === e.source) && nodes.some(n => n.id === e.target))
+        .filter(e => primaryNodes.some(n => n.id === e.source) && primaryNodes.some(n => n.id === e.target))
         .map((e) => ({
           id: String(e.id),
           sources: [String(e.source)],
@@ -169,26 +145,69 @@ const useAutoLayout = () => {
     try {
       const layoutedGraph = await elk.layout(graph);
 
-      if (!layoutedGraph.children) return { nodes, edges };
+      let layoutedNodes: Node[] = [];
 
-      let layoutedNodes = nodes.map((node) => {
-        const layoutedNode = layoutedGraph.children?.find((n) => n.id === String(node.id));
-        if (layoutedNode) {
-          return {
-            ...node,
-            position: {
-              x: layoutedNode.x ?? node.position.x,
-              y: layoutedNode.y ?? node.position.y,
-            },
-          };
-        }
-        return node;
-      });
-
-      // Post-layout: resolve any remaining collisions
-      if (layoutMode !== 'free') {
-        layoutedNodes = resolveCollisions(layoutedNodes);
+      if (layoutedGraph.children) {
+        layoutedNodes = primaryNodes.map((node) => {
+          const layoutedNode = layoutedGraph.children?.find((n) => n.id === String(node.id));
+          if (layoutedNode) {
+            return {
+              ...node,
+              position: {
+                x: layoutedNode.x ?? node.position.x,
+                y: layoutedNode.y ?? node.position.y,
+              },
+            };
+          }
+          return node;
+        });
+      } else {
+        layoutedNodes = [...primaryNodes];
       }
+
+      // 2. Attach practice nodes in their designated zones
+      practiceNodes.forEach(pNode => {
+        const incomingEdge = edges.find(e => e.target === pNode.id);
+        if (incomingEdge) {
+          const parentNode = layoutedNodes.find(n => n.id === incomingEdge.source);
+          if (parentNode) {
+            const siblingEdges = edges.filter(e => e.source === parentNode.id);
+            const siblingIds = siblingEdges.map(e => e.target);
+            const practiceSiblings = practiceNodes.filter(pn => siblingIds.includes(pn.id));
+            
+            const myIndex = practiceSiblings.findIndex(pn => pn.id === pNode.id);
+            const totalSiblings = practiceSiblings.length;
+            
+            const practiceWidth = 240;
+            const practiceHeight = 140;
+            const gap = 30;
+
+            let finalX = parentNode.position.x;
+            let finalY = parentNode.position.y;
+            
+            if (layoutMode === 'hierarchy') {
+              // Stack vertically on the right side
+              finalX = parentNode.position.x + NODE_WIDTH + 60;
+              finalY = parentNode.position.y + (myIndex * (practiceHeight + gap));
+            } else {
+              // Timeline/Mindmap: Layout horizontally beneath the parent
+              const totalWidth = (practiceWidth * totalSiblings) + (gap * (totalSiblings - 1));
+              const startX = parentNode.position.x + (NODE_WIDTH / 2) - (totalWidth / 2);
+              finalX = startX + (myIndex * (practiceWidth + gap));
+              finalY = parentNode.position.y + NODE_HEIGHT + 80;
+            }
+            
+            layoutedNodes.push({
+              ...pNode,
+              position: { x: finalX, y: finalY }
+            });
+          } else {
+            layoutedNodes.push(pNode);
+          }
+        } else {
+          layoutedNodes.push(pNode);
+        }
+      });
 
       // Center viewport
       centerViewportOnNodes(fitView);

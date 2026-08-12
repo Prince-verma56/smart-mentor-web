@@ -1,7 +1,7 @@
 "use client";
 
 import React, { memo, useState } from 'react';
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, Position, useReactFlow } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, getSmoothStepPath, Position, useReactFlow } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { useCanvasStore, useSelectionStore, LearningEdgeData, EdgeSemanticType } from '@/stores/learningUniverseStore';
 import { EdgeTypeSelector } from './EdgeTypeSelector';
@@ -101,81 +101,65 @@ export const LearningEdgeComponent = ({
     }
   }
 
-  // Use Bezier for a premium smooth curve
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const isPracticeEdge = targetNode?.data?.type === 'practice' || targetNode?.data?.nodeCategory === 'PRACTICE';
+
+  const pathParams = {
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
-  });
+  };
+
+  // Use SmoothStep for structured roadmap, Bezier for practice attachments
+  const [edgePath, labelX, labelY] = isPracticeEdge 
+    ? getBezierPath(pathParams)
+    : getSmoothStepPath({ ...pathParams, borderRadius: 24 });
 
   const semanticType = (data?.semanticType as EdgeSemanticType) || 'dependency';
   
   // Style config based on semantic type
   const edgeConfig: Record<EdgeSemanticType, { stroke: string; strokeWidth: number; dasharray: string; labelBg: string }> = {
-    prerequisite: {
-      stroke: 'stroke-primary/50',
-      strokeWidth: 2,
-      dasharray: 'none',
-      labelBg: 'bg-primary/10 text-primary',
-    },
-    unlock: {
-      stroke: 'stroke-blue-500/50',
-      strokeWidth: 2,
-      dasharray: '5,5',
-      labelBg: 'bg-blue-500/10 text-blue-400',
-    },
-    recommendation: {
-      stroke: 'stroke-amber-500/50',
-      strokeWidth: 1.5,
-      dasharray: '4,4',
-      labelBg: 'bg-amber-500/10 text-amber-400',
-    },
-    dependency: {
-      stroke: 'stroke-slate-500/50',
-      strokeWidth: 1.5,
-      dasharray: 'none',
-      labelBg: 'bg-slate-500/10 text-slate-400',
-    },
-    optional: {
-      stroke: 'stroke-muted-foreground/30',
-      strokeWidth: 1.5,
-      dasharray: '2,4',
-      labelBg: 'bg-muted/10 text-muted-foreground',
-    },
-    review_loop: {
-      stroke: 'stroke-rose-500/50',
-      strokeWidth: 1.5,
-      dasharray: '5,5',
-      labelBg: 'bg-rose-500/10 text-rose-400',
-    },
-    related: {
-      stroke: 'stroke-emerald-500/50',
-      strokeWidth: 1.5,
-      dasharray: '4,4',
-      labelBg: 'bg-emerald-500/10 text-emerald-400',
-    },
-    alternative_path: {
-      stroke: 'stroke-purple-500/50',
-      strokeWidth: 2,
-      dasharray: 'none',
-      labelBg: 'bg-purple-500/10 text-purple-400',
-    },
-    ai_suggested: {
-      stroke: 'stroke-cyan-500/50',
-      strokeWidth: 2,
-      dasharray: '10,5',
-      labelBg: 'bg-cyan-500/10 text-cyan-400',
-    }
+    // Original Lowercase Mappings
+    prerequisite: { stroke: 'stroke-primary/50', strokeWidth: 2, dasharray: 'none', labelBg: 'bg-primary/10 text-primary' },
+    dependency: { stroke: 'stroke-slate-500/50', strokeWidth: 1.5, dasharray: 'none', labelBg: 'bg-slate-500/10 text-slate-400' },
+    unlock: { stroke: 'stroke-blue-500/50', strokeWidth: 2, dasharray: '5,5', labelBg: 'bg-blue-500/10 text-blue-400' },
+    optional: { stroke: 'stroke-muted-foreground/30', strokeWidth: 1.5, dasharray: '2,4', labelBg: 'bg-muted/10 text-muted-foreground' },
+    recommended: { stroke: 'stroke-amber-500/50', strokeWidth: 1.5, dasharray: '4,4', labelBg: 'bg-amber-500/10 text-amber-400' },
+    parallel: { stroke: 'stroke-teal-500/50', strokeWidth: 1.5, dasharray: '3,3', labelBg: 'bg-teal-500/10 text-teal-400' },
+    alternative: { stroke: 'stroke-purple-500/50', strokeWidth: 2, dasharray: 'none', labelBg: 'bg-purple-500/10 text-purple-400' },
+    revision: { stroke: 'stroke-rose-500/50', strokeWidth: 1.5, dasharray: '5,5', labelBg: 'bg-rose-500/10 text-rose-400' },
+    project_requirement: { stroke: 'stroke-orange-500/50', strokeWidth: 2, dasharray: 'none', labelBg: 'bg-orange-500/10 text-orange-400' },
+    interview_requirement: { stroke: 'stroke-yellow-500/50', strokeWidth: 2, dasharray: 'none', labelBg: 'bg-yellow-500/10 text-yellow-400' },
+    challenge: { stroke: 'stroke-cyan-500/50', strokeWidth: 2, dasharray: '10,5', labelBg: 'bg-cyan-500/10 text-cyan-400' },
+    reference: { stroke: 'stroke-emerald-500/50', strokeWidth: 1.5, dasharray: '4,4', labelBg: 'bg-emerald-500/10 text-emerald-400' },
+    knowledge_bridge: { stroke: 'stroke-indigo-500/50', strokeWidth: 1.5, dasharray: '6,4', labelBg: 'bg-indigo-500/10 text-indigo-400' },
+    
+    // New Uppercase Semantic Types Mappings
+    PREREQUISITE: { stroke: 'stroke-primary/50', strokeWidth: 2.5, dasharray: 'none', labelBg: 'bg-primary/10 text-primary' },
+    DEPENDS_ON: { stroke: 'stroke-slate-400/50', strokeWidth: 1.5, dasharray: 'none', labelBg: 'bg-slate-500/10 text-slate-400' },
+    PART_OF: { stroke: 'stroke-teal-500/50', strokeWidth: 2, dasharray: 'none', labelBg: 'bg-teal-500/10 text-teal-400' },
+    NEXT_STEP: { stroke: 'stroke-blue-400/50', strokeWidth: 2, dasharray: '4,4', labelBg: 'bg-blue-500/10 text-blue-400' },
+    PRACTICE_OF: { stroke: 'stroke-purple-500/50', strokeWidth: 1.5, dasharray: '3,3', labelBg: 'bg-purple-500/10 text-purple-400' },
+    PROJECT_OF: { stroke: 'stroke-orange-500/50', strokeWidth: 3, dasharray: 'none', labelBg: 'bg-orange-500/10 text-orange-400' },
+    RELATED_TO: { stroke: 'stroke-emerald-500/50', strokeWidth: 1.5, dasharray: '2,4', labelBg: 'bg-emerald-500/10 text-emerald-400' },
+    REQUIRES: { stroke: 'stroke-red-500/50', strokeWidth: 2, dasharray: 'none', labelBg: 'bg-red-500/10 text-red-400' },
+    UNLOCK: { stroke: 'stroke-blue-500/50', strokeWidth: 2, dasharray: '5,5', labelBg: 'bg-blue-500/10 text-blue-400' },
+    RECOMMENDED: { stroke: 'stroke-amber-500/50', strokeWidth: 1.5, dasharray: '4,4', labelBg: 'bg-amber-500/10 text-amber-400' },
+    PARALLEL: { stroke: 'stroke-teal-500/50', strokeWidth: 1.5, dasharray: '3,3', labelBg: 'bg-teal-500/10 text-teal-400' },
+    REVISION: { stroke: 'stroke-rose-500/50', strokeWidth: 1.5, dasharray: '5,5', labelBg: 'bg-rose-500/10 text-rose-400' }
   };
 
   const config = edgeConfig[semanticType] || edgeConfig.dependency;
 
-  // Enhance styles if selected
-  const strokeClass = selected ? 'stroke-primary filter drop-shadow-[0_0_8px_rgba(var(--primary),0.8)]' : config.stroke;
-  const strokeWidth = selected ? config.strokeWidth + 1 : config.strokeWidth;
+  // Enhance styles if selected, and dampen practice edges
+  const strokeClass = selected 
+    ? 'stroke-primary filter drop-shadow-[0_0_8px_rgba(var(--primary),0.8)]' 
+    : isPracticeEdge ? cn(config.stroke, 'opacity-40') : config.stroke;
+    
+  const strokeWidth = selected ? config.strokeWidth + 1 : isPracticeEdge ? 1 : config.strokeWidth;
+  const dasharray = isPracticeEdge ? '5,5' : config.dasharray;
 
   return (
     <>
@@ -185,13 +169,17 @@ export const LearningEdgeComponent = ({
         style={{ strokeWidth: 20, strokeOpacity: 0, cursor: 'pointer' }}
         className="react-flow__edge-interaction z-10"
       />
-      {/* Visible edge path */}
+      {/* Visual Edge */}
       <BaseEdge 
         path={edgePath} 
-        markerEnd={markerEnd} 
-        style={{ ...style, strokeWidth, strokeDasharray: config.dasharray }}
-        // transition-colors instead of transition-all prevents the edge from lagging during drag
-        className={cn('transition-colors duration-300', strokeClass, selected ? 'z-10' : 'z-0')}
+        markerEnd={markerEnd}
+        style={{ 
+          ...style,
+          strokeWidth, 
+          strokeDasharray: dasharray,
+          animation: selected ? 'dash 1s linear infinite' : 'none'
+        }}
+        className={cn(strokeClass, "transition-colors duration-300", selected ? 'z-10' : 'z-0')}
       />
       {/* Edge Label Rendered in an overlay */}
       

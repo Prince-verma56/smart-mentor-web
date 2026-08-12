@@ -197,7 +197,7 @@ export const useCanvasStore = create<CanvasState>()(
               data: {
                 ...combined[existingIndex].data,
                 ...newEdge.data
-              }
+              } as LearningEdgeData
             };
           } else {
             combined.push(newEdge);

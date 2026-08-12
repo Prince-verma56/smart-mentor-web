@@ -117,13 +117,16 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
   };
   const semanticColor = getTypeColor(data.type);
 
+  const isPractice = data.type === 'practice' || data.nodeCategory === 'PRACTICE';
+  const isConcept = data.type === 'concept' || data.type === 'topic';
+
   return (
     <motion.div
       initial={{ scale: 0.95, opacity: 0, y: 10 }}
       animate={{ 
         scale: dragging ? 1.05 : selected ? 1.02 : 1, 
         y: dragging ? -5 : selected ? -2 : 0,
-        opacity: isFaded ? 0.3 : 1,
+        opacity: isFaded ? 0.3 : isPractice ? 0.85 : 1,
         boxShadow: dragging 
           ? '0 20px 40px -10px rgba(0,0,0,0.5), 0 0 40px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
           : selected 
@@ -131,12 +134,15 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
           : '0 8px 16px -4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)'
       }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      whileHover={dragging ? {} : { scale: 1.02, y: -3, boxShadow: '0 12px 24px -4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255,255,255,0.1)' }}
+      whileHover={dragging ? {} : { scale: 1.02, y: -3, opacity: isPractice ? 1 : 1, boxShadow: '0 12px 24px -4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255,255,255,0.1)' }}
       className={cn(
-        'relative group flex flex-col p-[5px] rounded-[22px] min-w-[280px] max-w-[320px] bg-zinc-900/95 backdrop-blur-2xl border transition-colors duration-200',
+        'relative group flex flex-col p-[5px] rounded-[22px] backdrop-blur-2xl transition-colors duration-200',
+        isPractice ? 'min-w-[200px] max-w-[240px] bg-zinc-950/80 border-dashed border-2' : 
+        isConcept ? 'min-w-[320px] max-w-[360px] bg-zinc-900/95 border' : 
+        'min-w-[260px] max-w-[300px] bg-zinc-900/95 border',
         dragging ? 'cursor-grabbing' : 'cursor-grab',
         config.border,
-        selected ? 'border-primary/50' : 'border-zinc-700/50 hover:bg-zinc-800/95'
+        selected ? 'border-primary/50' : isPractice ? 'border-zinc-700/50 hover:bg-zinc-900/95' : 'border-zinc-700/50 hover:bg-zinc-800/95'
       )}
     >
         {/* Floating Node Numbering Badge */}
@@ -196,11 +202,12 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
           {/* Content */}
           <div className="flex flex-col flex-1 min-w-0 pt-0.5">
             <div className="flex items-center gap-2 mb-2">
-              <span className={cn("text-[10px] uppercase font-bold tracking-widest", semanticColor)}>
+              <span className={cn(isPractice ? "text-[9px]" : "text-[10px]", "uppercase font-bold tracking-widest", semanticColor)}>
                 {data.type.replace('_', ' ')}
               </span>
               {data.difficulty && (
-                <span className={cn("text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10", 
+                <span className={cn("font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10", 
+                  isPractice ? "text-[8px]" : "text-[9px]",
                   data.difficulty === 'beginner' ? 'text-emerald-400' :
                   data.difficulty === 'intermediate' ? 'text-amber-400' : 'text-red-400'
                 )}>
@@ -208,11 +215,15 @@ const LearningNodeComponent = ({ id, data, selected, dragging }: LearningNodePro
                 </span>
               )}
             </div>
-            <h3 className="text-[15px] leading-snug font-bold text-slate-100 line-clamp-2 tracking-tight">
+            <h3 className={cn("leading-snug font-bold text-slate-100 line-clamp-2 tracking-tight",
+              isConcept ? "text-[16px]" : isPractice ? "text-[13px]" : "text-[15px]"
+            )}>
               {data.title}
             </h3>
             {data.description && (
-              <p className="text-[12px] leading-relaxed text-slate-400 line-clamp-2 mt-1.5">
+              <p className={cn("leading-relaxed text-slate-400 mt-1.5", 
+                isConcept ? "text-[13px] line-clamp-3" : isPractice ? "text-[11px] line-clamp-1" : "text-[12px] line-clamp-2"
+              )}>
                 {data.description}
               </p>
             )}

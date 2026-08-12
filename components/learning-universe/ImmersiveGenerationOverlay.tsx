@@ -57,7 +57,7 @@ export const ImmersiveGenerationOverlay = ({ isGenerating, status }: ImmersiveGe
   const isGenericStatus = status?.includes('Synthesizing') || status?.includes('Executing') || !status;
   const displayStatus = isGenericStatus ? THINKING_MESSAGES[thinkingIndex] : status;
   
-  let Icon = <Loader2 className="w-8 h-8 text-primary animate-spin" />;
+  let Icon: React.ReactNode = <Loader2 className="w-8 h-8 text-primary animate-spin" />;
   if (!isGenericStatus && statusIcons[status]) {
     Icon = statusIcons[status];
   } else if (isGenericStatus) {

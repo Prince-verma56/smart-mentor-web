@@ -403,77 +403,73 @@ const runRelationshipPlanner = (nodes: PipelineNode[]): PipelineEdge[] => {
   };
 
   // Foundation → all topics
-  addEdge('foundation', 'html', 'unlock', 'Foundation unlocks the first HTML topic', 1.0, 'required');
-  addEdge('foundation', 'css', 'prerequisite', 'CSS requires HTML basics', 0.9, 'required');
-  addEdge('foundation', 'javascript', 'prerequisite', 'JavaScript is unlocked after foundation', 0.9, 'strong');
+  addEdge('foundation', 'html', 'UNLOCK', 'Foundation unlocks the first HTML topic', 1.0, 'required');
+  addEdge('foundation', 'css', 'PREREQUISITE', 'CSS requires HTML basics', 0.9, 'required');
+  addEdge('foundation', 'javascript', 'PREREQUISITE', 'JavaScript is unlocked after foundation', 0.9, 'strong');
 
   // HTML → CSS (parallel possible but CSS benefits from HTML knowledge)
-  addEdge('html', 'css', 'recommended', 'CSS is most useful when you know HTML structure', 0.85, 'moderate');
+  addEdge('html', 'css', 'RECOMMENDED', 'CSS is most useful when you know HTML structure', 0.85, 'moderate');
 
   // HTML subtopics
-  addEdge('html', 'html-semantic', 'unlock', 'Semantic HTML is a direct subtopic', 1.0, 'required');
-  addEdge('html', 'html-forms', 'unlock', 'Forms build on semantic HTML knowledge', 0.9, 'strong');
-  addEdge('html-semantic', 'html-a11y', 'prerequisite', 'Accessibility builds on semantic markup', 0.85, 'strong');
+  addEdge('html', 'html-semantic', 'PART_OF', 'Semantic HTML is a direct subtopic', 1.0, 'required');
+  addEdge('html', 'html-forms', 'PART_OF', 'Forms build on semantic HTML knowledge', 0.9, 'strong');
+  addEdge('html-semantic', 'html-a11y', 'PREREQUISITE', 'Accessibility builds on semantic markup', 0.85, 'strong');
 
   // CSS subtopics
-  addEdge('css', 'css-flexbox', 'unlock', 'Flexbox is the first CSS layout system', 1.0, 'required');
-  addEdge('css-flexbox', 'css-grid', 'prerequisite', 'Grid is learned after Flexbox mastery', 0.9, 'strong');
-  addEdge('css', 'css-animations', 'recommended', 'Animations make sense after core CSS', 0.7, 'moderate');
-  addEdge('css-grid', 'css-responsive', 'knowledge_bridge', 'Grid and responsive design are deeply related', 0.85, 'strong');
+  addEdge('css', 'css-flexbox', 'PART_OF', 'Flexbox is the first CSS layout system', 1.0, 'required');
+  addEdge('css-flexbox', 'css-grid', 'NEXT_STEP', 'Grid is learned after Flexbox mastery', 0.9, 'strong');
+  addEdge('css', 'css-animations', 'RECOMMENDED', 'Animations make sense after core CSS', 0.7, 'moderate');
+  addEdge('css-grid', 'css-responsive', 'RELATED_TO', 'Grid and responsive design are deeply related', 0.85, 'strong');
 
   // JS subtopics
-  addEdge('javascript', 'js-variables', 'unlock', 'Variables are the entry point of JS', 1.0, 'required');
-  addEdge('js-variables', 'js-functions', 'prerequisite', 'Functions build on variable knowledge', 0.95, 'required');
-  addEdge('js-functions', 'js-async', 'prerequisite', 'Async/Await requires understanding functions and closures', 0.9, 'required');
-  addEdge('js-functions', 'js-dom', 'parallel', 'DOM and functions can be learned in parallel', 0.7, 'moderate');
-  addEdge('js-modules', 'react', 'prerequisite', 'ES6 modules are required before React', 0.95, 'required');
-  addEdge('js-async', 'js-modules', 'recommended', 'Modules are naturally learned after async patterns', 0.8, 'moderate');
-
-  // JavaScript → Frontend Milestone
-  addEdge('javascript', 'revision-js', 'revision', 'Revise JS before advancing to frameworks', 0.8, 'strong');
-  addEdge('revision-js', 'react', 'prerequisite', 'Complete JS revision before starting React', 0.9, 'required');
-
+  addEdge('javascript', 'js-variables', 'PART_OF', 'Variables are the entry point of JS', 1.0, 'required');
+  addEdge('js-variables', 'js-functions', 'NEXT_STEP', 'Functions build on variable knowledge', 0.95, 'required');
+  addEdge('js-functions', 'js-async', 'NEXT_STEP', 'Async/Await requires understanding functions and closures', 0.9, 'required');
+  addEdge('js-functions', 'js-dom', 'PARALLEL', 'DOM and functions can be learned in parallel', 0.7, 'moderate');
+  addEdge('javascript', 'revision-js', 'REVISION', 'Revise JS before advancing to frameworks', 0.8, 'strong');
+  addEdge('revision-js', 'milestone-frontend', 'UNLOCK', 'JS revision unlocks frontend milestone', 0.9, 'required');
+  
   // React subtopics
-  addEdge('react', 'react-components', 'unlock', 'Components are the entry point to React', 1.0, 'required');
-  addEdge('react-components', 'react-hooks', 'prerequisite', 'Hooks require understanding components', 0.95, 'required');
-  addEdge('react-hooks', 'react-state', 'prerequisite', 'State management builds on hooks knowledge', 0.9, 'strong');
-  addEdge('react-components', 'react-routing', 'recommended', 'Routing is natural after components', 0.8, 'moderate');
-  addEdge('react-hooks', 'react-patterns', 'knowledge_bridge', 'Patterns deepen hooks understanding', 0.85, 'strong');
+  addEdge('react', 'react-components', 'PART_OF', 'Components are the entry point to React', 1.0, 'required');
+  addEdge('react-components', 'react-hooks', 'NEXT_STEP', 'Hooks require understanding components', 0.95, 'required');
+  addEdge('react-hooks', 'react-state', 'NEXT_STEP', 'State management builds on hooks knowledge', 0.9, 'strong');
+  addEdge('react-components', 'react-routing', 'RECOMMENDED', 'Routing is natural after components', 0.8, 'moderate');
+  addEdge('react-hooks', 'react-patterns', 'RELATED_TO', 'Patterns deepen hooks understanding', 0.85, 'strong');
 
-  // React → Frontend Milestone
-  addEdge('css-responsive', 'milestone-frontend', 'project_requirement', 'Responsive design mastery required for frontend milestone', 0.9, 'required');
-  addEdge('react-state', 'milestone-frontend', 'project_requirement', 'State management mastery required for frontend milestone', 0.9, 'required');
+  // Frontend → Portfolio
+  addEdge('react-routing', 'project-portfolio', 'PROJECT_OF', 'React Router is required for the portfolio SPA', 0.9, 'required');
+  addEdge('css-responsive', 'project-portfolio', 'PROJECT_OF', 'Responsive design is mandatory for portfolio', 0.95, 'required');
+  addEdge('html-a11y', 'project-portfolio', 'PROJECT_OF', 'Accessibility knowledge required for portfolio', 0.7, 'moderate');
 
   // Portfolio Project
-  addEdge('milestone-frontend', 'project-portfolio', 'unlock', 'Frontend milestone unlocks portfolio project', 0.95, 'required');
-  addEdge('html-a11y', 'project-portfolio', 'project_requirement', 'Accessibility knowledge required for portfolio', 0.7, 'moderate');
+  addEdge('milestone-frontend', 'project-portfolio', 'UNLOCK', 'Frontend milestone unlocks portfolio project', 0.95, 'required');
 
   // Next.js subtopics
-  addEdge('react-patterns', 'nextjs', 'prerequisite', 'Advanced React patterns needed for Next.js', 0.9, 'required');
-  addEdge('nextjs', 'next-appdir', 'unlock', 'App Router is the entry to Next.js', 1.0, 'required');
-  addEdge('next-appdir', 'next-data', 'prerequisite', 'Data fetching builds on App Router understanding', 0.95, 'required');
-  addEdge('next-data', 'next-api', 'recommended', 'API routes are naturally learned after data fetching', 0.85, 'strong');
-  addEdge('next-api', 'next-perf', 'recommended', 'Performance is the final Next.js optimization step', 0.8, 'moderate');
+  addEdge('react-patterns', 'nextjs', 'PREREQUISITE', 'Advanced React patterns needed for Next.js', 0.9, 'required');
+  addEdge('nextjs', 'next-appdir', 'PART_OF', 'App Router is the entry to Next.js', 1.0, 'required');
+  addEdge('next-appdir', 'next-data', 'NEXT_STEP', 'Data fetching builds on App Router understanding', 0.95, 'required');
+  addEdge('next-data', 'next-api', 'PRACTICE_OF', 'API routes are naturally learned after data fetching', 0.85, 'strong');
+  addEdge('next-api', 'next-perf', 'RECOMMENDED', 'Performance is the final Next.js optimization step', 0.8, 'moderate');
 
   // Backend subtopics
-  addEdge('javascript', 'backend', 'parallel', 'Backend learning can begin after JS fundamentals', 0.7, 'moderate');
-  addEdge('backend', 'be-rest', 'unlock', 'REST API design is the entry to backend', 1.0, 'required');
-  addEdge('be-rest', 'be-auth', 'prerequisite', 'Authentication builds on REST API knowledge', 0.9, 'required');
-  addEdge('be-rest', 'be-db', 'prerequisite', 'Database design is foundational for APIs', 0.9, 'required');
-  addEdge('be-db', 'be-cache', 'prerequisite', 'Caching requires database understanding', 0.85, 'strong');
+  addEdge('javascript', 'backend', 'PARALLEL', 'Backend learning can begin after JS fundamentals', 0.7, 'moderate');
+  addEdge('backend', 'be-rest', 'PART_OF', 'REST API design is the entry to backend', 1.0, 'required');
+  addEdge('be-rest', 'be-auth', 'NEXT_STEP', 'Authentication builds on REST API knowledge', 0.9, 'required');
+  addEdge('be-rest', 'be-db', 'DEPENDS_ON', 'Database design is foundational for APIs', 0.9, 'required');
+  addEdge('be-db', 'be-cache', 'NEXT_STEP', 'Caching requires database understanding', 0.85, 'strong');
 
   // Final project
-  addEdge('next-perf', 'project-saas', 'project_requirement', 'Next.js mastery required for SaaS project', 0.9, 'required');
-  addEdge('be-auth', 'project-saas', 'project_requirement', 'Authentication is required for SaaS', 1.0, 'required');
-  addEdge('be-cache', 'project-saas', 'project_requirement', 'Caching knowledge enhances SaaS architecture', 0.7, 'moderate');
+  addEdge('next-perf', 'project-saas', 'PROJECT_OF', 'Next.js mastery required for SaaS project', 0.9, 'required');
+  addEdge('be-auth', 'project-saas', 'PROJECT_OF', 'Authentication is required for SaaS', 1.0, 'required');
+  addEdge('be-cache', 'project-saas', 'PROJECT_OF', 'Caching knowledge enhances SaaS architecture', 0.7, 'moderate');
 
   // Interview prep
-  addEdge('project-portfolio', 'interview-frontend', 'interview_requirement', 'Portfolio is required to demonstrate skills in interviews', 0.85, 'strong');
-  addEdge('milestone-frontend', 'interview-frontend', 'recommended', 'Milestone completion recommends interview prep', 0.8, 'moderate');
+  addEdge('project-portfolio', 'interview-frontend', 'REQUIRES', 'Portfolio is required to demonstrate skills in interviews', 0.85, 'strong');
+  addEdge('milestone-frontend', 'interview-frontend', 'RECOMMENDED', 'Milestone completion recommends interview prep', 0.8, 'moderate');
 
   // Final milestone
-  addEdge('project-saas', 'milestone-fullstack', 'unlock', 'Completing the SaaS project unlocks the fullstack milestone', 1.0, 'required');
-  addEdge('interview-frontend', 'milestone-fullstack', 'project_requirement', 'Interview preparation is part of the fullstack journey', 0.85, 'strong');
+  addEdge('project-saas', 'milestone-fullstack', 'UNLOCK', 'Completing the SaaS project unlocks the fullstack milestone', 1.0, 'required');
+  addEdge('interview-frontend', 'milestone-fullstack', 'REQUIRES', 'Interview preparation is part of the fullstack journey', 0.85, 'strong');
 
   return edges;
 };
@@ -489,6 +485,7 @@ const buildReactFlowNode = (node: PipelineNode): LearningNodeType => ({
     description: node.description,
     summary: node.summary,
     type: node.type as any,
+    nodeCategory: node.type === 'practice' ? 'PRACTICE' : (node.type === 'project' || node.type === 'mini_project') ? 'PROJECT' : 'CONCEPT',
     status: node.status as any,
     difficulty: node.difficulty as any,
     xp: node.xp,

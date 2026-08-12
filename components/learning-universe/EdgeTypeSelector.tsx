@@ -21,9 +21,9 @@ export const EdgeTypeSelector = ({ connection, mouseX, mouseY, isRelative = fals
     { type: 'prerequisite', label: 'Prerequisite', icon: CheckCircle2, color: 'text-primary' },
     { type: 'dependency', label: 'Dependency', icon: Link2, color: 'text-slate-400' },
     { type: 'unlock', label: 'Unlock', icon: Lock, color: 'text-blue-400' },
-    { type: 'recommendation', label: 'Recommendation', icon: Sparkles, color: 'text-amber-400' },
+    { type: 'recommended', label: 'Recommended', icon: Sparkles, color: 'text-amber-400' },
     { type: 'optional', label: 'Optional', icon: ExternalLink, color: 'text-muted-foreground' },
-    { type: 'related', label: 'Related', icon: BrainCircuit, color: 'text-emerald-400' },
+    { type: 'reference', label: 'Reference', icon: BrainCircuit, color: 'text-emerald-400' },
   ];
 
   return (

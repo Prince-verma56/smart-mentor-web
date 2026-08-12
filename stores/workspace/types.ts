@@ -6,23 +6,19 @@ export type NodeType =
   | 'topic' | 'lesson' | 'concept' | 'quiz' | 'flashcards' 
   | 'practice' | 'project' | 'ai_challenge' | 'interview' 
   | 'revision' | 'milestone' | 'bookmark' | 'notes' 
-  | 'resource' | 'certificate' | 'subtopic' | 'mini_project';
+  | 'resource' | 'certificate' | 'subtopic' | 'mini_project' | 'core';
 
 // 13 semantic edge types — each has a specific meaning in the learning graph
 export type EdgeSemanticType = 
-  | 'prerequisite'          // Must complete source before target
-  | 'dependency'            // Target depends on source knowledge
-  | 'unlock'                // Source completion unlocks target
-  | 'optional'              // Target is optional after source
-  | 'recommended'           // Source recommends target next
-  | 'parallel'              // Can learn source and target simultaneously
-  | 'alternative'           // Target is an alternative path to source
-  | 'revision'              // Target is a revision loop of source
-  | 'project_requirement'   // Source knowledge is required for target project
-  | 'interview_requirement' // Source is required for target interview prep
-  | 'challenge'             // Target challenges knowledge from source
-  | 'reference'             // Target references source material
-  | 'knowledge_bridge';     // Target bridges knowledge gap from source
+  // Original lowercase types
+  | 'prerequisite' | 'dependency' | 'unlock' | 'optional' 
+  | 'recommended' | 'parallel' | 'alternative' | 'revision' 
+  | 'project_requirement' | 'interview_requirement' | 'challenge' 
+  | 'reference' | 'knowledge_bridge'
+  // New uppercase semantic types
+  | 'PREREQUISITE' | 'DEPENDS_ON' | 'PART_OF' | 'NEXT_STEP'
+  | 'PRACTICE_OF' | 'PROJECT_OF' | 'RELATED_TO' | 'REQUIRES'
+  | 'UNLOCK' | 'RECOMMENDED' | 'PARALLEL' | 'REVISION';
 
 export interface NodeResource {
   id: string;
@@ -48,6 +44,7 @@ export type LearningNodeData = {
   description?: string;
   summary?: string;
   type: NodeType;
+  nodeCategory?: 'CONCEPT' | 'PRACTICE' | 'PROJECT'; // Semantic category for AI layout
   status: NodeStatus;
   progress?: number;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
@@ -210,6 +207,4 @@ export const calculateHierarchy = (nodes: LearningNodeType[], edges: Edge<Learni
   }));
 };
 
-
-export type NodeStatus = 'locked' | 'unlocked' | 'in-progress' | 'completed' | 'skipped';
 

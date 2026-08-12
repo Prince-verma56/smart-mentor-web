@@ -102,6 +102,7 @@ export class LearningPlanner {
     
     return mockGenerateLearningUniverseStream({
       mentorId: payload.mentor_id,
+      goal: "Generate a comprehensive roadmap",
       onStatusUpdate: callbacks.onStatus,
       onChunk: (chunk: string) => {
         try {

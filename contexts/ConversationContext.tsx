@@ -148,7 +148,7 @@ export function ConversationProvider({
 
     getChatSessions(mentorId, undefined).then((data) => {
       if (cancelled) return;
-      setSessions(data as ChatSession[]);
+      setSessions(data as unknown as ChatSession[]);
       setIsLoadingSessions(false);
     });
 

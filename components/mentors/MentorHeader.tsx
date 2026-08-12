@@ -22,6 +22,10 @@ import { MemoryDrawer } from "./MemoryDrawer";
 interface MentorHeaderProps {
   mentor: Mentor;
   stats?: MentorStats;
+  leftCollapsed?: boolean;
+  setLeftCollapsed?: (val: boolean | ((prev: boolean) => boolean)) => void;
+  rightCollapsed?: boolean;
+  setRightCollapsed?: (val: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 const DIFFICULTY_COLORS = {
